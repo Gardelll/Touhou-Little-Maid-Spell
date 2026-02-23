@@ -16,10 +16,12 @@
     "LivingEntityMixin",
     "MinecraftServerMixin",
     "MobMixin",
+    "MobUtilMixin",
     "OpenMaidGuiPackageMixin",
     "ServerLevelMixin",
     "StructureTemplateMixin",
     "TaskFeedOwnerMixin",
+    "WandUtilMixin",
     "iss.SyncedSpellDataMixin",
     "iss.UtilsMixin"
   ],

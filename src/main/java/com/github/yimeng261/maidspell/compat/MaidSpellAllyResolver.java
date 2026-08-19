@@ -74,6 +74,10 @@ public final class MaidSpellAllyResolver {
     }
 
     public static boolean isFriendlyDamage(LivingEntity target, @Nullable Entity causing, @Nullable Entity direct) {
+        // Player attacks must keep the target's normal damage rules, such as a maid's owner-damage reduction.
+        if (causing instanceof Player || direct instanceof Player) {
+            return false;
+        }
         return areFriendly(target, causing)
                 || areFriendly(target, direct)
                 || resolveResponsibleEntity(direct).map(owner -> areFriendly(target, owner)).orElse(false);

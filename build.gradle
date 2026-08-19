@@ -244,6 +244,54 @@ tasks.named('assemble') {
     dependsOn tasks.named('bundleJar')
 }
 
+tasks.register('verifyBundledModJar') {
+    group = 'verification'
+    description = 'Verifies the bootstrap jar contains a remapped MaidSpell mod and its Mixin refmap.'
+    dependsOn tasks.named('bundleJar')
+    inputs.file(tasks.named('bundleJar').flatMap { it.archiveFile })
+
+    doLast {
+        def bundleFile = tasks.named('bundleJar').get().archiveFile.get().asFile
+        def nestedJarBytes
+        new java.util.zip.ZipFile(bundleFile).withCloseable { bundle ->
+            def nestedEntry = bundle.getEntry('META-INF/maidspell/maidspell-mod.jar')
+            if (nestedEntry == null) {
+                throw new GradleException("${bundleFile.name} is missing the nested MaidSpell mod jar")
+            }
+            nestedJarBytes = bundle.getInputStream(nestedEntry).bytes
+        }
+
+        boolean hasRefmap = false
+        byte[] livingEntityMixin = null
+        new java.util.zip.ZipInputStream(new ByteArrayInputStream(nestedJarBytes)).withCloseable { nestedJar ->
+            java.util.zip.ZipEntry entry
+            while ((entry = nestedJar.nextEntry) != null) {
+                if (entry.name == 'maidspell.refmap.json') {
+                    hasRefmap = true
+                } else if (entry.name == 'com/github/yimeng261/maidspell/mixin/LivingEntityMixin.class') {
+                    livingEntityMixin = nestedJar.readAllBytes()
+                }
+            }
+        }
+
+        if (!hasRefmap) {
+            throw new GradleException('Nested MaidSpell mod jar is missing maidspell.refmap.json')
+        }
+        if (livingEntityMixin == null) {
+            throw new GradleException('Nested MaidSpell mod jar is missing LivingEntityMixin.class')
+        }
+
+        def classConstants = new String(livingEntityMixin, java.nio.charset.StandardCharsets.ISO_8859_1)
+        if (!classConstants.contains('m_6234_') || classConstants.contains('removeEffectNoUpdate')) {
+            throw new GradleException('Nested LivingEntityMixin contains unremapped Minecraft method names')
+        }
+    }
+}
+
+tasks.named('check') {
+    dependsOn tasks.named('verifyBundledModJar')
+}
+
 tasks.configureEach {
     if (name == 'downloadMcpConfig') {
         // ForgeGradle marks this task out-of-date by default; only run it when the cached zip is missing.
@@ -256,6 +304,22 @@ tasks.withType(JavaCompile).configureEach {
     options.encoding = 'UTF-8'
     // 忽略过时API的警告
     options.compilerArgs += ['-Xlint:-removal']
+}
+
+// MixinGradle writes the annotation processor output beside compileJava's
+// temporary files. Declare it as an output so deleting the refmap cannot make
+// an incremental build silently produce an unlaunchable release jar.
+def maidSpellCompileRefmap = layout.buildDirectory.file('tmp/compileJava/compileJava-refmap.json')
+tasks.named('compileJava').configure {
+    outputs.file(maidSpellCompileRefmap)
+}
+
+tasks.named('jar', Jar).configure {
+    doFirst {
+        if (!maidSpellCompileRefmap.get().asFile.isFile()) {
+            throw new GradleException('Mixin refmap was not generated; refusing to package a jar without maidspell.refmap.json')
+        }
+    }
 }
 
 tasks.withType(Test).configureEach {

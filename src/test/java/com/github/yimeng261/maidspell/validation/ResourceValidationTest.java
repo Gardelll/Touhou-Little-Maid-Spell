@@ -37,6 +37,9 @@ class ResourceValidationTest {
         "assets/touhou_little_maid_spell/lang/zh_cn.json");
     private static final Pattern LITERAL_TRANSLATION = Pattern.compile(
         "\\bComponent\\s*\\.\\s*translatable\\s*\\(\\s*\"([^\"\\r\\n]+)\"");
+    private static final Set<String> EXTERNAL_TRANSLATION_PREFIXES = Set.of(
+        "ui.irons_spellbooks."
+    );
     private static final Map<String, String> OPTIONAL_LOOT_NAMESPACES = Map.of(
         "irons_spellbooks:", "irons_spellbooks",
         "youkaishomecoming:", "youkaishomecoming"
@@ -82,7 +85,11 @@ class ResourceValidationTest {
             String javaSource = Files.readString(source, StandardCharsets.UTF_8);
             Matcher matcher = LITERAL_TRANSLATION.matcher(withoutJavaComments(javaSource));
             while (matcher.find()) {
-                literalKeys.add(matcher.group(1));
+                String key = matcher.group(1);
+                // Compatibility providers own these translations in their own language assets.
+                if (EXTERNAL_TRANSLATION_PREFIXES.stream().noneMatch(key::startsWith)) {
+                    literalKeys.add(key);
+                }
             }
         }
 

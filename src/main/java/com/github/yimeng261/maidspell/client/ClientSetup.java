@@ -24,6 +24,7 @@ public class ClientSetup {
             ItemBlockRenderTypes.setRenderLayer(MaidSpellBlocks.POTTED_YUE_LINGLAN.get(), RenderType.cutout());
             ItemBlockRenderTypes.setRenderLayer(MaidSpellBlocks.JINGXU_YOULAN.get(), RenderType.cutout());
             ItemBlockRenderTypes.setRenderLayer(MaidSpellBlocks.POTTED_JINGXU_YOULAN.get(), RenderType.cutout());
+            ItemBlockRenderTypes.setRenderLayer(MaidSpellBlocks.STAR_GLOW_FLOWER_CLUSTER.get(), RenderType.cutout());
             ItemBlockRenderTypes.setRenderLayer(MaidSpellBlocks.FLOATING_FOX_LEAF_TRAIL.get(), RenderType.cutout());
             ItemBlockRenderTypes.setRenderLayer(MaidSpellBlocks.FLOATING_FOX_LEAF_TRAIL_BIG.get(), RenderType.cutout());
             ItemBlockRenderTypes.setRenderLayer(MaidSpellBlocks.FLOATING_FOX_LEAF_TRAIL_SMALL.get(), RenderType.cutout());

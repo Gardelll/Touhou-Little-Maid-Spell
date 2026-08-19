@@ -2,9 +2,12 @@ package com.github.yimeng261.maidspell.compat.irons_spellbooks.client;
 
 import com.github.yimeng261.maidspell.MaidSpellMod;
 import com.github.yimeng261.maidspell.compat.irons_spellbooks.client.model.GenericSpellHumanoidModel;
+import com.github.yimeng261.maidspell.compat.irons_spellbooks.client.renderer.entity.WinefoxSwordProjectileRenderer;
 import com.github.yimeng261.maidspell.compat.irons_spellbooks.client.renderer.entity.HolyConstructRenderer;
 import com.github.yimeng261.maidspell.compat.irons_spellbooks.client.renderer.entity.GenericSpellHumanoidRenderer;
 import com.github.yimeng261.maidspell.compat.irons_spellbooks.registry.IronsSpellbooksCompatEntities;
+import io.redspace.ironsspellbooks.entity.spells.comet.CometRenderer;
+import net.minecraft.client.renderer.entity.NoopRenderer;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraftforge.client.event.EntityRenderersEvent;
 
@@ -26,5 +29,10 @@ public final class IronsSpellbooksCompatClient {
                         new ResourceLocation(MaidSpellMod.MOD_ID, "geo/elf_templar.geo.json"),
                         new ResourceLocation(MaidSpellMod.MOD_ID, "textures/entity/elf_templar.png"))));
         event.registerEntityRenderer(IronsSpellbooksCompatEntities.HOLY_CONSTRUCT.get(), HolyConstructRenderer::new);
+        event.registerEntityRenderer(IronsSpellbooksCompatEntities.MODIFIED_STARFALL_CLOUD.get(), NoopRenderer::new);
+        event.registerEntityRenderer(IronsSpellbooksCompatEntities.MODIFIED_STARFALL_COMET.get(), context ->
+                new CometRenderer(context, 0.75F));
+        event.registerEntityRenderer(IronsSpellbooksCompatEntities.WINEFOX_SWORD_PROJECTILE.get(),
+                WinefoxSwordProjectileRenderer::new);
     }
 }

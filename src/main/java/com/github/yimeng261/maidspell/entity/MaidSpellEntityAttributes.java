@@ -12,5 +12,6 @@ public final class MaidSpellEntityAttributes {
 
     @SubscribeEvent
     public static void onAttributeCreate(EntityAttributeCreationEvent event) {
+        event.put(MaidSpellEntities.MAGICAL_WINEFOX_BOSS.get(), MagicalWinefoxBossEntity.createAttributes().build());
     }
 }

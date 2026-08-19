@@ -1,0 +1,7 @@
+{
+  "parent": "minecraft:block/flowerbed_1",
+  "textures": {
+    "flowerbed": "touhou_little_maid_spell:block/purple_petals",
+    "stem": "touhou_little_maid_spell:block/purple_petals_stem"
+  }
+}

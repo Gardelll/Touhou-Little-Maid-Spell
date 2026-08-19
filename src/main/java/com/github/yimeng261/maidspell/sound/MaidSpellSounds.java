@@ -6,6 +6,7 @@ import net.minecraft.sounds.SoundEvent;
 import net.minecraftforge.registries.DeferredRegister;
 import net.minecraftforge.registries.ForgeRegistries;
 import net.minecraftforge.registries.RegistryObject;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * 女仆法术音效注册
@@ -25,4 +26,35 @@ public class MaidSpellSounds {
     public static final RegistryObject<SoundEvent> SILENT_MERCHANT_FEEDBACK = SOUNDS.register("silent_merchant_feedback",
         () -> SoundEvent.createVariableRangeEvent(new ResourceLocation(MaidSpellMod.MOD_ID, "silent_merchant_feedback")));
 
+    public static final RegistryObject<SoundEvent> WINEFOX_ATK_1 = registerWinefoxSound("atk1");
+    public static final RegistryObject<SoundEvent> WINEFOX_ATK_2 = registerWinefoxSound("atk2");
+    public static final RegistryObject<SoundEvent> WINEFOX_ATK_3 = registerWinefoxSound("atk3");
+    public static final RegistryObject<SoundEvent> WINEFOX_ATK_3_READY = registerWinefoxSound("atk3ready");
+    public static final RegistryObject<SoundEvent> WINEFOX_ATTACKED = registerWinefoxSound("atked");
+    public static final RegistryObject<SoundEvent> WINEFOX_MAGIC = registerWinefoxSound("magic01");
+    public static final RegistryObject<SoundEvent> WINEFOX_MAGIC_SHOOT = registerWinefoxSound("magic01_shoot");
+    public static final RegistryObject<SoundEvent> WINEFOX_MAGIC_BOW = registerWinefoxSound("magicbow");
+    public static final RegistryObject<SoundEvent> WINEFOX_VOICE = registerWinefoxSound("shengyin");
+
+    private static RegistryObject<SoundEvent> registerWinefoxSound(String name) {
+        String id = "entity.magical_winefox_boss." + name;
+        return SOUNDS.register(id,
+                () -> SoundEvent.createVariableRangeEvent(new ResourceLocation(MaidSpellMod.MOD_ID, id)));
+    }
+
+    @Nullable
+    public static SoundEvent getWinefoxSound(String name) {
+        return switch (name) {
+            case "atk1" -> WINEFOX_ATK_1.get();
+            case "atk2" -> WINEFOX_ATK_2.get();
+            case "atk3" -> WINEFOX_ATK_3.get();
+            case "atk3ready" -> WINEFOX_ATK_3_READY.get();
+            case "atked" -> WINEFOX_ATTACKED.get();
+            case "magic01" -> WINEFOX_MAGIC.get();
+            case "magic01_shoot" -> WINEFOX_MAGIC_SHOOT.get();
+            case "magicbow" -> WINEFOX_MAGIC_BOW.get();
+            case "shengyin" -> WINEFOX_VOICE.get();
+            default -> null;
+        };
+    }
 }

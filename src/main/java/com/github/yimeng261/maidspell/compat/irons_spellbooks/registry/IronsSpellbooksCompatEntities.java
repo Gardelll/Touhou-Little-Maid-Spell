@@ -5,6 +5,9 @@ import com.github.yimeng261.maidspell.compat.irons_spellbooks.entity.CorruptedKn
 import com.github.yimeng261.maidspell.compat.irons_spellbooks.entity.ElfTemplarEntity;
 import com.github.yimeng261.maidspell.compat.irons_spellbooks.entity.HolyConstructEntity;
 import com.github.yimeng261.maidspell.compat.irons_spellbooks.entity.ShadowAssassinEntity;
+import com.github.yimeng261.maidspell.compat.irons_spellbooks.entity.spell.ModifiedStarfallCloudEntity;
+import com.github.yimeng261.maidspell.compat.irons_spellbooks.entity.spell.ModifiedStarfallCometEntity;
+import com.github.yimeng261.maidspell.compat.irons_spellbooks.entity.spell.WinefoxSwordProjectileEntity;
 import net.minecraft.core.BlockPos;
 import net.minecraft.tags.BlockTags;
 import net.minecraft.util.RandomSource;
@@ -53,6 +56,31 @@ public final class IronsSpellbooksCompatEntities {
                             .sized(0.8F, 2.5F)
                             .clientTrackingRange(10)
                             .build("holy_construct"));
+
+    public static final RegistryObject<EntityType<ModifiedStarfallCloudEntity>> MODIFIED_STARFALL_CLOUD =
+            ENTITY_TYPES.register("starfall_modified_cloud",
+                    () -> EntityType.Builder.<ModifiedStarfallCloudEntity>of(ModifiedStarfallCloudEntity::new, MobCategory.MISC)
+                            .sized(0.1F, 0.1F)
+                            .clientTrackingRange(64)
+                            .updateInterval(1)
+                            .build("starfall_modified_cloud"));
+
+    public static final RegistryObject<EntityType<ModifiedStarfallCometEntity>> MODIFIED_STARFALL_COMET =
+            ENTITY_TYPES.register("starfall_modified_comet",
+                    () -> EntityType.Builder.<ModifiedStarfallCometEntity>of(ModifiedStarfallCometEntity::new, MobCategory.MISC)
+                            .sized(0.5F, 0.5F)
+                            .clientTrackingRange(64)
+                            .updateInterval(1)
+                            .build("starfall_modified_comet"));
+
+    public static final RegistryObject<EntityType<WinefoxSwordProjectileEntity>> WINEFOX_SWORD_PROJECTILE =
+            ENTITY_TYPES.register("winefox_sword_projectile",
+                    () -> EntityType.Builder.<WinefoxSwordProjectileEntity>of(
+                                    WinefoxSwordProjectileEntity::new, MobCategory.MISC)
+                            .sized(0.35F, 0.35F)
+                            .clientTrackingRange(64)
+                            .updateInterval(1)
+                            .build("winefox_sword_projectile"));
 
     private IronsSpellbooksCompatEntities() {
     }

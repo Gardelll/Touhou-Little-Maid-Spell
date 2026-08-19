@@ -18,5 +18,41 @@
         "type": "event"
       }
     ]
+  },
+  "entity.magical_winefox_boss.atk1": {
+    "category": "hostile",
+    "sounds": ["touhou_little_maid_spell:entity/magical_winefox_boss/atk1"]
+  },
+  "entity.magical_winefox_boss.atk2": {
+    "category": "hostile",
+    "sounds": ["touhou_little_maid_spell:entity/magical_winefox_boss/atk2"]
+  },
+  "entity.magical_winefox_boss.atk3": {
+    "category": "hostile",
+    "sounds": ["touhou_little_maid_spell:entity/magical_winefox_boss/atk3"]
+  },
+  "entity.magical_winefox_boss.atk3ready": {
+    "category": "hostile",
+    "sounds": ["touhou_little_maid_spell:entity/magical_winefox_boss/atk3ready"]
+  },
+  "entity.magical_winefox_boss.atked": {
+    "category": "hostile",
+    "sounds": ["touhou_little_maid_spell:entity/magical_winefox_boss/atked"]
+  },
+  "entity.magical_winefox_boss.magic01": {
+    "category": "hostile",
+    "sounds": ["touhou_little_maid_spell:entity/magical_winefox_boss/magic01"]
+  },
+  "entity.magical_winefox_boss.magic01_shoot": {
+    "category": "hostile",
+    "sounds": ["touhou_little_maid_spell:entity/magical_winefox_boss/magic01_shoot"]
+  },
+  "entity.magical_winefox_boss.magicbow": {
+    "category": "hostile",
+    "sounds": ["touhou_little_maid_spell:entity/magical_winefox_boss/magicbow"]
+  },
+  "entity.magical_winefox_boss.shengyin": {
+    "category": "hostile",
+    "sounds": ["touhou_little_maid_spell:entity/magical_winefox_boss/shengyin"]
   }
 }

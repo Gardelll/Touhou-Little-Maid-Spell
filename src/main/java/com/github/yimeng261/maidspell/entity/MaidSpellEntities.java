@@ -23,6 +23,14 @@ public class MaidSpellEntities {
                 .clientTrackingRange(4)
                 .updateInterval(10)
                 .build("wind_seeking_bell"));
+
+    public static final RegistryObject<EntityType<MagicalWinefoxBossEntity>> MAGICAL_WINEFOX_BOSS =
+        ENTITY_TYPES.register("magical_winefox_boss",
+            () -> EntityType.Builder.of(MagicalWinefoxBossEntity::new, MobCategory.MONSTER)
+                .sized(0.8F, 2.4F)
+                .clientTrackingRange(10)
+                .updateInterval(2)
+                .build("magical_winefox_boss"));
     
     /**
      * 注册实体类型

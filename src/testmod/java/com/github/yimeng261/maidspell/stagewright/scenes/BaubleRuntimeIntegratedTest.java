@@ -2,11 +2,13 @@ package com.github.yimeng261.maidspell.stagewright.scenes;
 
 import com.github.tartaricacid.touhoulittlemaid.entity.passive.EntityMaid;
 import com.github.yimeng261.maidspell.Config;
+import com.github.yimeng261.maidspell.api.entity.AnchoredEntityMaid;
 import com.github.yimeng261.maidspell.stagewright.support.Actors;
 import com.github.yimeng261.maidspell.stagewright.support.Maids;
 import com.github.yimeng261.maidspell.stagewright.support.Players;
 import com.github.yimeng261.maidspell.stagewright.support.Stage;
 import net.magicterra.stagewright.test.Game;
+import net.magicterra.stagewright.test.Locks;
 import net.magicterra.stagewright.test.Player;
 import net.magicterra.stagewright.test.Plot;
 import net.magicterra.stagewright.test.Requires;
@@ -19,6 +21,7 @@ import net.minecraft.world.item.ItemStack;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestReporter;
+import org.junit.jupiter.api.parallel.ResourceLock;
 
 import java.util.UUID;
 
@@ -32,6 +35,7 @@ import static com.github.yimeng261.maidspell.stagewright.support.Checks.NS;
  */
 @Scene("tlms.integrated")
 @DisplayName("魂之书：主人保护（需真实玩家）")
+@ResourceLock(Locks.TICK_RATE)
 class BaubleRuntimeIntegratedTest {
     private static final String ANCHOR = NS + "anchor_core";
     /** 远程女仆与玩家的距离：超出集成服视距，强加载解除后区块会卸载。 */
@@ -164,6 +168,8 @@ class BaubleRuntimeIntegratedTest {
             level.setChunkForced(far.getX() >> 4, far.getZ() >> 4, false);
             return owned;
         });
+        // 区块卸载要等 tick 循环里的票据过期，宿主玩家已落定，之后只等游戏逻辑
+        ctx.fastForward();
         ctx.await(360, "女仆随区块卸载", maid::isRemoved);
         ctx.run(() -> {
             ctx.record("removalReason", String.valueOf(maid.getRemovalReason()));
@@ -190,10 +196,13 @@ class BaubleRuntimeIntegratedTest {
             ctx.check(directWriteBlocked(player)).as("远处女仆区块加载时受保护").isTrue();
             return owned;
         });
-        ctx.ticks(10);
+        // 女仆所在区块升到实体 tick 要等后台线程；等锚定核心在她身上 tick 过、加上票据，再撤掉测试的强加载并加速等卸载期过去
+        ctx.await(200, "锚定核心在女仆身上生效", ((AnchoredEntityMaid) maid)::maidSpell$isAnchored);
         ctx.run(() -> level.setChunkForced(far.getX() >> 4, far.getZ() >> 4, false));
+        ctx.fastForward();
         ctx.ticks(360);
         ctx.run(() -> {
+            ctx.record("removalReason", String.valueOf(maid.getRemovalReason()));
             ctx.check(maid.isRemoved()).as("戴锚定核心的女仆随区块卸载").isFalse();
             ctx.check(directWriteBlocked(player)).as("撤掉测试强加载后受保护").isTrue();
         });

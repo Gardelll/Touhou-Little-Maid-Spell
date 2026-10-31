@@ -18,6 +18,7 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.phys.Vec3;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestReporter;
 
@@ -29,9 +30,11 @@ import static com.github.yimeng261.maidspell.stagewright.scenes.EnderPocketTest.
 import static com.github.yimeng261.maidspell.stagewright.scenes.EnderPocketTest.pocketMaid;
 
 /** 末影腰包传送到锚定女仆身边（集成服，需要真实玩家）：授权、落点安全、跨维度、先下坐骑、冷却。 */
+@DisplayName("末影腰包：传送到锚定女仆身边")
 @Scene("tlms.integrated")
 class EnderPocketIntegratedTest {
     /** 只有同时戴锚定核心的女仆才能传送过去。 */
+    @DisplayName("只有同时戴锚定核心的女仆才能传送过去，被拒绝时玩家不位移")
     @Test
     @Requires(Requires.Capability.CLIENT)
     void teleportNeedsAnchorCore(Game game, @Plot.Size(32) @Plot.Centered Plot plot, Player host,
@@ -47,6 +50,7 @@ class EnderPocketIntegratedTest {
     }
 
     /** 传送到女仆旁边：不卡进方块，站在实心地面上，摔落距离清零。 */
+    @DisplayName("传送到女仆旁边的安全落点：不卡进方块，站在实心地面上，摔落距离清零")
     @Test
     @Requires(Requires.Capability.CLIENT)
     void teleportToSafeSpot(Game game, @Plot.Size(32) @Plot.Centered Plot plot, Player host,
@@ -80,6 +84,7 @@ class EnderPocketIntegratedTest {
     }
 
     /** 跨维度传送到下界的锚定女仆身边。 */
+    @DisplayName("可跨维度传送到下界的锚定女仆身边")
     @Test
     @Requires(Requires.Capability.CLIENT)
     void teleportAcrossDimensions(Game game, @Plot.Size(32) @Plot.Centered Plot plot, Player host,
@@ -114,6 +119,7 @@ class EnderPocketIntegratedTest {
     }
 
     /** 骑乘状态下传送：先下坐骑再传送。 */
+    @DisplayName("骑乘状态下传送会先下坐骑再传送，坐骑留在原地")
     @Test
     @Requires(Requires.Capability.CLIENT)
     void teleportDismountsFirst(Game game, @Plot.Size(32) @Plot.Centered Plot plot, Player host,
@@ -137,6 +143,7 @@ class EnderPocketIntegratedTest {
     }
 
     /** 传送请求有 1 秒冷却：连点两次只传送一次。 */
+    @DisplayName("传送请求有 1 秒冷却，连点两次只传送一次")
     @Test
     @Requires(Requires.Capability.CLIENT)
     void teleportCooldown(Game game, @Plot.Size(32) @Plot.Centered Plot plot, Player host,

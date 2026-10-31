@@ -28,6 +28,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestReporter;
 import org.junit.jupiter.api.parallel.ResourceLock;
@@ -46,6 +47,7 @@ import static com.github.yimeng261.maidspell.stagewright.support.Checks.NS;
  * 专用服拓扑不装 UsefulMagic，它的那一组在 {@link SpellLifecycleIntegratedTest} 里跑。
  */
 /** 各测试共用一个主人玩家，按玩家名上锁串行。 */
+@DisplayName("女仆法术数据的生命周期")
 @Scene("tlms")
 @ResourceLock("stagewright.player:TlmsSpellOwner")
 class SpellLifecycleTest {
@@ -57,180 +59,210 @@ class SpellLifecycleTest {
     private static final String CONE_OF_COLD_BOOK = "irons_spellbooks:gold_spell_book[irons_spellbooks:spell_container="
             + "{maxSpells:1,mustEquip:false,spellWheel:true,data:[{id:\"irons_spellbooks:cone_of_cold\",index:0,level:5,locked:false}]}]";
 
+    @DisplayName("铁魔法：收进魂符再放出，法术书与冷却保留且能再次施法")
     @Test
     void ironsSpellbooksSlabRoundTrip(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
         Stage ctx = Stage.flat(game, plot, reporter);
         slabRoundTrip(ctx, "irons_spellbooks");
     }
 
+    @DisplayName("铁魔法：区块卸载 5 秒内回来，法术数据仍在")
     @Test
     void ironsSpellbooksUnloadBriefly(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
         Stage ctx = Stage.flat(game, plot, reporter);
         unload(ctx, "irons_spellbooks", RETENTION / 2);
     }
 
+    @DisplayName("铁魔法：区块卸载超过 5 秒才回来，旧冷却被删除并按背包重新登记法术书")
     @Test
     void ironsSpellbooksUnloadLong(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
         Stage ctx = Stage.flat(game, plot, reporter);
         unload(ctx, "irons_spellbooks", RETENTION + 20);
     }
 
+    @DisplayName("铁魔法：跟随主人换维度后，法术书与冷却保留且能施法")
     @Test
     void ironsSpellbooksDimensionChange(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
         Stage ctx = Stage.flat(game, plot, reporter);
         dimensionChange(ctx, "irons_spellbooks");
     }
 
+    @DisplayName("铁魔法：女仆真正死亡后法术数据立即清掉")
     @Test
     void ironsSpellbooksDeath(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
         Stage ctx = Stage.flat(game, plot, reporter);
         death(ctx, "irons_spellbooks", false);
     }
 
+    @DisplayName("铁魔法：被梦云水晶救下后法术书保留、冷却清零且能施法")
     @Test
     void ironsSpellbooksRevived(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
         Stage ctx = Stage.flat(game, plot, reporter);
         death(ctx, "irons_spellbooks", true);
     }
 
+    @DisplayName("Ars Nouveau：收进魂符再放出，法术书与冷却保留且能再次施法")
     @Test
     void arsNouveauSlabRoundTrip(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
         Stage ctx = Stage.flat(game, plot, reporter);
         slabRoundTrip(ctx, "ars_nouveau");
     }
 
+    @DisplayName("Ars Nouveau：区块卸载 5 秒内回来，法术数据仍在")
     @Test
     void arsNouveauUnloadBriefly(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
         Stage ctx = Stage.flat(game, plot, reporter);
         unload(ctx, "ars_nouveau", RETENTION / 2);
     }
 
+    @DisplayName("Ars Nouveau：区块卸载超过 5 秒才回来，旧冷却被删除并按背包重新登记法术书")
     @Test
     void arsNouveauUnloadLong(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
         Stage ctx = Stage.flat(game, plot, reporter);
         unload(ctx, "ars_nouveau", RETENTION + 20);
     }
 
+    @DisplayName("Ars Nouveau：跟随主人换维度后，法术书与冷却保留且能施法")
     @Test
     void arsNouveauDimensionChange(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
         Stage ctx = Stage.flat(game, plot, reporter);
         dimensionChange(ctx, "ars_nouveau");
     }
 
+    @DisplayName("Ars Nouveau：女仆真正死亡后法术数据立即清掉")
     @Test
     void arsNouveauDeath(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
         Stage ctx = Stage.flat(game, plot, reporter);
         death(ctx, "ars_nouveau", false);
     }
 
+    @DisplayName("Ars Nouveau：被梦云水晶救下后法术书保留、冷却清零且能施法")
     @Test
     void arsNouveauRevived(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
         Stage ctx = Stage.flat(game, plot, reporter);
         death(ctx, "ars_nouveau", true);
     }
 
+    @DisplayName("Psi：收进魂符再放出，法术书与冷却保留且能再次施法")
     @Test
     void psiSlabRoundTrip(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
         Stage ctx = Stage.flat(game, plot, reporter);
         slabRoundTrip(ctx, "psi");
     }
 
+    @DisplayName("Psi：区块卸载 5 秒内回来，法术数据仍在")
     @Test
     void psiUnloadBriefly(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
         Stage ctx = Stage.flat(game, plot, reporter);
         unload(ctx, "psi", RETENTION / 2);
     }
 
+    @DisplayName("Psi：区块卸载超过 5 秒才回来，旧冷却被删除并按背包重新登记法术书")
     @Test
     void psiUnloadLong(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
         Stage ctx = Stage.flat(game, plot, reporter);
         unload(ctx, "psi", RETENTION + 20);
     }
 
+    @DisplayName("Psi：跟随主人换维度后，法术书与冷却保留且能施法")
     @Test
     void psiDimensionChange(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
         Stage ctx = Stage.flat(game, plot, reporter);
         dimensionChange(ctx, "psi");
     }
 
+    @DisplayName("Psi：女仆真正死亡后法术数据立即清掉")
     @Test
     void psiDeath(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
         Stage ctx = Stage.flat(game, plot, reporter);
         death(ctx, "psi", false);
     }
 
+    @DisplayName("Psi：被梦云水晶救下后法术书保留、冷却清零且能施法")
     @Test
     void psiRevived(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
         Stage ctx = Stage.flat(game, plot, reporter);
         death(ctx, "psi", true);
     }
 
+    @DisplayName("Goety：收进魂符再放出，法术书与冷却保留且能再次施法")
     @Test
     void goetySlabRoundTrip(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
         Stage ctx = Stage.flat(game, plot, reporter);
         slabRoundTrip(ctx, "goety");
     }
 
+    @DisplayName("Goety：区块卸载 5 秒内回来，法术数据仍在")
     @Test
     void goetyUnloadBriefly(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
         Stage ctx = Stage.flat(game, plot, reporter);
         unload(ctx, "goety", RETENTION / 2);
     }
 
+    @DisplayName("Goety：区块卸载超过 5 秒才回来，旧冷却被删除并按背包重新登记法术书")
     @Test
     void goetyUnloadLong(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
         Stage ctx = Stage.flat(game, plot, reporter);
         unload(ctx, "goety", RETENTION + 20);
     }
 
+    @DisplayName("Goety：跟随主人换维度后，法术书与冷却保留且能施法")
     @Test
     void goetyDimensionChange(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
         Stage ctx = Stage.flat(game, plot, reporter);
         dimensionChange(ctx, "goety");
     }
 
+    @DisplayName("Goety：女仆真正死亡后法术数据立即清掉")
     @Test
     void goetyDeath(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
         Stage ctx = Stage.flat(game, plot, reporter);
         death(ctx, "goety", false);
     }
 
+    @DisplayName("Goety：被梦云水晶救下后法术书保留、冷却清零且能施法")
     @Test
     void goetyRevived(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
         Stage ctx = Stage.flat(game, plot, reporter);
         death(ctx, "goety", true);
     }
 
+    @DisplayName("SlashBlade：收进魂符再放出，法术书与冷却保留且能再次施法")
     @Test
     void slashbladeSlabRoundTrip(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
         Stage ctx = Stage.flat(game, plot, reporter);
         slabRoundTrip(ctx, "slashblade");
     }
 
+    @DisplayName("SlashBlade：区块卸载 5 秒内回来，法术数据仍在")
     @Test
     void slashbladeUnloadBriefly(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
         Stage ctx = Stage.flat(game, plot, reporter);
         unload(ctx, "slashblade", RETENTION / 2);
     }
 
+    @DisplayName("SlashBlade：区块卸载超过 5 秒才回来，旧冷却被删除并按背包重新登记法术书")
     @Test
     void slashbladeUnloadLong(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
         Stage ctx = Stage.flat(game, plot, reporter);
         unload(ctx, "slashblade", RETENTION + 20);
     }
 
+    @DisplayName("SlashBlade：跟随主人换维度后，法术书与冷却保留且能施法")
     @Test
     void slashbladeDimensionChange(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
         Stage ctx = Stage.flat(game, plot, reporter);
         dimensionChange(ctx, "slashblade");
     }
 
+    @DisplayName("SlashBlade：女仆真正死亡后法术数据立即清掉")
     @Test
     void slashbladeDeath(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
         Stage ctx = Stage.flat(game, plot, reporter);
         death(ctx, "slashblade", false);
     }
 
+    @DisplayName("SlashBlade：被梦云水晶救下后法术书保留、冷却清零且能施法")
     @Test
     void slashbladeRevived(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
         Stage ctx = Stage.flat(game, plot, reporter);
@@ -238,6 +270,7 @@ class SpellLifecycleTest {
     }
 
     /** 施法中收进魂符再放出：不崩溃、不在施法、法术书仍在，可以再次施法。 */
+    @DisplayName("铁魔法：施法中收进魂符再放出，不崩溃、不在施法、法术书仍在且能再次施法")
     @Test
     void slabWhileCasting(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
         Stage ctx = Stage.flat(game, plot, reporter);
@@ -265,6 +298,7 @@ class SpellLifecycleTest {
     }
 
     /** 打开女仆背包时停止施法；关闭后能恢复施法。 */
+    @DisplayName("铁魔法：打开女仆背包时停止施法，关闭后恢复施法")
     @Test
     void backpackStopsCasting(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
         Stage ctx = Stage.flat(game, plot, reporter);
@@ -281,6 +315,7 @@ class SpellLifecycleTest {
     }
 
     /** 法术近战、法术远程任务的女仆被设成 NoAI 后约 1 秒内自动恢复；其他任务的女仆保持 NoAI。 */
+    @DisplayName("法术近战、远程任务的女仆被设成 NoAI 后自动恢复，其他任务的保持 NoAI")
     @Test
     void noAiRestoredForSpellTasks(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
         Stage ctx = Stage.flat(game, plot, reporter);

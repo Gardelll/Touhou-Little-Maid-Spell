@@ -5,6 +5,7 @@ import net.magicterra.stagewright.test.Game;
 import net.magicterra.stagewright.test.KnownIssue;
 import net.magicterra.stagewright.test.Plot;
 import net.magicterra.stagewright.test.Scene;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestReporter;
 import com.github.yimeng261.maidspell.Config;
@@ -83,6 +84,7 @@ import static com.github.yimeng261.maidspell.stagewright.support.Checks.NS;
  * <p>不借用场地的地板，直接查询服务器的主世界/下界/末地/归隐之地；除悬空检查要完整生成区块外，计算只到 STRUCTURE_STARTS 或只用噪声。
  */
 @Scene("tlms")
+@DisplayName("结构自然生成")
 class NaturalTest {
     private static final String OVERWORLD = "minecraft:overworld";
     private static final String NETHER = "minecraft:the_nether";
@@ -215,12 +217,14 @@ class NaturalTest {
     /** 本项不需要等区块，直接处理下一项。 */
     private static final CompletableFuture<Boolean> NEXT = CompletableFuture.completedFuture(false);
 
+    @DisplayName("结构的类型、群系、地形适配、所属结构集与放置参数与注册快照一致")
     @Test
     void registration(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);
         ctx.run(() -> registration(ctx));
     }
 
+    @DisplayName("主世界、下界、末地、归隐之地各自可能生成的本模组结构集与预期一致")
     @Test
     void dimensionSets(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);
@@ -231,6 +235,7 @@ class NaturalTest {
      * 主世界有樱花林，隐世之境的结构集也在主世界的候选里；满足地形和群系条件的候选区块
      * 走完真实的 STRUCTURE_STARTS 后也不能出现隐世之境起点。
      */
+    @DisplayName("主世界满足群系与地形条件的候选区块也不会生成隐世之境起点")
     @Test
     void hiddenRetreatNotInOverworld(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);
@@ -253,6 +258,7 @@ class NaturalTest {
     }
 
     /** 在主世界、下界、末地执行 /locate structure 隐世之境，应被拒绝为"无效结构"而不是去搜索。 */
+    @DisplayName("在主世界、下界、末地 /locate 隐世之境被拒绝为无效结构")
     @Test
     void locateRejectedOutsideRetreat(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);
@@ -263,6 +269,7 @@ class NaturalTest {
      * 归隐之地只允许白名单结构：咖啡厅的群系（樱花林）和地形都满足，但真实生成后没有起点；
      * 白名单里的隐世樱树满足条件时正常生成起点（对照组）。
      */
+    @DisplayName("归隐之地只生成白名单结构：妖精女仆咖啡厅无起点，隐世樱花树正常生成")
     @Test
     void retreatWhitelist(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);
@@ -304,12 +311,14 @@ class NaturalTest {
         ctx.check(treeMissing).as("满足条件却没有生成隐世樱树起点的区块").isEmpty();
     }
 
+    @DisplayName("归隐之地用自己的一份原版地形，不引用主世界密度函数且与主世界逐点同密度")
     @Test
     void retreatOwnTerrain(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);
         ctx.run(() -> retreatOwnTerrain(ctx));
     }
 
+    @DisplayName("隐世之境需要估算地表下方有实心地面：地形被置零时拒绝，估算偏高几格内仍通过")
     @Test
     void hiddenRetreatNeedsRealGround(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);
@@ -317,6 +326,7 @@ class NaturalTest {
     }
 
     /** 固定种子世界里由近及远找到每个自然结构的真实起点（走 STRUCTURE_STARTS），检查起点在建筑高度范围内。 */
+    @DisplayName("固定种子世界里能找到每个自然结构的真实起点，且起点在建筑高度范围内")
     @Test
     void found(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);
@@ -326,6 +336,7 @@ class NaturalTest {
     }
 
     /** 应当不在水里的结构：建筑本体占地内的水柱比例不超过 10%。 */
+    @DisplayName("不应生成在水里的结构，建筑占地内水柱比例不超过 10%")
     @Test
     void notInWater(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);
@@ -336,6 +347,7 @@ class NaturalTest {
         }
     }
 
+    @DisplayName("精灵秘境建筑占地内水柱比例不超过 10%")
     @Test
     @KnownIssue("精灵秘境的水域检查只覆盖 3×3 区块，结构本身远大于这个范围，占地仍可能压在水上")
     void elvenRealmNotInWater(Game game, Plot plot, TestReporter reporter) {
@@ -344,6 +356,7 @@ class NaturalTest {
     }
 
     /** 地形检查用深度函数估算地表，在山地与真实地形偏差很大。 */
+    @DisplayName("隐世之境的地形检查与真实地形吻合：通过检查的位置水柱少、地势平、估算地表准")
     @Test
     @KnownIssue("深度函数估算的地表在山地与真实地形偏差很大")
     void hiddenRetreatTerrainCheckMatchesRealTerrain(Game game, Plot plot, TestReporter reporter) {
@@ -352,6 +365,7 @@ class NaturalTest {
     }
 
     /** 精灵秘境与圣遗礼拜堂同为 relic_sanctum 类型，共用这段地形检查。 */
+    @DisplayName("精灵秘境与圣遗礼拜堂共用的地形检查与真实地形吻合：水柱少、地势平、估算地表准")
     @Test
     @KnownIssue("深度函数估算的地表在山地与真实地形偏差很大")
     void relicSanctumTerrainCheckMatchesRealTerrain(Game game, Plot plot, TestReporter reporter) {
@@ -359,6 +373,7 @@ class NaturalTest {
         terrainCheck(ctx, OVERWORLD, "relic_sanctum", RelicSanctumStructure.class, 1, 1);
     }
 
+    @DisplayName("堕天圣堂的拼图片位于世界底部与下界顶层基岩之间")
     @Test
     void fallenSanctumFitsNetherHeight(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);
@@ -366,6 +381,7 @@ class NaturalTest {
     }
 
     /** 真实生成后每个结构都不悬空、不陷进地里。 */
+    @DisplayName("真实生成后结构不悬空、不陷进地里，也不与其他结构重叠")
     @Test
     void grounded(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);
@@ -374,6 +390,7 @@ class NaturalTest {
         }
     }
 
+    @DisplayName("抽样的村庄中本模组的补充街道与补充房屋都至少出现一次")
     @Test
     void villageSupplementAppears(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);

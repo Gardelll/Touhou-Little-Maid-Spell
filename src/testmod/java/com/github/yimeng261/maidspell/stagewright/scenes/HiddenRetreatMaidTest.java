@@ -22,6 +22,7 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.level.Level;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestReporter;
 
@@ -38,6 +39,7 @@ import java.util.concurrent.Executor;
  * 隐世女仆的归属记录与共享维度兼容：来源标记在转运中的保留与永久效果协议、认领与结构归属的落盘读回、
  * 独立与共享归隐之地的维度判定和任务匹配、共享模式下结构搜索的串行排队。
  */
+@DisplayName("隐世女仆：归属记录与共享归隐之地兼容")
 @Scene("tlms")
 class HiddenRetreatMaidTest {
     private static final UUID FIRST = UUID.fromString("12345678-1234-5678-9abc-123456789abc");
@@ -48,6 +50,7 @@ class HiddenRetreatMaidTest {
     private static final String QUEUE = TheRetreatDimension.class.getPackageName() + ".SharedRetreatSearchQueue";
 
     /** 转运只覆盖自己的字段，不动持久数据里其他模组的内容，来源标记里将来新增的字段也原样带过去。 */
+    @DisplayName("来源标记转运保留其他模组数据，新增字段原样带过去")
     @Test
     void transportKeepsOtherDataAndFutureFields(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);
@@ -55,6 +58,7 @@ class HiddenRetreatMaidTest {
     }
 
     /** 只有根节点上标记的旧数据，经恢复后同样出现在实体加载会读取的持久数据里，并补上来源标记。 */
+    @DisplayName("只有根节点标记的旧数据恢复后出现在持久数据里并补上来源标记")
     @Test
     void rootOnlyMarkersSurviveEntityLoad(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);
@@ -62,6 +66,7 @@ class HiddenRetreatMaidTest {
     }
 
     /** 声明保留永久效果的女仆，胶片里只补回无限时长的效果；没声明的、魂符里已有效果的都不动。 */
+    @DisplayName("声明保留永久效果的女仆，胶片只补回无限时长效果")
     @Test
     void filmRestoresOnlyInfiniteEffects(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);
@@ -69,6 +74,7 @@ class HiddenRetreatMaidTest {
     }
 
     /** 光有来源标记不构成保留永久效果的许可，来源不是合法注册名也不行。 */
+    @DisplayName("仅有来源标记或来源非法时不构成保留永久效果的许可")
     @Test
     void originAloneGrantsNoEffectPermission(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);
@@ -76,6 +82,7 @@ class HiddenRetreatMaidTest {
     }
 
     /** 模板实体生成时只快照初始的无限效果，保留效果名与等级，不留数值 id 与隐藏效果，之后改动活动效果不影响快照。 */
+    @DisplayName("模板实体生成时只快照初始无限效果，之后改动活动效果不影响快照")
     @Test
     void presetSnapshotsOnlyInitialInfiniteEffects(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);
@@ -83,6 +90,7 @@ class HiddenRetreatMaidTest {
     }
 
     /** 放置的是数据包覆盖过的模板时，快照取自这份模板的初始效果，而不是旧模板里嵌的快照。 */
+    @DisplayName("放置数据包覆盖过的模板时，快照取自覆盖后的初始效果")
     @Test
     void presetFollowsPlacedTemplateData(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);
@@ -90,6 +98,7 @@ class HiddenRetreatMaidTest {
     }
 
     /** 没有来源标记的普通女仆模板不会被补上标记，也不会进入效果维护。 */
+    @DisplayName("无来源标记的普通女仆模板不会被补标记也不进入效果维护")
     @Test
     void unmarkedMaidAcquiresNoPreset(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);
@@ -97,6 +106,7 @@ class HiddenRetreatMaidTest {
     }
 
     /** 没有快照的旧标记按模板预设升级一次；已有快照（含显式的空快照）不会被覆盖。 */
+    @DisplayName("无快照的旧标记按模板预设只升级一次，已有快照不被覆盖")
     @Test
     void legacyMarkerMigratesFromTemplateOnce(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);
@@ -104,6 +114,7 @@ class HiddenRetreatMaidTest {
     }
 
     /** 转运数据里的效果被清掉后，预设里的无限效果补回来；无关的效果原样保留，重复补不会叠加。 */
+    @DisplayName("转运数据里被清掉的预设无限效果会补回，无关效果保留且重复补不叠加")
     @Test
     void transportRestoresMissingPresets(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);
@@ -111,6 +122,7 @@ class HiddenRetreatMaidTest {
     }
 
     /** 更强的有限效果过期后能回落到初始的无限效果，但更强的等级不会因此变成永久。 */
+    @DisplayName("更强的有限效果过期后回落到初始无限效果，但不会变成永久")
     @Test
     void strongerFiniteEffectFallsBackToPreset(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);
@@ -118,6 +130,7 @@ class HiddenRetreatMaidTest {
     }
 
     /** 效果模组缺失时按名字查不到，不会读成别的效果。 */
+    @DisplayName("效果模组缺失时按名字查不到，不会读成别的效果")
     @Test
     void absentEffectIsNotLoaded(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);
@@ -125,6 +138,7 @@ class HiddenRetreatMaidTest {
     }
 
     /** 同一来源下有多份初始效果不同的模板女仆时，旧数据迁移不采用任何一份。 */
+    @DisplayName("同一来源下多份初始效果不同的模板女仆，旧数据迁移不采用任何一份")
     @Test
     void sharedSourceWithDifferentEffectsIsAmbiguous(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);
@@ -132,6 +146,7 @@ class HiddenRetreatMaidTest {
     }
 
     /** 认领落盘后重启仍在、互不影响别的玩家，管理员重置后又能重新领取。 */
+    @DisplayName("认领落盘后重启仍在且互不影响别的玩家，重置后可重新领取")
     @Test
     void surviveRestartAndStayPerPlayer(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);
@@ -139,6 +154,7 @@ class HiddenRetreatMaidTest {
     }
 
     /** 归属玩家未认领时，每座结构的模板女仆都生成（含并行装饰的多座）；认领之后不再生成。 */
+    @DisplayName("玩家未认领时每座结构的模板女仆都生成，认领后不再生成")
     @Test
     void templateMaidFollowsClaim(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);
@@ -146,30 +162,35 @@ class HiddenRetreatMaidTest {
     }
 
     /** 共享维度里结构的归属落盘后不变，后来的搜索改派不了，范围之外和别的维度都没有归属。 */
+    @DisplayName("共享维度里结构的归属落盘后不变，后来的搜索改派不了")
     @Test
     void sharedStructureOwnerCannotBeReassigned(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);
         ctx.run(() -> structureOwnership(ctx));
     }
 
+    @DisplayName("共享归隐之地的任务条件匹配共享维度和任意玩家的独立归隐之地")
     @Test
     void sharedConditionAcceptsAnyPrivateRetreat(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);
         ctx.run(() -> sharedConditionAcceptsPrivate(ctx));
     }
 
+    @DisplayName("指定某玩家独立归隐之地的任务条件只匹配该维度")
     @Test
     void explicitConditionStaysExact(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);
         ctx.run(() -> explicitConditionExact(ctx));
     }
 
+    @DisplayName("名字相近的维度（后缀不合法、别的模组命名空间）不被判为归隐之地")
     @Test
     void similarNamesAreNotRetreats(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);
         ctx.run(() -> similarNames(ctx));
     }
 
+    @DisplayName("普通维度的任务条件只精确匹配自己，不匹配其他维度和独立归隐之地")
     @Test
     void ordinaryConditionsStayExact(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);
@@ -177,6 +198,7 @@ class HiddenRetreatMaidTest {
     }
 
     /** 排队中的搜索被取消后，不能让它后面的搜索抢在正在进行的搜索完成之前开始。 */
+    @DisplayName("排队中的搜索被取消后，后继搜索不会抢在进行中的搜索完成前开始")
     @Test
     void cancelledSearchDoesNotReleaseSuccessor(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);
@@ -184,6 +206,7 @@ class HiddenRetreatMaidTest {
     }
 
     /** 启动失败的搜索不堵后面的搜索，不同维度各自排队。 */
+    @DisplayName("启动失败的搜索不堵后面的搜索，不同维度各自排队")
     @Test
     void failureDoesNotBlockAndDimensionsIndependent(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);

@@ -13,6 +13,7 @@ import net.magicterra.stagewright.test.Game;
 import net.magicterra.stagewright.test.Plot;
 import net.magicterra.stagewright.test.Scene;
 import net.neoforged.neoforge.common.ModConfigSpec;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestReporter;
 
@@ -31,51 +32,61 @@ import java.util.stream.Stream;
  * 新文件的每一项在补全后都带中英文注释。
  */
 @Scene("tlms")
+@DisplayName("配置文件拆分与迁移")
 class ConfigFileTest {
     private static final String MIGRATION = Config.class.getPackageName() + ".ConfigMigration";
 
+    @DisplayName("旧的 winefox.toml 原样改名为 boss.toml，重复迁移不出错")
     @Test
     void winefoxFileRenamedToBoss(Game game, Plot plot, TestReporter reporter) {
         io(Stage.sky(game, plot, reporter), ConfigFileTest::bossRenamed);
     }
 
+    @DisplayName("boss.toml 已存在时以它为准，旧的 winefox.toml 保留不动")
     @Test
     void existingBossFileWins(Game game, Plot plot, TestReporter reporter) {
         io(Stage.sky(game, plot, reporter), ConfigFileTest::bossExists);
     }
 
+    @DisplayName("旧通用配置按分组拆进多个新文件，玩家改过的值保留，旧文件改名留作备份")
     @Test
     void legacyCommonSplitsIntoFiles(Game game, Plot plot, TestReporter reporter) {
         io(Stage.sky(game, plot, reporter), ConfigFileTest::legacyCommon);
     }
 
+    @DisplayName("新文件已存在的分组以新文件为准，其余分组照常从旧通用配置迁入")
     @Test
     void existingSplitFileWinsOverLegacy(Game game, Plot plot, TestReporter reporter) {
         io(Stage.sky(game, plot, reporter), ConfigFileTest::legacyCommonExistingWins);
     }
 
+    @DisplayName("旧客户端配置整体搬到 client/ender_pocket.toml，已改的值保留")
     @Test
     void legacyClientMoves(Game game, Plot plot, TestReporter reporter) {
         io(Stage.sky(game, plot, reporter), ConfigFileTest::legacyClient);
     }
 
+    @DisplayName("baubles.toml 旧分组的项挪进 utility 与 special，新位置已有的值不被覆盖")
     @Test
     void baublesOldGroupsMoveToUtilityAndSpecial(Game game, Plot plot, TestReporter reporter) {
         io(Stage.sky(game, plot, reporter), ConfigFileTest::baublesLayout);
     }
 
+    @DisplayName("星落之庭生成开关缺省为开启，显式关闭后补全仍保持关闭")
     @Test
     void starfallGardenSwitchDefaultsOnAndKeepsFalse(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);
         ctx.run(() -> starfallGardenSwitch(ctx));
     }
 
+    @DisplayName("实用魔法女仆地形保护配置缺省为开启，显式关闭后补全仍保持关闭")
     @Test
     void usefulMagicTerrainProtectionDefaultsOnAndKeepsFalse(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);
         ctx.run(() -> usefulMagicTerrainProtection(ctx));
     }
 
+    @DisplayName("各配置文件补全后每一项都带中英文注释，已填的值不被覆盖")
     @Test
     void everyEntryBilingualAfterCorrect(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);

@@ -21,6 +21,7 @@ import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.ai.goal.Goal;
 import net.minecraft.world.entity.projectile.Arrow;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestReporter;
 import org.junit.jupiter.api.parallel.ResourceAccessMode;
@@ -42,6 +43,7 @@ import static com.github.yimeng261.maidspell.stagewright.support.Checks.NS;
  * 每个测试掉的血都不到一半，不会触发转阶段。
  * 动态限伤开关是全局配置，整个类持有同一把读写锁，测试之间互斥。
  */
+@DisplayName("星之魔女：动态限伤")
 @Scene("tlms")
 @ResourceLock(value = "winefox.adaptiveDamageConfig", mode = ResourceAccessMode.READ_WRITE)
 class WinefoxAdaptiveDamageTest {
@@ -87,6 +89,7 @@ class WinefoxAdaptiveDamageTest {
     }
 
     /** 一个窗口内每个受击间隔都打一记远超上限的伤害：首击吃满单次上限，之后被压低，整体有效 DPS 不超过最终预算。 */
+    @DisplayName("持续高压下首击吃满单次上限，之后被压低，窗口内有效 DPS 不超过最终预算")
     @Test
     void sustainedPressureStaysWithinBudget(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
         Stage ctx = Stage.flat(game, plot, reporter);
@@ -111,6 +114,7 @@ class WinefoxAdaptiveDamageTest {
     }
 
     /** 尝试 DPS 远低于启动倍数、单击也不到高伤阈值时，每一击都原样生效。 */
+    @DisplayName("轻度施压（尝试 DPS 低、单击不到高伤阈值）时每一击原样生效，不减伤")
     @Test
     void lightPressureUnreduced(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
         Stage ctx = Stage.flat(game, plot, reporter);
@@ -129,6 +133,7 @@ class WinefoxAdaptiveDamageTest {
     }
 
     /** 单击不到上限和高伤阈值、但按受击间隔连打时也会被压低；停手一个窗口后，下一击恢复原伤。 */
+    @DisplayName("低于单次上限的高频伤害也会被压低，停手一个窗口后恢复原伤")
     @Test
     void subCapPressureReducedThenRecovers(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
         Stage ctx = Stage.flat(game, plot, reporter);
@@ -152,6 +157,7 @@ class WinefoxAdaptiveDamageTest {
     }
 
     /** 关掉动态限伤：连续远超上限的伤害每一击都正好是单次上限，没有动态减伤，也没有高伤保护。 */
+    @DisplayName("关闭动态限伤后每击都正好是单次上限，无动态减伤也无高伤保护")
     @Test
     void disabledLeavesOnlyHitCap(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
         Stage ctx = Stage.flat(game, plot, reporter);
@@ -164,46 +170,55 @@ class WinefoxAdaptiveDamageTest {
         }
     }
 
+    @DisplayName("近战伤害持续高压：首击吃满单次上限，整体有效 DPS 不超过最终预算")
     @Test
     void melee(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
         sourcePressure(Stage.flat(game, plot, reporter), MELEE);
     }
 
+    @DisplayName("弹射物（箭）伤害持续高压：首击吃满单次上限，整体有效 DPS 不超过最终预算")
     @Test
     void arrow(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
         sourcePressure(Stage.flat(game, plot, reporter), ARROW);
     }
 
+    @DisplayName("铁魔法法术伤害持续高压：首击吃满单次上限，整体有效 DPS 不超过最终预算")
     @Test
     void spell(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
         sourcePressure(Stage.flat(game, plot, reporter), SPELL);
     }
 
+    @DisplayName("瞬间伤害药水持续高压：首击吃满单次上限，整体有效 DPS 不超过最终预算")
     @Test
     void harmingPotion(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
         sourcePressure(Stage.flat(game, plot, reporter), HARMING_POTION);
     }
 
+    @DisplayName("魔法伤害持续高压：首击吃满单次上限，整体有效 DPS 不超过最终预算")
     @Test
     void magic(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
         sourcePressure(Stage.flat(game, plot, reporter), MAGIC);
     }
 
+    @DisplayName("爆炸伤害持续高压：首击吃满单次上限，整体有效 DPS 不超过最终预算")
     @Test
     void explosion(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
         sourcePressure(Stage.flat(game, plot, reporter), EXPLOSION);
     }
 
+    @DisplayName("火焰伤害持续高压：首击吃满单次上限，整体有效 DPS 不超过最终预算")
     @Test
     void fire(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
         sourcePressure(Stage.flat(game, plot, reporter), FIRE);
     }
 
+    @DisplayName("本模组真伤持续高压：首击吃满单次上限，整体有效 DPS 不超过最终预算")
     @Test
     void trueDamage(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
         sourcePressure(Stage.flat(game, plot, reporter), TRUE_DAMAGE);
     }
 
+    @DisplayName("无来源的直接写血持续高压：首击吃满单次上限，整体有效 DPS 不超过最终预算")
     @Test
     void directSetHealth(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
         sourcePressure(Stage.flat(game, plot, reporter), DIRECT_SET_HEALTH);
@@ -230,6 +245,7 @@ class WinefoxAdaptiveDamageTest {
     }
 
     /** 每 tick 结算的中毒与凋零：有伤害落下，但两次掉血之间不短于受击间隔。 */
+    @DisplayName("中毒与凋零的持续伤害有伤害落下，且两次掉血间隔不短于受击间隔")
     @Test
     void poisonAndWitherFollowHitInterval(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
         Stage ctx = Stage.flat(game, plot, reporter);

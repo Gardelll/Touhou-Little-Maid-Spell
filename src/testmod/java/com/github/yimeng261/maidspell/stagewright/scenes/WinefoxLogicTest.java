@@ -18,6 +18,7 @@ import net.magicterra.stagewright.test.Plot;
 import net.magicterra.stagewright.test.Scene;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.FriendlyByteBuf;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestReporter;
 
@@ -31,12 +32,14 @@ import java.util.function.Function;
  * 眩晕动画与星锚眩晕时长、法术默认权重、近战连段的出招节奏，以及挑战配置（含护甲）的存取与网络往返。
  */
 @Scene("tlms")
+@DisplayName("星之魔女战斗：纯计算逻辑")
 class WinefoxLogicTest {
     private static final List<WinefoxAction> SWORD_ACTIONS = List.of(
             WinefoxAction.SWORD_ATTACK_1, WinefoxAction.SWORD_ATTACK_2,
             WinefoxAction.SWORD_ATTACK_3, WinefoxAction.SWORD_ATTACK_4);
 
     /** 先减伤再封顶：100 减到 50 再封顶 48，而不是先封顶到 48 再减成 24。 */
+    @DisplayName("承伤先减伤再按单次上限封顶，而不是先封顶再减伤")
     @Test
     void reductionBeforeSingleHitCap(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);
@@ -44,6 +47,7 @@ class WinefoxLogicTest {
     }
 
     /** 额外直接写入的生命变化也算进本次伤害。 */
+    @DisplayName("额外直接写入的生命变化也算进本次伤害")
     @Test
     void extraHealthWriteCounted(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);
@@ -51,6 +55,7 @@ class WinefoxLogicTest {
     }
 
     /** 溢出伤害按原始压力计算，不截到剩余生命。 */
+    @DisplayName("溢出伤害按原始压力计算，不截到剩余生命")
     @Test
     void overkillNotClippedToRemainingHealth(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);
@@ -58,6 +63,7 @@ class WinefoxLogicTest {
     }
 
     /** 极端但有限的写入仍得到有限伤害。 */
+    @DisplayName("极端但有限的生命写入仍得到有限的伤害")
     @Test
     void extremeWritesStayFinite(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);
@@ -65,6 +71,7 @@ class WinefoxLogicTest {
     }
 
     /** 治疗和 NaN、负无穷这类无效写入不算伤害。 */
+    @DisplayName("治疗以及 NaN、负无穷这类无效写入不算伤害")
     @Test
     void healingAndInvalidWritesAreNotDamage(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);
@@ -72,6 +79,7 @@ class WinefoxLogicTest {
     }
 
     /** 减伤和保护叠完之后只剩一点残血的写入，会被补足到最低有效伤害并清零残血。 */
+    @DisplayName("减伤和保护叠完只剩一点残血的写入，补足到最低有效伤害并清零残血")
     @Test
     void minimumDamageClearsTinyResidual(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);
@@ -79,6 +87,7 @@ class WinefoxLogicTest {
     }
 
     /** 最低有效伤害在高伤保护之后结算。 */
+    @DisplayName("最低有效伤害在高伤保护之后结算")
     @Test
     void minimumDamageAppliesAfterGuard(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);
@@ -86,6 +95,7 @@ class WinefoxLogicTest {
     }
 
     /** 最低有效伤害不超过单次封顶。 */
+    @DisplayName("最低有效伤害不超过单次封顶")
     @Test
     void minimumDamageNeverExceedsHitCap(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);
@@ -93,6 +103,7 @@ class WinefoxLogicTest {
     }
 
     /** 被减到零的伤害写入仍然算一次命中，且不足最低伤害的残血直接归零。 */
+    @DisplayName("被减到零的伤害写入仍算一次命中，不足最低伤害的残血直接归零")
     @Test
     void minimumDamageCountsZeroedHit(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);
@@ -100,6 +111,7 @@ class WinefoxLogicTest {
     }
 
     /** 治疗不会被当成伤害，致命一击保持为零。 */
+    @DisplayName("最低有效伤害不把治疗当成伤害，致命一击保持为零")
     @Test
     void minimumDamageLeavesHealingAndLethalAlone(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);
@@ -107,6 +119,7 @@ class WinefoxLogicTest {
     }
 
     /** 不限伤的写入使用默认的最低有效伤害。 */
+    @DisplayName("不限伤的写入使用默认的最低有效伤害")
     @Test
     void minimumDamageUnlimitedCapUsesDefault(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);
@@ -114,6 +127,7 @@ class WinefoxLogicTest {
     }
 
     /** 高伤一击之后保护仍在，不够格的小伤害不消耗它。 */
+    @DisplayName("高伤一击之后保护仍在，不够格的小伤害不消耗它")
     @Test
     void smallHitKeepsGuard(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);
@@ -121,6 +135,7 @@ class WinefoxLogicTest {
     }
 
     /** 连续高伤只刷新保护，不叠加。 */
+    @DisplayName("连续高伤只刷新高伤保护，不叠加")
     @Test
     void refreshesWithoutStacking(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);
@@ -128,6 +143,7 @@ class WinefoxLogicTest {
     }
 
     /** 阈值是最大生命的 5%，正好等于阈值也算高伤，之后的小伤害不会清掉保护。 */
+    @DisplayName("高伤阈值为最大生命的 5%，正好等于阈值也算高伤")
     @Test
     void thresholdFivePercentInclusive(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);
@@ -135,6 +151,7 @@ class WinefoxLogicTest {
     }
 
     /** 保护在时限内有效，过了时限失效。 */
+    @DisplayName("高伤保护在时限内有效，过了时限失效")
     @Test
     void expiresAfterLifetime(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);
@@ -142,6 +159,7 @@ class WinefoxLogicTest {
     }
 
     /** 保护状态可以从存档恢复，也可以清掉。 */
+    @DisplayName("高伤保护状态可以从存档恢复，也可以清掉")
     @Test
     void pendingRestoredAndReset(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);
@@ -149,6 +167,7 @@ class WinefoxLogicTest {
     }
 
     /** 剑阵之后依次是停顿、闪身、瞬移、斩击，各步等对应法术真正开始或放出。 */
+    @DisplayName("剑系连段在剑阵后依次为停顿、闪身、瞬移、斩击，各步等对应法术开始或放出")
     @Test
     void stepsInOrder(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);
@@ -156,6 +175,7 @@ class WinefoxLogicTest {
     }
 
     /** 无关法术的放出不能跳过停顿或闪身。 */
+    @DisplayName("无关法术的放出不能让剑系连段跳过停顿或闪身")
     @Test
     void unrelatedReleasesCannotSkip(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);
@@ -163,6 +183,7 @@ class WinefoxLogicTest {
     }
 
     /** 在任意一步打断都会清空连段，之后能重新开始。 */
+    @DisplayName("在剑系连段任意一步打断都会清空连段，之后能重新开始")
     @Test
     void interruptionClearsEveryStep(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);
@@ -170,6 +191,7 @@ class WinefoxLogicTest {
     }
 
     /** 眩晕动画长 6 秒，覆盖星锚珍珠的整段眩晕。 */
+    @DisplayName("眩晕动画长 6 秒，覆盖星锚珍珠的整段眩晕")
     @Test
     void dizzyAnimationCoversPearlStun(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);
@@ -177,18 +199,21 @@ class WinefoxLogicTest {
     }
 
     /** 默认权重：剑牢二阶段减半，黑洞二阶段加倍，其余法术两阶段都是 2。 */
+    @DisplayName("法术默认权重：剑牢二阶段减半，黑洞二阶段加倍，其余法术两阶段都是 2")
     @Test
     void swordPrisonHalvedOnlyInPhaseTwo(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);
         ctx.run(() -> spellWeights(ctx));
     }
 
+    @DisplayName("三连击近战每一击的起手时刻与整套打完放开 AI 的时刻符合预期")
     @Test
     void threeHitComboTimeline(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);
         ctx.run(() -> comboTimeline(ctx, 3, 0, 12, 24, 42));
     }
 
+    @DisplayName("四连击近战每一击的起手时刻与整套打完放开 AI 的时刻符合预期")
     @Test
     void fourHitComboTimeline(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);
@@ -196,6 +221,7 @@ class WinefoxLogicTest {
     }
 
     /** 只有剑系动作允许提前接续，其余动作的接续时刻等于动作时长。 */
+    @DisplayName("只有剑系动作允许提前接续，其余动作的接续时刻等于动作时长")
     @Test
     void onlySwordActionsFollowUpEarly(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);
@@ -203,6 +229,7 @@ class WinefoxLogicTest {
     }
 
     /** 剑系接续不丢动作事件，单独出招时冷却覆盖完整动画。 */
+    @DisplayName("剑系接续不丢动作事件，单独出招时冷却覆盖完整动画")
     @Test
     void followUpsKeepEventsAndFullRecovery(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);
@@ -210,6 +237,7 @@ class WinefoxLogicTest {
     }
 
     /** 护甲与其他设置一起经 NBT 和网络往返后不变。 */
+    @DisplayName("挑战配置的护甲与其他设置经 NBT 和网络往返后不变")
     @Test
     void armorRoundTrips(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);
@@ -217,6 +245,7 @@ class WinefoxLogicTest {
     }
 
     /** 没有护甲字段的旧挑战与预设按默认护甲读入。 */
+    @DisplayName("没有护甲字段的旧挑战与预设按默认护甲读入")
     @Test
     void legacyTagsUseDefaultArmor(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);
@@ -224,6 +253,7 @@ class WinefoxLogicTest {
     }
 
     /** 护甲下限是服务器默认值的一半，上限是原版属性上限 30。 */
+    @DisplayName("挑战护甲下限是服务器默认值的一半，上限是原版属性上限 30")
     @Test
     void armorBounds(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);
@@ -231,6 +261,7 @@ class WinefoxLogicTest {
     }
 
     /** 插入护甲一项后，其他基础设置的下限仍对应各自的设置项。 */
+    @DisplayName("插入护甲一项后，其他基础设置的下限仍对应各自的设置项")
     @Test
     void basicLimitsKeepTheirSlots(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);
@@ -238,6 +269,7 @@ class WinefoxLogicTest {
     }
 
     /** 预设经网络往返后保留护甲和空槽位。 */
+    @DisplayName("挑战预设经网络往返后保留护甲和空槽位")
     @Test
     void presetsRoundTripWithEmptySlots(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);

@@ -36,6 +36,7 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestReporter;
 
@@ -43,69 +44,81 @@ import java.util.ArrayDeque;
 import java.util.List;
 
 /** 女仆地形保护与实用魔法游戏规则独立，真实爆破、分批队列及挖掘在落地时遵循当前配置（集成拓扑，专用服不装 UsefulMagic）。 */
+@DisplayName("实用魔法：女仆地形保护")
 @Scene("tlms.integrated")
 @Requires(mods = "usefulmagic")
 class UsefulMagicTerrainTest {
+    @DisplayName("保护开启、地形破坏规则开启：女仆来源的爆破不破坏方块")
     @Test
     void maidProtectionTrueRuleTrue(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
         Stage ctx = Stage.flat(game, plot, reporter);
         ctx.run(() -> matrix(ctx, true, true, true));
     }
 
+    @DisplayName("保护开启、地形破坏规则开启：玩家来源的爆破照常破坏方块")
     @Test
     void playerProtectionTrueRuleTrue(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
         Stage ctx = Stage.flat(game, plot, reporter);
         ctx.run(() -> matrix(ctx, true, true, false));
     }
 
+    @DisplayName("保护开启、地形破坏规则关闭：女仆来源的爆破不破坏方块")
     @Test
     void maidProtectionTrueRuleFalse(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
         Stage ctx = Stage.flat(game, plot, reporter);
         ctx.run(() -> matrix(ctx, true, false, true));
     }
 
+    @DisplayName("保护开启、地形破坏规则关闭：玩家来源的爆破也不破坏方块")
     @Test
     void playerProtectionTrueRuleFalse(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
         Stage ctx = Stage.flat(game, plot, reporter);
         ctx.run(() -> matrix(ctx, true, false, false));
     }
 
+    @DisplayName("保护关闭、地形破坏规则开启：女仆来源的爆破照常破坏方块")
     @Test
     void maidProtectionFalseRuleTrue(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
         Stage ctx = Stage.flat(game, plot, reporter);
         ctx.run(() -> matrix(ctx, false, true, true));
     }
 
+    @DisplayName("保护关闭、地形破坏规则开启：玩家来源的爆破照常破坏方块")
     @Test
     void playerProtectionFalseRuleTrue(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
         Stage ctx = Stage.flat(game, plot, reporter);
         ctx.run(() -> matrix(ctx, false, true, false));
     }
 
+    @DisplayName("保护关闭、地形破坏规则关闭：女仆来源的爆破不破坏方块")
     @Test
     void maidProtectionFalseRuleFalse(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
         Stage ctx = Stage.flat(game, plot, reporter);
         ctx.run(() -> matrix(ctx, false, false, true));
     }
 
+    @DisplayName("保护关闭、地形破坏规则关闭：玩家来源的爆破不破坏方块")
     @Test
     void playerProtectionFalseRuleFalse(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
         Stage ctx = Stage.flat(game, plot, reporter);
         ctx.run(() -> matrix(ctx, false, false, false));
     }
 
+    @DisplayName("陨石分批破坏队列按当前保护配置处理：开启保护后终止剩余批次，重新关闭后恢复破坏")
     @Test
     void pendingQueueUsesCurrentSetting(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
         Stage ctx = Stage.flat(game, plot, reporter);
         pendingQueue(ctx);
     }
 
+    @DisplayName("沿所有者链追溯到女仆的召唤物受保护，追溯到玩家的仍遵循原规则")
     @Test
     void maidOwnerChain(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
         Stage ctx = Stage.flat(game, plot, reporter);
         ctx.run(() -> ownerChain(ctx));
     }
 
+    @DisplayName("保护开启时女仆的挖掘魔法与巨剑不破坏地形、仍伤害实体，关闭后恢复")
     @Test
     void diggingAndGiantSword(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
         Stage ctx = Stage.flat(game, plot, reporter);

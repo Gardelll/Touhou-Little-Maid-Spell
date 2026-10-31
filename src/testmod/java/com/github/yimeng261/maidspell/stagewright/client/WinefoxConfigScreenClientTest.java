@@ -14,6 +14,7 @@ import net.magicterra.stagewright.test.Plot;
 import net.magicterra.stagewright.test.Player;
 import net.magicterra.stagewright.test.Requires;
 import net.magicterra.stagewright.test.Scene;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestReporter;
 import net.minecraft.client.Minecraft;
@@ -30,10 +31,12 @@ import java.util.List;
  * 酒狐挑战配置界面的输入路由：基础参数输入框反复选中仍能输入，滚动条拖动与松开，滚动后命中区域跟着移动，切换模式时释放隐藏输入框的焦点。
  * <p>界面只初始化、不显示，直接调用它的输入回调。
  */
+@DisplayName("星之魔女挑战配置界面的输入路由")
 @Scene("tlms.integrated")
 class WinefoxConfigScreenClientTest {
 
     /** 两个输入框来回选中多次，每次都直接收到界面的字符输入。 */
+    @DisplayName("基础参数输入框来回反复选中后，每次都能直接接收字符输入")
     @Test
     @Requires(Requires.Capability.CLIENT)
     void basicInputsKeepFocus(Game game, @Plot.Size(32) @Plot.Centered Plot plot, Player player, TestReporter reporter) {
@@ -43,6 +46,7 @@ class WinefoxConfigScreenClientTest {
     }
 
     /** 拖动滚动条使输入框上移；在面板外松开后不再残留拖动状态。 */
+    @DisplayName("拖动滚动条使输入框上移，在面板外松开后不残留拖动状态")
     @Test
     @Requires(Requires.Capability.CLIENT)
     void scrollbarDragAndOutsideRelease(Game game, @Plot.Size(32) @Plot.Centered Plot plot, Player player, TestReporter reporter) {
@@ -52,6 +56,7 @@ class WinefoxConfigScreenClientTest {
     }
 
     /** 滚轮滚动后命中区域跟着移动，滚出可见区的输入框不接收点击，滚进来的输入框可以输入且在背包区之上。 */
+    @DisplayName("滚轮滚动后命中区域跟着移动，滚出可见区的输入框不接收点击，滚进来的可以输入")
     @Test
     @Requires(Requires.Capability.CLIENT)
     void scrollMovesHitboxes(Game game, @Plot.Size(32) @Plot.Centered Plot plot, Player player, TestReporter reporter) {
@@ -61,6 +66,7 @@ class WinefoxConfigScreenClientTest {
     }
 
     /** 切到高级模式时隐藏的输入框交出焦点并停用；切回后恢复编辑。 */
+    @DisplayName("切到高级模式时隐藏的输入框交出焦点并停用，切回后恢复编辑")
     @Test
     @Requires(Requires.Capability.CLIENT)
     void modeSwitchReleasesHiddenFocus(Game game, @Plot.Size(32) @Plot.Centered Plot plot, Player player, TestReporter reporter) {

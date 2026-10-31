@@ -33,6 +33,7 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.entity.living.MobSpawnEvent;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestReporter;
 
@@ -50,6 +51,7 @@ import static com.github.yimeng261.maidspell.stagewright.support.Checks.NS;
  * 镇石对生成检查事件的拦截、喋血之心/熔岩狐叶/春花-返/馥郁巧思的效果。
  */
 @Scene("tlms")
+@DisplayName("花、镇石与饰品的功能行为")
 class FunctionTest {
     /** 花的光环半径：AABB(花).inflate(3)，距花 3 格的生物在内、4 格的在外。 */
     private static final int INSIDE = 3;
@@ -73,6 +75,7 @@ class FunctionTest {
      * 猩红朱华：范围内存活生物获得力量 II（100 tick，环境效果、无粒子）；非女仆、非入魔骑士额外获得凋零 I；
      * Iron's 的非敌对商人 NPC 不受影响；距花 4 格的生物不受影响。
      */
+    @DisplayName("猩红朱华光环：范围内生物得力量 II，非女仆非入魔骑士另得凋零 I，商人 NPC 与范围外生物不受影响")
     @Test
     void scarletZhuhuaAura(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
         scarletZhuhua(Stage.flat(game, plot, reporter), "scarlet_zhuhua");
@@ -82,30 +85,35 @@ class FunctionTest {
      * 盆栽版，猩红朱华：范围内存活生物获得力量 II（100 tick，环境效果、无粒子）；非女仆、非入魔骑士额外获得凋零 I；
      * Iron's 的非敌对商人 NPC 不受影响；距花 4 格的生物不受影响。
      */
+    @DisplayName("盆栽猩红朱华光环：范围内生物得力量 II，非女仆非入魔骑士另得凋零 I，商人 NPC 与范围外生物不受影响")
     @Test
     void pottedScarletZhuhuaAura(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
         scarletZhuhua(Stage.flat(game, plot, reporter), "potted_scarlet_zhuhua");
     }
 
     /** 月铃兰：范围内女仆获得生命恢复 I 与抗性提升 I（100 tick，非环境效果）；其他生物、距花 4 格的女仆不受影响。 */
+    @DisplayName("月铃兰光环：范围内女仆得生命恢复 I 与抗性提升 I，其他生物与范围外女仆不受影响")
     @Test
     void yueLinglanAura(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
         yueLinglan(Stage.flat(game, plot, reporter), "yue_linglan");
     }
 
     /** 盆栽版，月铃兰：范围内女仆获得生命恢复 I 与抗性提升 I（100 tick，非环境效果）；其他生物、距花 4 格的女仆不受影响。 */
+    @DisplayName("盆栽月铃兰光环：范围内女仆得生命恢复 I 与抗性提升 I，其他生物与范围外女仆不受影响")
     @Test
     void pottedYueLinglanAura(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
         yueLinglan(Stage.flat(game, plot, reporter), "potted_yue_linglan");
     }
 
     /** 净墟幽兰：范围内女仆只移除有害效果；其他生物移除全部效果；距花 4 格的不受影响。 */
+    @DisplayName("净墟幽兰光环：范围内女仆只移除有害效果，其他生物移除全部效果，范围外不受影响")
     @Test
     void jingxuYoulanPurge(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
         jingxuYoulan(Stage.flat(game, plot, reporter), "jingxu_youlan");
     }
 
     /** 盆栽版，净墟幽兰：范围内女仆只移除有害效果；其他生物移除全部效果；距花 4 格的不受影响。 */
+    @DisplayName("盆栽净墟幽兰光环：范围内女仆只移除有害效果，其他生物移除全部效果，范围外不受影响")
     @Test
     void pottedJingxuYoulanPurge(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
         jingxuYoulan(Stage.flat(game, plot, reporter), "potted_jingxu_youlan");
@@ -208,6 +216,7 @@ class FunctionTest {
      * 镇石：7×7 区块内敌对生物的生成位置检查被拒绝（豁免的生成方式除外），范围外、非敌对生物不受影响；
      * 拆掉镇石后不再拦截。
      */
+    @DisplayName("镇石拒绝 7×7 区块内敌对生物的生成位置检查（豁免方式除外），范围外与非敌对生物不受影响，拆除后不再拦截")
     @Test
     void positionCheck(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
         Stage ctx = Stage.flat(game, plot, reporter);
@@ -262,6 +271,7 @@ class FunctionTest {
     // ---- 饰品 ----
 
     /** 喋血之心：女仆造成伤害后按目标实际掉血的 10% 治疗自己；没有饰品的女仆不治疗。 */
+    @DisplayName("喋血之心：女仆造成伤害后按目标实际掉血的 10% 治疗自己，没有饰品的女仆不治疗")
     @Test
     void healsMaidOnHit(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
         Stage ctx = Stage.flat(game, plot, reporter);
@@ -295,6 +305,7 @@ class FunctionTest {
     }
 
     /** 熔岩狐叶：免疫熔岩/火焰/燃烧/灼热地面伤害并熄火；绕过无敌的伤害照常生效；无饰品女仆照常受伤。 */
+    @DisplayName("熔岩狐叶：免疫熔岩、火焰、燃烧、灼热地面伤害并熄火，绕过无敌的伤害照常生效，无饰品女仆照常受伤")
     @Test
     void fireImmunity(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
         Stage ctx = Stage.flat(game, plot, reporter);
@@ -334,6 +345,7 @@ class FunctionTest {
     }
 
     /** 熔岩狐叶：女仆站在熔岩池上不下沉、不受伤、不着火。 */
+    @DisplayName("熔岩狐叶：女仆站在熔岩池上不下沉、不受伤、不着火")
     @Test
     void walksOnLava(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
         Stage ctx = Stage.flat(game, plot, reporter);
@@ -360,6 +372,7 @@ class FunctionTest {
      * 春花-返：施法获得层数（20 tick 获取冷却、最多 3 层、每层 400 tick 后过期）；
      * 受到 ≥4 点或 ≥10% 最大生命的伤害时消耗一层，回复 5% 最大生命，进入 200 tick 触发冷却。
      */
+    @DisplayName("春花-返：施法获得层数（有获取冷却与上限、会过期），受到重击消耗一层并回复生命、进入触发冷却")
     @Test
     void stacksAndTrigger(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
         Stage ctx = Stage.flat(game, plot, reporter);
@@ -419,6 +432,7 @@ class FunctionTest {
     }
 
     /** 春花-返：好感度等级 ≥3 时触发还会移除一个负面效果（持续时间最长的）。 */
+    @DisplayName("春花-返：好感度等级达到 3 时触发还会移除持续时间最长的一个负面效果")
     @Test
     void purgeAtFavorabilityLevel3(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
         Stage ctx = Stage.flat(game, plot, reporter);
@@ -442,6 +456,7 @@ class FunctionTest {
     }
 
     /** 春花-返：女仆用 Iron's 法术书真实施法一次后获得一层。 */
+    @DisplayName("春花-返：女仆用 Iron's 法术书真实施法一次后获得一层")
     @Test
     void realIronsCast(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
         Stage ctx = Stage.flat(game, plot, reporter);
@@ -467,6 +482,7 @@ class FunctionTest {
     }
 
     /** 馥郁巧思：女仆进食后额外增加 2 点好感度；无饰品女仆不增加。 */
+    @DisplayName("馥郁巧思：女仆进食后额外增加 2 点好感度，无饰品女仆不增加")
     @Test
     void eatFavorability(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
         Stage ctx = Stage.flat(game, plot, reporter);

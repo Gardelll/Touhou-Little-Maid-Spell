@@ -27,6 +27,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.levelgen.structure.Structure;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
@@ -68,6 +69,7 @@ import static com.github.yimeng261.maidspell.stagewright.scenes.RetreatFixtures.
  * 已找到后重复查看、没有配额时的提示、不同玩家各自找到自己的隐世之境。
  * <p>测试按 {@link Order} 顺序运行并共享宿主玩家在 RetreatDimensionData 里的记录。
  */
+@DisplayName("共享归隐之地：首次进入、配额与寻风之铃搜索")
 @Scene("tlms.integratedShared")
 @ResourceLock(RetreatFixtures.HOST_PLAYER)
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
@@ -79,6 +81,7 @@ class SharedRetreatTest {
     private static final int OVERLAY_VISIBLE_TICKS = 40;
 
     /** 首次进入共享归隐之地的"已分配专属隐世之境"动作栏提示要能被看到：之后一段时间内不被别的动作栏消息顶掉。 */
+    @DisplayName("首次进入的“已分配专属隐世之境”动作栏提示不被别的动作栏消息顶掉，能被看到")
     @Test
     @Order(1)
     @Requires(Requires.Capability.CLIENT)
@@ -101,6 +104,7 @@ class SharedRetreatTest {
     }
 
     /** 主世界右键进入共享归隐之地：首次进入提示、登记 1 个配额、不消耗铃。 */
+    @DisplayName("主世界右键进入共享归隐之地：首次进入提示、登记 1 个配额、不消耗铃")
     @Test
     @Order(2)
     @Requires(Requires.Capability.CLIENT)
@@ -121,6 +125,7 @@ class SharedRetreatTest {
     }
 
     /** 搜索期间把铃从手上换走：仍给出坐标，不吞铃、不飞铃，配额照常消耗并记住找到的位置。 */
+    @DisplayName("搜索期间把铃换走仍给出坐标，不吞铃、不飞铃，配额照常消耗并记住位置")
     @Test
     @Order(3)
     @Requires(Requires.Capability.CLIENT)
@@ -150,6 +155,7 @@ class SharedRetreatTest {
         });
     }
 
+    @DisplayName("已找到后再次右键，直接给出记住的坐标且不再进入等待搜索")
     @Test
     @Order(4)
     @Requires(Requires.Capability.CLIENT)
@@ -159,6 +165,7 @@ class SharedRetreatTest {
     }
 
     /** 重复查看复用坐标，仍消耗一只铃。 */
+    @DisplayName("已找到后再次右键复用坐标，仍消耗一只铃")
     @Test
     @Order(5)
     @Requires(Requires.Capability.CLIENT)
@@ -168,6 +175,7 @@ class SharedRetreatTest {
     }
 
     /** 没有配额、也没有找到过的结构时右键：提示"你只能搜索一次！"，不搜索、不消耗铃。 */
+    @DisplayName("没有配额也没找到过结构时右键，提示“你只能搜索一次！”，不搜索、不消耗铃")
     @Test
     @Order(6)
     @Requires(Requires.Capability.CLIENT)
@@ -210,6 +218,7 @@ class SharedRetreatTest {
      * 两个模拟玩家（NeoForge FakePlayer，直接放在共享归隐之地同一位置）先后用铃搜索：各自找到一个隐世之境，
      * 位置互不相同、也不同于宿主玩家的；再次搜索不会得到新的。模拟玩家收不到消息，从服务器记录读结果。
      */
+    @DisplayName("两个模拟玩家先后搜索，各自找到互不相同的隐世之境，再次搜索不会得到新的")
     @Test
     @Order(7)
     @Requires(Requires.Capability.CLIENT)

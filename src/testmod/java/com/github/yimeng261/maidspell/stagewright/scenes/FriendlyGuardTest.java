@@ -17,6 +17,7 @@ import net.minecraft.world.damagesource.DamageTypes;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.TamableAnimal;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestReporter;
 
@@ -28,6 +29,7 @@ import static com.github.yimeng261.maidspell.stagewright.support.Checks.NS;
  * 强力防友伤（{@code powerfulFriendlyFireProtection}）：友方强制写血在 1 tick 窗口内被恢复、窗口内的移除被拦截，
  * 窗口过期后放开，敌方伤害照常致死，开关默认关闭时什么都不做；星之魔女的 hurt 早退路径不残留伤害帧。
  */
+@DisplayName("强力防友伤")
 @Scene("tlms")
 class FriendlyGuardTest {
     /** 打开开关，测试结束时还原（服务端线程）。 */
@@ -44,6 +46,7 @@ class FriendlyGuardTest {
     }
 
     /** 友方命中后一个 tick 内：强制把血写低被恢复到命中前，KILLED 原因的移除被拦下。 */
+    @DisplayName("友方命中后 1 tick 内：强制写低的生命被恢复，KILLED 移除被拦下")
     @Test
     void restoresForcedWriteAndBlocksRemoval(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
         Stage ctx = Stage.flat(game, plot, reporter);
@@ -64,6 +67,7 @@ class FriendlyGuardTest {
     }
 
     /** 窗口只有 1 tick：之后同样的强制写血不再被恢复。 */
+    @DisplayName("保护窗口只有 1 tick，过期后强制写血不再被恢复")
     @Test
     void windowExpiresAfterOneTick(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
         Stage ctx = Stage.flat(game, plot, reporter);
@@ -82,6 +86,7 @@ class FriendlyGuardTest {
     }
 
     /** 开关默认关闭：友方命中后强制写血照常生效。 */
+    @DisplayName("开关默认关闭，友方命中后强制写血照常生效")
     @Test
     void offByDefaultDoesNothing(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
         Stage ctx = Stage.flat(game, plot, reporter);
@@ -96,6 +101,7 @@ class FriendlyGuardTest {
     }
 
     /** 开启后敌对生物的正常攻击不被误拦：致命一击照常致死。 */
+    @DisplayName("开启后敌对生物的致命一击不被误拦，宠物照常死亡")
     @Test
     void hostileDamageStillKills(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
         Stage ctx = Stage.flat(game, plot, reporter);
@@ -113,6 +119,7 @@ class FriendlyGuardTest {
      * 星之魔女的 hurt 在伤害量非正等早退分支里不进 super.hurt，RETURN 钩子不会清伤害帧；
      * 魔女自己用 finally 清掉，不能残留到 tick 末。
      */
+    @DisplayName("星之魔女的 hurt 在伤害量为 0 等早退分支后不残留伤害帧")
     @Test
     @SuppressWarnings("unchecked")
     void winefoxEarlyExitLeavesNoFrame(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {

@@ -35,6 +35,7 @@ import net.minecraft.world.level.ForcedChunksSavedData;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestReporter;
 
@@ -51,6 +52,7 @@ import static com.github.yimeng261.maidspell.stagewright.support.Checks.NS;
  * 以及普通生物的交互与转化不受这些保护影响。主人在线的记录见 {@link AnchorIntegratedTest}。
  */
 @Scene("tlms")
+@DisplayName("锚定核心：强加载记录与保护（专用服）")
 class AnchorTest {
     static final String ANCHOR = NS + "anchor_core";
 
@@ -80,6 +82,7 @@ class AnchorTest {
     }
 
     /** 离线主人的记录与待变更跟着女仆换区块（女仆从 z=-8 移到 z=8，相隔一个区块宽，区块必然不同）。 */
+    @DisplayName("主人离线时，强加载记录与待变更跟着女仆换区块")
     @Test
     void offlineOwnerRecordFollowsChunk(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
         Stage ctx = Stage.flat(game, plot, reporter);
@@ -96,11 +99,13 @@ class AnchorTest {
         ctx.run(() -> ctx.check(pending(server, owner).get(maid.getUUID())).as("换区块后的待变更").isEqualTo(Optional.of(here(maid))));
     }
 
+    @DisplayName("主人离线时，锚定女仆死亡后记录被删除")
     @Test
     void offlineOwnerDeathDeletesRecord(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
         offlineRecordDeleted(Stage.flat(game, plot, reporter), true);
     }
 
+    @DisplayName("主人离线时，女仆卸下锚定核心后记录被删除")
     @Test
     void offlineOwnerTakeOffDeletesRecord(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
         offlineRecordDeleted(Stage.flat(game, plot, reporter), false);
@@ -128,6 +133,7 @@ class AnchorTest {
      * 离线主人的锚定女仆过了一轮周期校验仍保持强加载；之后女仆绕过正常移除凭空消失（不触发死亡和卸下，票据和记录都留着），
      * 周期校验在区块实体已加载时判定她不在，释放票据、区块不再被实体票据强加载，并把记录记为待删。
      */
+    @DisplayName("锚定女仆绕过正常移除凭空消失后，周期校验释放强加载票据并标记记录待删")
     @Test
     void vanishedMaidTicketReleased(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
         Stage ctx = Stage.flat(game, plot, reporter);
@@ -166,6 +172,7 @@ class AnchorTest {
     }
 
     /** A 离线时对这只女仆留了待删记录，同一只女仆改由 B 锚定：B 的记录照常生效。 */
+    @DisplayName("原主人 A 留下的待删记录不影响改由新主人 B 锚定后的记录")
     @Test
     void otherOwnersPendingRemovalIgnored(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
         Stage ctx = Stage.flat(game, plot, reporter);
@@ -189,6 +196,7 @@ class AnchorTest {
     }
 
     /** 抓捕类物品：Goety 秘法超立方左键锚定女仆被拦下，女仆还在、物品没记下实体。 */
+    @DisplayName("Goety 秘法超立方左键锚定女仆被拦下，女仆还在、物品没记下实体")
     @Test
     void captureBlocked(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
         Stage ctx = Stage.flat(game, plot, reporter);
@@ -210,6 +218,7 @@ class AnchorTest {
         });
     }
 
+    @DisplayName("锚定女仆无法被转化，被雷劈后仍在且保留锚定核心")
     @Test
     void conversionAndLightningBlocked(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
         Stage ctx = Stage.flat(game, plot, reporter);
@@ -227,6 +236,7 @@ class AnchorTest {
     }
 
     /** 背包放一件东西，卸载再加载后饰品、背包都在。 */
+    @DisplayName("锚定女仆卸载再加载后，饰品与背包数据完整")
     @Test
     void unloadReloadKeepsData(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
         Stage ctx = Stage.flat(game, plot, reporter);
@@ -248,6 +258,7 @@ class AnchorTest {
         });
     }
 
+    @DisplayName("锚定女仆换维度后，饰品与背包数据完整，记录跟到下界")
     @Test
     void dimensionChangeKeepsData(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
         Stage ctx = Stage.flat(game, plot, reporter);
@@ -275,6 +286,7 @@ class AnchorTest {
     }
 
     /** 普通生物：拴绳、命名牌、刷怪蛋右键照常。 */
+    @DisplayName("普通生物的拴绳、命名牌、刷怪蛋交互不受锚定保护影响")
     @Test
     void mobInteractionsUnaffected(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
         Stage ctx = Stage.flat(game, plot, reporter);
@@ -301,6 +313,7 @@ class AnchorTest {
     }
 
     /** 普通生物被雷劈照常转化：猪变僵尸猪灵，村民变女巫。 */
+    @DisplayName("普通生物被雷劈照常转化：猪变僵尸猪灵，村民变女巫")
     @Test
     void mobConversionsUnaffected(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
         Stage ctx = Stage.flat(game, plot, reporter);

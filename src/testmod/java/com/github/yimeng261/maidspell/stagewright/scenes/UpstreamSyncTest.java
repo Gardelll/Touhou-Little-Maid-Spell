@@ -23,6 +23,7 @@ import com.github.yimeng261.maidspell.stagewright.support.Stage;
 import net.magicterra.stagewright.test.Game;
 import net.magicterra.stagewright.test.Plot;
 import net.magicterra.stagewright.test.Scene;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestReporter;
 import net.minecraft.core.Holder;
@@ -64,6 +65,7 @@ import static com.github.yimeng261.maidspell.stagewright.support.Checks.NS;
 /**
  * 跟进上游后补的验收：联动 mixin 的加载开关、酒狐交易栏、法术射表、语言文案、咖啡厅的 Youkais' Feasts 回退池与梦云水晶默认白名单。
  */
+@DisplayName("跟进上游补充验收")
 @Scene("tlms")
 class UpstreamSyncTest {
     /** 只在对应模组在场时才应用的联动 mixin 包。 */
@@ -76,48 +78,56 @@ class UpstreamSyncTest {
     private static final List<String> NEW_STRUCTURES = List.of("cherry_cabin", "enchantress_footsteps_crimson_cabin",
             "enchantress_footsteps_basalt_forge", "enchantress_footsteps_warped_perch", "enchantress_footsteps_soulvalley_nook");
 
+    @DisplayName("联动 mixin 只在对应模组在场时应用，其余 mixin 不受影响")
     @Test
     void optionalCompatFollowsLoadedMods(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);
         ctx.run(() -> optionalCompatMixins(ctx));
     }
 
+    @DisplayName("酒狐交易的附魔书与卷轴：战胜前后的内容与绿宝石价格")
     @Test
     void enchantedBooksAndScrolls(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);
         ctx.run(() -> trades(ctx));
     }
 
+    @DisplayName("法术射表为史诗稀有度、在饰品页里，祭坛配方材料与灵力消耗正确")
     @Test
     void itemTabAndAltarRecipe(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);
         ctx.run(() -> rangeTableItem(ctx));
     }
 
+    @DisplayName("坐下或骑乘时只有戴着法术射表才允许施法，站着的女仆不走这条判定")
     @Test
     void ridePoseGate(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
         Stage ctx = Stage.flat(game, plot, reporter);
         ctx.run(() -> ridePoseGate(ctx));
     }
 
+    @DisplayName("5 个新结构与归隐之地的名称在中英日三份语言文件里齐全")
     @Test
     void newStructureAndRetreatNames(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);
         ctx.run(() -> structureNames(ctx));
     }
 
+    @DisplayName("梦云水晶说明只讲女仆的栏位 +1，三种语言都不再提玩家佩戴")
     @Test
     void dreamCrystalDescribesMaidSlotsOnly(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);
         ctx.run(() -> dreamCrystalDesc5(ctx));
     }
 
+    @DisplayName("妖精女仆咖啡厅的起始模板池按妖怪们的归家与 Youkais' Feasts 在场情况回退")
     @Test
     void youkaisFeastsFallbackPool(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);
         ctx.run(() -> cafeFallback(ctx));
     }
 
+    @DisplayName("梦云水晶效果白名单默认放行妖怪们的归家和 Youkais' Feasts 的效果")
     @Test
     void dreamCrystalWhitelistCoversYoukaiMods(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);

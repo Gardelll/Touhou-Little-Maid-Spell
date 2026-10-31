@@ -17,6 +17,7 @@ import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.common.CommonHooks;
 import net.neoforged.neoforge.common.util.FakePlayer;
 import net.neoforged.neoforge.common.util.FakePlayerFactory;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestReporter;
 
@@ -30,23 +31,27 @@ import static com.github.yimeng261.maidspell.stagewright.support.Checks.NS;
  * 星之魔女挑战进度记在主世界存档：旧版记在玩家身上的已击败/进行中标记的迁入与清除、挑战者死亡清掉进行中、
  * 已击败的玩家潜行右键星芒短剑能打开挑战配置。
  */
+@DisplayName("星之魔女挑战进度")
 @Scene("tlms")
 class ChallengeStateTest {
     private static final String LEGACY_DEFEATED = "MaidSpellWinefoxDefeated";
     private static final String LEGACY_ACTIVE = "MaidSpellWinefoxChallengeActive";
 
+    @DisplayName("旧版记在玩家身上的已击败标记迁入主世界存档并从玩家身上清除")
     @Test
     void legacyDefeatedMigrates(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);
         ctx.run(() -> legacyDefeated(ctx));
     }
 
+    @DisplayName("旧版卡在玩家身上的挑战进行中标记被清除，不算进行中")
     @Test
     void legacyActiveCleared(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);
         ctx.run(() -> legacyActive(ctx));
     }
 
+    @DisplayName("挑战者死亡后清掉进行中的挑战标记")
     @Test
     void deathClearsActive(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);
@@ -54,6 +59,7 @@ class ChallengeStateTest {
     }
 
     /** 誓约进度按玩家 UUID 累计：两场常规胜利后专属胜利才生效，旧版实体计数只在玩家无进度时迁入。 */
+    @DisplayName("誓约进度按玩家累计，两场常规胜利后专属胜利才生效，旧版计数只在无进度时迁入")
     @Test
     void vowProgressPerPlayer(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);
@@ -61,6 +67,7 @@ class ChallengeStateTest {
     }
 
     /** 没击败过时打不开；击败后能打开；挑战进行中打不开。 */
+    @DisplayName("潜行右键星芒短剑：未击败过和挑战进行中打不开挑战配置，击败后能打开")
     @Test
     void daggerConfigNeedsDefeat(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);

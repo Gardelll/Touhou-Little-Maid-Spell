@@ -23,6 +23,7 @@ import net.magicterra.stagewright.test.Scene;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.item.ItemStack;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestReporter;
 
@@ -34,6 +35,7 @@ import java.util.List;
  */
 @Scene("tlms")
 @Requires(mods = "goety")
+@DisplayName("Goety 聚晶包：虚拟法杖施法")
 class GoetyVirtualWandTest {
     private static final String FOCUS_BAG = "goety:focus_bag";
     private static final String MAGIC_BOLT_FOCUS = "goety:magic_bolt_focus";
@@ -44,6 +46,7 @@ class GoetyVirtualWandTest {
     private static final String FROST_STAFF = "goety:frost_staff";
 
     /** 只有聚晶包：瞬发的魔弹术通过虚拟法杖放出，施法结束后上下文释放，聚晶仍留在聚晶包里。 */
+    @DisplayName("只有聚晶包时通过虚拟法杖放出魔弹术，上下文释放且聚晶仍在包里")
     @Test
     void castsWithFocusBagOnly(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
         Stage ctx = Stage.flat(game, plot, reporter);
@@ -51,6 +54,7 @@ class GoetyVirtualWandTest {
     }
 
     /** 虚拟法杖上的 Goety 聚晶读取走聚晶包槽位，写入也落回聚晶包，释放后读不到聚晶。 */
+    @DisplayName("虚拟法杖的聚晶读写代理到聚晶包槽位，释放后读不到聚晶")
     @Test
     void proxiesBagSlot(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
         Stage ctx = Stage.flat(game, plot, reporter);
@@ -58,6 +62,7 @@ class GoetyVirtualWandTest {
     }
 
     /** 手上的真实法杖镶着与聚晶包相同的聚晶：用真实法杖，不建虚拟法杖，聚晶包里的聚晶不被消耗。 */
+    @DisplayName("手上法杖镶着与聚晶包相同的聚晶时用真实法杖，不建虚拟法杖也不消耗包里的聚晶")
     @Test
     void handWandKeepsBagFocus(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
         Stage ctx = Stage.flat(game, plot, reporter);
@@ -65,6 +70,7 @@ class GoetyVirtualWandTest {
     }
 
     /** 手上的真实法杖优先于虚拟法杖，即使法杖镶的是另一枚聚晶。 */
+    @DisplayName("主手真实法杖优先于虚拟法杖，即使法杖镶的是另一枚聚晶")
     @Test
     void prefersMainHandWand(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
         Stage ctx = Stage.flat(game, plot, reporter);
@@ -72,6 +78,7 @@ class GoetyVirtualWandTest {
     }
 
     /** 手上的真实法杖优先于虚拟法杖，即使法杖镶的是另一枚聚晶。 */
+    @DisplayName("副手真实法杖优先于虚拟法杖，即使法杖镶的是另一枚聚晶")
     @Test
     void prefersOffHandWand(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
         Stage ctx = Stage.flat(game, plot, reporter);
@@ -79,6 +86,7 @@ class GoetyVirtualWandTest {
     }
 
     /** 背包里的法杖不参与选择：只有聚晶包与背包法杖时仍用虚拟法杖，停止施法后释放。 */
+    @DisplayName("背包里的法杖不参与选择，仍用虚拟法杖，停止施法后释放")
     @Test
     void ignoresBackpackWand(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
         Stage ctx = Stage.flat(game, plot, reporter);
@@ -86,6 +94,7 @@ class GoetyVirtualWandTest {
     }
 
     /** 手持冰霜法杖施放冰霜聚晶时有学派加成，虚拟法杖不给任何学派加成。 */
+    @DisplayName("手持冰霜法杖施放冰霜聚晶有学派加成，虚拟法杖不给学派加成")
     @Test
     void handStaffGrantsSchoolBonus(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
         Stage ctx = Stage.flat(game, plot, reporter);
@@ -96,6 +105,7 @@ class GoetyVirtualWandTest {
      * 施法中虚拟法杖的上下文失效（被释放）后停止施法：不对空聚晶的法杖继续回调，
      * 仍按已发射段数补上冷却，施法数据复位，没有残留上下文。
      */
+    @DisplayName("施法中虚拟法杖上下文失效后停止施法，仍补上冷却且施法数据复位")
     @Test
     void staleContextStopStillSetsCooldown(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
         Stage ctx = Stage.flat(game, plot, reporter);
@@ -103,6 +113,7 @@ class GoetyVirtualWandTest {
     }
 
     /** 绕过 Provider 直接复位施法数据时，上下文也一并释放，不泄漏到 removeData 或 clearAll。 */
+    @DisplayName("绕过 Provider 直接复位施法数据时，虚拟法杖上下文一并释放")
     @Test
     void dataResetReleasesContext(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
         Stage ctx = Stage.flat(game, plot, reporter);
@@ -110,6 +121,7 @@ class GoetyVirtualWandTest {
     }
 
     /** 虚拟法杖的上下文有效时是可用法杖；被释放、女仆被移除后都不再有效。 */
+    @DisplayName("虚拟法杖上下文有效时可用，被释放或女仆被移除后不再有效")
     @Test
     void invalidContextIsNotUsable(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
         Stage ctx = Stage.flat(game, plot, reporter);

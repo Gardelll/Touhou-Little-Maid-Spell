@@ -41,6 +41,7 @@ import net.minecraft.world.level.levelgen.structure.StructureSet;
 import net.minecraft.world.level.levelgen.structure.placement.RandomSpreadStructurePlacement;
 import net.minecraft.world.level.levelgen.structure.templatesystem.StructureTemplate;
 import net.neoforged.neoforge.common.NeoForge;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestReporter;
 
@@ -58,6 +59,7 @@ import static com.github.yimeng261.maidspell.stagewright.support.Checks.NS;
  * 掌心黑洞吟唱期间不受反制、星锚眩晕在吟唱期间同样无效、两只星之魔女互为目标不递归、
  * 月铃兰按结构集间距换算搜索圈数、落樱厨舍两个变体除铁魔法方块外一致。
  */
+@DisplayName("星之魔女：星海唱片、掌心黑洞吟唱防护、月铃兰搜索圈数与落樱厨舍变体")
 @Scene("tlms")
 class StellarDiscGuardTest {
     private static final String STELLAR_DISC = NS + "music_disc_stellar_endshore";
@@ -72,6 +74,7 @@ class StellarDiscGuardTest {
     }
 
     /** 战胜前后补给档都有「10 绿宝石 → 星海唱片」，价格不打折、不限购，排在星荧花簇之后、经验修补附魔书之前。 */
+    @DisplayName("补给档有 10 绿宝石换星海唱片的交易，价格不打折、不限购，位置固定")
     @Test
     void stellarDiscInSupplies(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);
@@ -115,6 +118,7 @@ class StellarDiscGuardTest {
     }
 
     /** 正式挑战战胜掉星云核心与 Vivaldi 唱片各一；被判限制或自定义配置挑战都不掉。 */
+    @DisplayName("正式挑战战胜掉星云核心与 Vivaldi 唱片，被判限制或自定义配置挑战都不掉")
     @Test
     void battleDiscOnlyForFormalWin(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
         Stage ctx = Stage.flat(game, plot, reporter);
@@ -190,12 +194,14 @@ class StellarDiscGuardTest {
     }
 
     /** 掌心黑洞吟唱（二阶段战斗中）：反制事件被取消，尸壳真正施放的反制法术也打不断吟唱。 */
+    @DisplayName("掌心黑洞吟唱期间不受反制：反制事件被取消，反制法术也打不断吟唱")
     @Test
     void palmBlackHoleIgnoresCounterspell(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
         counterspell(Stage.flat(game, plot, reporter), true);
     }
 
     /** 对照（一阶段挂同一个施法状态，不算掌心黑洞吟唱）：事件不取消，反制法术把施法取消掉。 */
+    @DisplayName("非掌心黑洞的吟唱照常被反制：事件不取消，反制法术取消施法")
     @Test
     void otherCastsStillCountered(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
         counterspell(Stage.flat(game, plot, reporter), false);
@@ -217,12 +223,14 @@ class StellarDiscGuardTest {
     }
 
     /** 星锚眩晕：掌心黑洞吟唱期间不打断、不眩晕。 */
+    @DisplayName("掌心黑洞吟唱期间星锚眩晕无效：不打断吟唱、不进入眩晕")
     @Test
     void palmBlackHoleNotInterrupted(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
         staranchorStun(Stage.flat(game, plot, reporter), true);
     }
 
     /** 对照（一阶段挂同一个施法状态）：照常打断。 */
+    @DisplayName("非掌心黑洞的吟唱照常被星锚眩晕打断并进入眩晕")
     @Test
     void otherCastsInterrupted(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
         staranchorStun(Stage.flat(game, plot, reporter), false);
@@ -241,6 +249,7 @@ class StellarDiscGuardTest {
     // ---- 普通生物战斗的重入 ----
 
     /** 两只星之魔女互相设为目标：不抛 StackOverflowError，谁也不因对方开战。 */
+    @DisplayName("两只星之魔女互为目标时不递归溢出，也不因对方开战")
     @Test
     void mutualWitchTargetsDoNotRecurse(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
         Stage ctx = Stage.flat(game, plot, reporter);
@@ -267,6 +276,7 @@ class StellarDiscGuardTest {
     }
 
     /** 重入标志置位时，嵌套的 beginMobCombat 直接返回 false 且不开战；复位后同一只尸壳能正常开战。 */
+    @DisplayName("重入标志置位时嵌套的普通战斗调用被拒绝，复位后能正常开战")
     @Test
     void reentryGuardRejectsNestedCall(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
         Stage ctx = Stage.flat(game, plot, reporter);
@@ -292,6 +302,7 @@ class StellarDiscGuardTest {
     // ---- 月铃兰 ----
 
     /** 搜索圈数 = 5120 格 ÷ (结构集 spacing × 16)：当前 elven_realm_set 是随机分布、spacing 32，换算为 10 圈。 */
+    @DisplayName("月铃兰的搜索圈数按精灵秘境结构集间距换算，间距 32 时为 10 圈")
     @Test
     void searchRadiusFollowsStructureSetSpacing(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);
@@ -347,6 +358,7 @@ class StellarDiscGuardTest {
      * 无铁魔法变体同步了上游的陈设：两个模板尺寸相同，方块不同的坐标上，装铁魔法版一侧都是铁魔法方块、另一侧都不是；
      * 只有方块实体内容不同的坐标是那三个装着铁魔法物品的容器；实体（含盔甲架）完全一致。
      */
+    @DisplayName("落樱厨舍两个变体除铁魔法方块与三个容器内容外完全一致")
     @Test
     void variantsDifferOnlyInIronsBlocks(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);

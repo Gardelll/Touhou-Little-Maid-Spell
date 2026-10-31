@@ -16,6 +16,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.item.ItemStack;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestReporter;
 
@@ -30,6 +31,7 @@ import static com.github.yimeng261.maidspell.stagewright.support.Checks.NS;
  * 戴锚定核心的女仆区块不卸载，保护保留。
  */
 @Scene("tlms.integrated")
+@DisplayName("魂之书：主人保护（需真实玩家）")
 class BaubleRuntimeIntegratedTest {
     private static final String ANCHOR = NS + "anchor_core";
     /** 远程女仆与玩家的距离：超出集成服视距，强加载解除后区块会卸载。 */
@@ -51,6 +53,7 @@ class BaubleRuntimeIntegratedTest {
     }
 
     /** 装备魂之书时主人受保护、正常受伤照常扣血；卸下后立即失效，再装备后恢复。 */
+    @DisplayName("装备魂之书时主人受保护且正常扣血，卸下后失效，再装备后恢复")
     @Test
     @Requires(Requires.Capability.CLIENT)
     void ownerProtectionOnOff(Game game, @Plot.Size(32) @Plot.Centered Plot plot, Player host, TestReporter reporter) {
@@ -72,6 +75,7 @@ class BaubleRuntimeIntegratedTest {
     }
 
     /** 反复穿脱多次后状态仍与当前是否装备一致：不会永久开启或永久失效。 */
+    @DisplayName("反复穿脱魂之书后，保护状态仍与当前是否装备一致")
     @Test
     @Requires(Requires.Capability.CLIENT)
     void ownerProtectionAfterCycles(Game game, @Plot.Size(32) @Plot.Centered Plot plot, Player host, TestReporter reporter) {
@@ -94,6 +98,7 @@ class BaubleRuntimeIntegratedTest {
     }
 
     /** 装备魂之书的女仆死亡后保护失效。 */
+    @DisplayName("装备魂之书的女仆死亡后，主人保护失效")
     @Test
     @Requires(Requires.Capability.CLIENT)
     void ownerProtectionEndsOnDeath(Game game, @Plot.Size(32) @Plot.Centered Plot plot, Player host, TestReporter reporter) {
@@ -114,6 +119,7 @@ class BaubleRuntimeIntegratedTest {
     }
 
     /** 女仆被收进魂符后保护失效；放出来后恢复。 */
+    @DisplayName("女仆被收进魂符后主人保护失效，放出来后恢复")
     @Test
     @Requires(Requires.Capability.CLIENT)
     void ownerProtectionEndsInSlab(Game game, @Plot.Size(32) @Plot.Centered Plot plot, Player host, TestReporter reporter) {
@@ -141,6 +147,7 @@ class BaubleRuntimeIntegratedTest {
     }
 
     /** 女仆所在区块卸载后保护失效。 */
+    @DisplayName("女仆所在区块卸载后，主人保护失效")
     @Test
     @Requires(Requires.Capability.CLIENT)
     void ownerProtectionEndsOnUnload(Game game, @Plot.Size(32) @Plot.Centered Plot plot, Player host, TestReporter reporter) {
@@ -166,6 +173,7 @@ class BaubleRuntimeIntegratedTest {
     }
 
     /** 同时戴锚定核心的女仆，撤掉测试的强加载后区块仍由锚定核心保持加载，保护不失效。 */
+    @DisplayName("女仆同时戴锚定核心时，区块不卸载，主人保护保留")
     @Test
     @Requires(Requires.Capability.CLIENT)
     void ownerProtectionKeptWhenAnchored(Game game, @Plot.Size(32) @Plot.Centered Plot plot, Player host, TestReporter reporter) {

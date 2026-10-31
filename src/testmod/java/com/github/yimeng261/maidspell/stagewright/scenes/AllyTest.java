@@ -25,6 +25,7 @@ import net.minecraft.world.entity.projectile.Arrow;
 import net.minecraft.world.entity.projectile.ThrownTrident;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestReporter;
 import org.junit.jupiter.api.parallel.ResourceLock;
@@ -39,6 +40,7 @@ import java.util.TreeMap;
  * 女仆、宠物、各模组召唤物和法术实体按主人链判定互不伤害、互不索敌；别人的一方照常能打；
  * 记分板队伍与友伤开关；主人的间接伤害不打自己一方，近战交给车万女仆原有规则。
  */
+@DisplayName("盟友判定与友伤")
 @Scene("tlms.integrated")
 @ResourceLock(RetreatFixtures.HOST_PLAYER)
 class AllyTest {
@@ -52,6 +54,7 @@ class AllyTest {
             "minecraft:area_effect_cloud", "minecraft:evoker_fangs", "minecraft:tnt");
 
     /** P 的女仆施法（法术伤害、弹射物）打不到 P 这一方。 */
+    @DisplayName("女仆的法术伤害和弹射物打不到主人一方")
     @Test
     @Requires(Requires.Capability.CLIENT)
     void maidSparesOwnerSide(Game game, @Plot.Size(32) @Plot.Centered Plot plot, Player player, TestReporter reporter) {
@@ -61,6 +64,7 @@ class AllyTest {
     }
 
     /** P 的女仆不会以 P 这一方为目标。 */
+    @DisplayName("女仆不会以主人一方为目标")
     @Test
     @Requires(Requires.Capability.CLIENT)
     void maidDoesNotTargetOwnerSide(Game game, @Plot.Size(32) @Plot.Centered Plot plot, Player player, TestReporter reporter) {
@@ -70,6 +74,7 @@ class AllyTest {
     }
 
     /** P 的召唤物、仆从、宠物打不到也不以 P 的女仆为目标。 */
+    @DisplayName("主人的召唤物、仆从、宠物打不到也不以主人的女仆为目标")
     @Test
     @Requires(Requires.Capability.CLIENT)
     void summonsSpareOwnerMaids(Game game, @Plot.Size(32) @Plot.Centered Plot plot, Player player, TestReporter reporter) {
@@ -79,6 +84,7 @@ class AllyTest {
     }
 
     /** 另一名玩家的女仆、宠物、召唤物和野生女仆照常能被 P 的女仆打到。 */
+    @DisplayName("另一名玩家的女仆、宠物、召唤物和野生女仆照常能被打到")
     @Test
     @Requires(Requires.Capability.CLIENT)
     void otherPlayerSideIsHittable(Game game, @Plot.Size(32) @Plot.Centered Plot plot, Player player, TestReporter reporter) {
@@ -88,6 +94,7 @@ class AllyTest {
     }
 
     /** P、Q 同队：双方的女仆和召唤物互不伤害；Q 换到另一支队伍后按主人判定，又能打到。 */
+    @DisplayName("两名玩家同队时双方女仆和召唤物互不伤害，换队后又能打到")
     @Test
     @Requires(Requires.Capability.CLIENT)
     void sameTeamSpared(Game game, @Plot.Size(32) @Plot.Centered Plot plot, Player player, TestReporter reporter) {
@@ -97,6 +104,7 @@ class AllyTest {
     }
 
     /** 玩家本身不再被视为有主人：两名不同队的玩家不是友方，P 的女仆能打到 Q。 */
+    @DisplayName("玩家本身不被视为有主人，不同队的两名玩家不是友方")
     @Test
     @Requires(Requires.Capability.CLIENT)
     void playersAreNotOwned(Game game, @Plot.Size(32) @Plot.Centered Plot plot, Player player, TestReporter reporter) {
@@ -109,6 +117,7 @@ class AllyTest {
      * 女仆放出的法术实体（铁魔法触手/根须/火墙/冰墓，Goety 尖牙/光束/陷阱/地刺/药雾，原版药水云/唤魔者尖牙/TNT）
      * 以实体本身为直接来源、没有记账者时，仍追溯到女仆：打不到主人一方，能打到野生僵尸；女仆不以它们为目标。
      */
+    @DisplayName("女仆放出的法术实体追溯到女仆：打不到主人一方，能打到野生僵尸")
     @Test
     @Requires(Requires.Capability.CLIENT)
     void spellEntitiesTraceToCaster(Game game, @Plot.Size(32) @Plot.Centered Plot plot, Player player, TestReporter reporter) {
@@ -118,6 +127,7 @@ class AllyTest {
     }
 
     /** 原版 TraceableEntity 按其主人判定：野生唤魔者的尖牙照常伤害玩家的狼。 */
+    @DisplayName("野生唤魔者的尖牙按其主人判定，照常伤害玩家的狼")
     @Test
     @Requires(Requires.Capability.CLIENT)
     void wildTraceableHitsPets(Game game, @Plot.Size(32) @Plot.Centered Plot plot, Player player, TestReporter reporter) {
@@ -131,6 +141,7 @@ class AllyTest {
      * 其余实体是 Boss 或主人只能是生物，没有可设为玩家的主人，只记录不判定。
      * 结论交人工判断：UsefulMagic 召唤物是否需要额外适配。
      */
+    @DisplayName("实用魔法能设主人的召唤物，主人设为玩家后其女仆打不到它")
     @Test
     @Requires(Requires.Capability.CLIENT)
     void usefulMagicSummonsSpared(Game game, @Plot.Size(32) @Plot.Centered Plot plot, Player player, TestReporter reporter) {
@@ -140,6 +151,7 @@ class AllyTest {
     }
 
     /** 主人的弓箭、三叉戟、法术、TNT（间接伤害）打不到自己的女仆、狼、召唤物，也不会引起反击。 */
+    @DisplayName("主人的弓箭、三叉戟、法术、TNT 间接伤害打不到自己一方，也不引起反击")
     @Test
     @Requires(Requires.Capability.CLIENT)
     void ownerIndirectSparesOwnSide(Game game, @Plot.Size(32) @Plot.Centered Plot plot, Player player, TestReporter reporter) {
@@ -149,6 +161,7 @@ class AllyTest {
     }
 
     /** 主人近战打自己的女仆：本模组不按友伤取消，交给车万女仆原有规则处理。 */
+    @DisplayName("主人近战打自己的女仆不按友伤取消，交给车万女仆原有规则")
     @Test
     @Requires(Requires.Capability.CLIENT)
     void ownerMeleeFollowsMaidRule(Game game, @Plot.Size(32) @Plot.Centered Plot plot, Player player, TestReporter reporter) {
@@ -158,6 +171,7 @@ class AllyTest {
     }
 
     /** 主人对野生女仆、另一名玩家的女仆和宠物照常造成伤害（近战和远程）。 */
+    @DisplayName("主人对野生女仆、他人的女仆和宠物照常造成近战与远程伤害")
     @Test
     @Requires(Requires.Capability.CLIENT)
     void ownerHitsOthers(Game game, @Plot.Size(32) @Plot.Centered Plot plot, Player player, TestReporter reporter) {
@@ -167,6 +181,7 @@ class AllyTest {
     }
 
     /** P、Q 同队且关闭友伤：P 近战和远程都打不到 Q 的女仆、狼、召唤物；打开友伤后照常能打。 */
+    @DisplayName("同队关闭友伤时主人近战和远程都打不到队友一方，打开友伤后能打到")
     @Test
     @Requires(Requires.Capability.CLIENT)
     void teamFriendlyFireOff(Game game, @Plot.Size(32) @Plot.Centered Plot plot, Player player, TestReporter reporter) {
@@ -176,6 +191,7 @@ class AllyTest {
     }
 
     /** 玩家之间的伤害不经本模组判定，仍按原版队伍规则。 */
+    @DisplayName("玩家之间的伤害不经本模组判定，仍按原版队伍规则")
     @Test
     @Requires(Requires.Capability.CLIENT)
     void playersFollowVanilla(Game game, @Plot.Size(32) @Plot.Centered Plot plot, Player player, TestReporter reporter) {
@@ -185,6 +201,7 @@ class AllyTest {
     }
 
     /** 装 Goety 时：玩家的间接法术伤害不打自己的仆从、也不打属于自己女仆的仆从；女仆把这些仆从当友方。 */
+    @DisplayName("装有 Goety 时，玩家的间接法术伤害不打自己及自己女仆的仆从，女仆视其为友方")
     @Test
     @Requires(value = Requires.Capability.CLIENT, mods = "goety")
     void goetyServantsOfOwnerSide(Game game, @Plot.Size(32) @Plot.Centered Plot plot, Player player, TestReporter reporter) {

@@ -27,6 +27,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.Level;
 import net.neoforged.fml.loading.FMLPaths;
 import net.neoforged.neoforge.common.ModConfigSpec;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestReporter;
 
@@ -48,6 +49,7 @@ import static com.github.yimeng261.maidspell.stagewright.support.Checks.NS;
  * 状态栏数据每秒刷新；客户端配置文件生成并写回。
  */
 @Scene("tlms.integrated")
+@DisplayName("末影腰包客户端界面")
 class EnderPocketClientTest {
     private static final Path CLIENT_CONFIG = FMLPaths.CONFIGDIR.get()
             .resolve("touhou_little_maid_spell").resolve("client").resolve("ender_pocket.toml");
@@ -94,6 +96,7 @@ class EnderPocketClientTest {
     }
 
     /** 客户端配置文件已生成，含状态栏的四项。 */
+    @DisplayName("客户端配置文件已生成，含状态栏的四项配置")
     @Test
     @Requires(Requires.Capability.CLIENT)
     void clientConfigGenerated(Game game, @Plot.Size(32) @Plot.Centered Plot plot, Player host, TestReporter reporter) {
@@ -107,6 +110,7 @@ class EnderPocketClientTest {
     }
 
     /** 配置界面里每个配置文件入口、配置项与分组（通用与客户端）在中英文下都有标题；铁魔法法术黑名单的标题点明是铁魔法。 */
+    @DisplayName("配置界面里每个配置文件入口、配置项与分组在中英文下都有标题，铁魔法法术黑名单标题点明是铁魔法")
     @Test
     @Requires(Requires.Capability.CLIENT)
     void everyKeyTranslated(Game game, @Plot.Size(32) @Plot.Centered Plot plot, Player host, TestReporter reporter) {
@@ -151,6 +155,7 @@ class EnderPocketClientTest {
     }
 
     /** 面板左上角的"关闭/显示"按钮切换状态栏开关，文字随之切换，并写回配置文件。 */
+    @DisplayName("面板的状态栏开关按钮切换开关与按钮文字，并写回配置文件")
     @Test
     @Requires(Requires.Capability.CLIENT)
     void hudToggleButton(Game game, @Plot.Size(32) @Plot.Centered Plot plot, Player host, TestReporter reporter) {
@@ -173,6 +178,7 @@ class EnderPocketClientTest {
     }
 
     /** 取消某只女仆的勾选：写进隐藏名单与配置文件，提示变为"隐藏"；编辑预览只按可见的女仆计高度。 */
+    @DisplayName("取消某只女仆的勾选后写进隐藏名单与配置文件，编辑预览只按可见的女仆计高度")
     @Test
     @Requires(Requires.Capability.CLIENT)
     void maidVisibilityCheckbox(Game game, @Plot.Size(32) @Plot.Centered Plot plot, Player host, TestReporter reporter) {
@@ -206,6 +212,7 @@ class EnderPocketClientTest {
     }
 
     /** 全部取消勾选：编辑预览退回一个占位框的高度。 */
+    @DisplayName("全部女仆取消勾选后，编辑预览退回一个占位框的高度")
     @Test
     @Requires(Requires.Capability.CLIENT)
     void allHiddenLeavesPlaceholder(Game game, @Plot.Size(32) @Plot.Centered Plot plot, Player host, TestReporter reporter) {
@@ -223,6 +230,7 @@ class EnderPocketClientTest {
     }
 
     /** 超过 8 只时列表只显示 8 行，滚轮向下翻出第 9、10 只；不超过 8 只时滚轮无效。 */
+    @DisplayName("超过 8 只女仆时列表显示 8 行并可滚轮翻出其余，不超过 8 只时滚轮无效")
     @Test
     @Requires(Requires.Capability.CLIENT)
     void listScrollsBeyondEight(Game game, @Plot.Size(32) @Plot.Centered Plot plot, Player host, TestReporter reporter) {
@@ -257,6 +265,7 @@ class EnderPocketClientTest {
     }
 
     /** 锚定女仆的行多一个传送按钮；勾选框、名字按钮、传送按钮互不重叠。 */
+    @DisplayName("锚定女仆的行多一个传送按钮，勾选框、名字按钮、传送按钮互不重叠")
     @Test
     @Requires(Requires.Capability.CLIENT)
     void anchorRowLayout(Game game, @Plot.Size(32) @Plot.Centered Plot plot, Player host, TestReporter reporter) {
@@ -288,6 +297,7 @@ class EnderPocketClientTest {
     }
 
     /** 编辑界面：输入坐标后保存写回配置；重置回 (6, 6)；取消不保存。 */
+    @DisplayName("状态栏位置编辑界面：输入坐标后保存写回配置，重置回 (6, 6)，取消不保存")
     @Test
     @Requires(Requires.Capability.CLIENT)
     void hudEditorSaveResetCancel(Game game, @Plot.Size(32) @Plot.Centered Plot plot, Player host, TestReporter reporter) {
@@ -317,6 +327,7 @@ class EnderPocketClientTest {
     }
 
     /** 输入越界的坐标：预览不出屏，也不压到底部工具栏上。 */
+    @DisplayName("状态栏位置编辑界面输入越界坐标时，预览不出屏也不压到底部工具栏")
     @Test
     @Requires(Requires.Capability.CLIENT)
     void hudEditorClampsPosition(Game game, @Plot.Size(32) @Plot.Centered Plot plot, Player host, TestReporter reporter) {
@@ -355,6 +366,7 @@ class EnderPocketClientTest {
     }
 
     /** 自己戴末影腰包的女仆出现在状态栏数据里，生命变化约 1 秒内刷新。 */
+    @DisplayName("自己戴末影腰包的女仆出现在状态栏数据里，生命变化约 1 秒内刷新")
     @Test
     @Requires(Requires.Capability.CLIENT)
     void hudDataRefreshes(Game game, @Plot.Size(32) @Plot.Centered Plot plot, Player host, TestReporter reporter) {

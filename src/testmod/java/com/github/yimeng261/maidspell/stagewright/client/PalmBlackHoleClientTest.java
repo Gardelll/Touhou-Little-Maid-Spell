@@ -12,6 +12,7 @@ import com.google.gson.JsonObject;
 import net.magicterra.stagewright.test.Game;
 import net.magicterra.stagewright.test.Plot;
 import net.magicterra.stagewright.test.Scene;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestReporter;
 import org.joml.Matrix4f;
@@ -28,65 +29,76 @@ import java.util.List;
 /**
  * 掌心黑洞的客户端表现：脱手后的位置与姿态、涟漪跟手对齐，以及模型、动画、音效资源。
  */
+@DisplayName("掌心黑洞：客户端表现")
 @Scene("tlms.integrated")
 class PalmBlackHoleClientTest {
     private static final List<String> RIPPLES = List.of("heobo-z", "heobo-z2");
 
     /** 切换渲染器到落下前的 3 秒里，黑洞停在最后可见的世界位置；位置同步包只改地面落点，不挪动黑洞。 */
+    @DisplayName("落下前的停留阶段黑洞停在最后可见的世界位置，位置同步包不挪动它")
     @Test
     void holdKeepsLastVisibleCenter(Game game, Plot plot, TestReporter reporter) {
         ClientSide.verify(Stage.sky(game, plot, reporter), "client.palmBlackHole.release.holdKeepsLastVisibleCenter", PalmBlackHoleClientTest::holdKeepsCenter);
     }
 
     /** 落下时单调下降，第 340 刻正好落到服务端给的落点，地面比起点高或低都一样。 */
+    @DisplayName("落下时单调下降，第 340 刻正好落到服务端给的落点")
     @Test
     void fallReachesLanding(Game game, Plot plot, TestReporter reporter) {
         ClientSide.verify(Stage.sky(game, plot, reporter), "client.palmBlackHole.release.fallReachesLanding", PalmBlackHoleClientTest::fallReachesLandingBody);
     }
 
     /** 换成独立渲染器后朝向和大小不变；姿态保存的是副本，外部改动影响不到它。 */
+    @DisplayName("换成独立渲染器后朝向和大小不变，姿态保存的是副本")
     @Test
     void detachedPoseMatchesLocator(Game game, Plot plot, TestReporter reporter) {
         ClientSide.verify(Stage.sky(game, plot, reporter), "client.palmBlackHole.release.detachedPoseMatchesLocator", PalmBlackHoleClientTest::detachedPose);
     }
 
     /** 镜头在脱手后才回来时，蓄力早期的旧姿态不算数。 */
+    @DisplayName("镜头在脱手后才回来时，蓄力早期的旧姿态不算数")
     @Test
     void staleBuildupPoseRejected(Game game, Plot plot, TestReporter reporter) {
         ClientSide.verify(Stage.sky(game, plot, reporter), "client.palmBlackHole.release.staleBuildupPoseRejected", PalmBlackHoleClientTest::staleBuildup);
     }
 
     /** 开场阶段涟漪留在设计高度。 */
+    @DisplayName("开场阶段涟漪留在设计高度")
     @Test
     void openingKeepsAuthoredHeight(Game game, Plot plot, TestReporter reporter) {
         ClientSide.verify(Stage.sky(game, plot, reporter), "client.palmBlackHole.ripple.openingKeepsAuthoredHeight", PalmBlackHoleClientTest::rippleOpening);
     }
 
     /** 施法中段按手部实际变换对齐高度，只改高度，涟漪自己的缩放、旋转和水平位置不动。 */
+    @DisplayName("施法中段涟漪按手部实际变换对齐高度，缩放、旋转和水平位置不动")
     @Test
     void midCastFollowsHand(Game game, Plot plot, TestReporter reporter) {
         ClientSide.verify(Stage.sky(game, plot, reporter), "client.palmBlackHole.ripple.midCastFollowsHand", PalmBlackHoleClientTest::rippleFollowsHand);
     }
 
     /** 过渡期逐渐靠拢；黑洞脱手后不再覆盖涟漪位置。 */
+    @DisplayName("涟漪在过渡期逐渐靠拢手部，黑洞脱手后不再覆盖涟漪位置")
     @Test
     void transitionGradualAndSkipsDetached(Game game, Plot plot, TestReporter reporter) {
         ClientSide.verify(Stage.sky(game, plot, reporter), "client.palmBlackHole.ripple.transitionGradualAndSkipsDetached", PalmBlackHoleClientTest::rippleTransition);
     }
 
     /** 魔女模型的掌心定位点挂在左手下且没有方块，贴图是模型包自带的 1024×1024。 */
+    @DisplayName("星之魔女模型的掌心定位点挂在左手下且没有方块，贴图为 1024×1024")
     @Test
     void witchModelPalmMarker(Game game, Plot plot, TestReporter reporter) {
         ClientSide.verify(Stage.sky(game, plot, reporter), "client.palmBlackHole.resources.witchModelPalmMarker", PalmBlackHoleClientTest::witchModel);
     }
 
     /** 施法动画一直放到落地爆炸，定位点在 13 秒移位并放大到黑洞最大尺寸，涟漪从设计高度升到 160。 */
+    @DisplayName("施法动画放到落地爆炸，定位点 13 秒移位放大到最大尺寸，涟漪升到 160 高度")
     @Test
     void locatorAnimationKeyframes(Game game, Plot plot, TestReporter reporter) {
         ClientSide.verify(Stage.sky(game, plot, reporter), "client.palmBlackHole.resources.locatorAnimationKeyframes", PalmBlackHoleClientTest::locatorAnimation);
     }
 
     /** 两个黑洞音效都指向单声道 48kHz 的 Vorbis 文件（定位音效必须是单声道）。 */
+    @DisplayName("两个黑洞音效都指向单声道 48kHz 的 Vorbis 文件")
     @Test
     void soundsMonoVorbis(Game game, Plot plot, TestReporter reporter) {
         ClientSide.verify(Stage.sky(game, plot, reporter), "client.palmBlackHole.resources.soundsMonoVorbis", PalmBlackHoleClientTest::sounds);

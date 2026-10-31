@@ -4,6 +4,7 @@ import com.github.yimeng261.maidspell.stagewright.support.Stage;
 import net.magicterra.stagewright.test.Game;
 import net.magicterra.stagewright.test.Plot;
 import net.magicterra.stagewright.test.Scene;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestReporter;
 
@@ -12,19 +13,23 @@ import org.junit.jupiter.api.TestReporter;
  * 曲目时长与音频实际时长一致、放进唱片机能播放且比较器读数为 15。
  */
 @Scene("tlms")
+@DisplayName("音乐唱片：星海与 Vivaldi")
 class MusicDiscTest {
+    @DisplayName("唱片物品属性、曲目数据、唱片标签、创造栏与三种语言文本都正确")
     @Test
     void itemsAndSongs(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);
         ctx.run(() -> MusicDiscFixtures.itemsAndSongs(ctx));
     }
 
+    @DisplayName("曲目时长与音频文件实际时长相差不到 0.1 秒")
     @Test
     void songLengthMatchesAudio(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);
         ctx.run(() -> MusicDiscFixtures.audioLength(ctx));
     }
 
+    @DisplayName("唱片放进唱片机能播放，比较器读数为 15")
     @Test
     void jukeboxPlaysWithFullComparator(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
         Stage ctx = Stage.flat(game, plot, reporter);

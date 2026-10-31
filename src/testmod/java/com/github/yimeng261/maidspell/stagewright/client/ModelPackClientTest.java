@@ -14,6 +14,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.phys.Vec3;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestReporter;
 
@@ -25,9 +26,11 @@ import java.util.Set;
  * 旧存档里仍用这个模型 ID 的女仆出现在玩家面前时客户端照常渲染、不掉线。
  */
 @Scene("tlms.integrated")
+@DisplayName("客户端车万女仆模型表")
 class ModelPackClientTest {
     private static final String REMOVED_MODEL = "geckolib:winefox_saint_black";
 
+    @DisplayName("客户端模型表含两个酒狐模型与星之魔女酒狐，不含已移除的 winefox_saint_black")
     @Test
     @Requires(Requires.Capability.CLIENT)
     void clientModelList(Game game, @Plot.Size(32) @Plot.Centered Plot plot, Player host, TestReporter reporter) {
@@ -42,6 +45,7 @@ class ModelPackClientTest {
     }
 
     /** 把女仆放到玩家视线正前方，渲染 3 秒后客户端仍在世界里、能看到这只女仆。 */
+    @DisplayName("旧存档里使用已移除模型 ID 的女仆出现在眼前，客户端照常渲染不掉线")
     @Test
     @Requires(Requires.Capability.CLIENT)
     void removedModelIdStillRenders(Game game, @Plot.Size(32) @Plot.Centered Plot plot, Player host, TestReporter reporter) {

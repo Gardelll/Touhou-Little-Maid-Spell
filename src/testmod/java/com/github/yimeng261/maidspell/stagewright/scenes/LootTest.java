@@ -12,6 +12,7 @@ import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.entity.EntityType;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestReporter;
 
@@ -23,6 +24,7 @@ import java.util.TreeSet;
 /**
  * 战利品表测试：每个结构一组表的可达集合快照、实体类型绑定的掉落表、真实击杀掉落。
  */
+@DisplayName("战利品表：可达物品、实体掉落表绑定与击杀掉落")
 @Scene("tlms")
 class LootTest {
     /** 实体 → 默认掉落表。 */
@@ -36,33 +38,39 @@ class LootTest {
     private static final int KILLS = 8;
 
     /** 逐组检查：表已加载，可达物品与快照一致；每项断言的说明里带表名。 */
+    @DisplayName("每个结构的战利品表都已加载，可达物品与快照一致")
     @Test
     void tables(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);
         ctx.run(() -> LootSnapshots.GROUPS.forEach((group, tables) -> checkTables(ctx, group, tables)));
     }
 
+    @DisplayName("各实体类型已注册，且默认掉落表绑定到各自的战利品表")
     @Test
     void entityTableBinding(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);
         ctx.run(() -> checkEntityBinding(ctx));
     }
 
+    @DisplayName("击杀暗影刺客的掉落都来自它的掉落表且并集非空")
     @Test
     void killDropsShadowAssassin(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
         killDrops(game, plot, reporter, "touhou_little_maid_spell:shadow_assassin");
     }
 
+    @DisplayName("击杀圣素构造体的掉落都来自它的掉落表且并集非空")
     @Test
     void killDropsHolyConstruct(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
         killDrops(game, plot, reporter, "touhou_little_maid_spell:holy_construct");
     }
 
+    @DisplayName("击杀入魔骑士的掉落都来自它的掉落表且并集非空")
     @Test
     void killDropsCorruptedKnight(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
         killDrops(game, plot, reporter, "touhou_little_maid_spell:corrupted_knight");
     }
 
+    @DisplayName("击杀精灵守卫的掉落都来自它的掉落表且并集非空")
     @Test
     void killDropsElfTemplar(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
         killDrops(game, plot, reporter, "touhou_little_maid_spell:elf_templar");

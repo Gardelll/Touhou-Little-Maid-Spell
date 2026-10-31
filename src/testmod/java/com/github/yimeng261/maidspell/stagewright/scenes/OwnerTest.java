@@ -28,6 +28,7 @@ import net.minecraft.world.inventory.ClickType;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.ChunkPos;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestReporter;
 import org.junit.jupiter.api.parallel.ResourceLock;
@@ -42,6 +43,7 @@ import static com.github.yimeng261.maidspell.stagewright.support.Checks.NS;
  * 喋血之心治疗主人、熔岩狐叶共享保护与主人踏熔岩、馥郁巧思经真实喂食任务给主人加效果、春花-返保护主人。
  * <p>女仆都经真实交互入口驯服（手持驯服物品右键），与游戏里一样登记到主人名下。
  */
+@DisplayName("需要宿主玩家的女仆功能")
 @Scene("tlms.integrated")
 @ResourceLock(RetreatFixtures.HOST_PLAYER)
 class OwnerTest {
@@ -52,6 +54,7 @@ class OwnerTest {
      * 末影腰包：装备它的自有女仆出现在主人的末影腰包列表里（没装备的不在），
      * 远在视距外也能打开她的背包界面（客户端确认代理就绪后才打开）；别人的女仆打不开。
      */
+    @DisplayName("末影腰包：列出装备它的自有女仆，视距外也能远程打开其背包，别人的女仆打不开")
     @Test
     @Requires(Requires.Capability.CLIENT)
     void enderPocketOpensRemoteMaid(Game game, @Plot.Size(32) @Plot.Centered Plot plot, Player player, TestReporter reporter) {
@@ -105,6 +108,7 @@ class OwnerTest {
     }
 
     /** 法术白名单：右键打开 27 格卷轴界面；放入卷轴不消耗原物品，关闭后法术记录到白名单物品上。 */
+    @DisplayName("法术白名单：右键打开 27 格卷轴界面，放入卷轴不消耗原物品，关闭后法术记到物品上")
     @Test
     @Requires(Requires.Capability.CLIENT)
     void blueNoteMenuStoresScroll(Game game, @Plot.Size(32) @Plot.Centered Plot plot, Player player, TestReporter reporter) {
@@ -134,6 +138,7 @@ class OwnerTest {
     }
 
     /** 喋血之心：自有女仆打出伤害时主人按目标实际扣血量的比例回血；别人的女仆打出伤害不给这个玩家回血。 */
+    @DisplayName("喋血之心：自有女仆打出伤害时主人按实际扣血比例回血，别人的女仆不给回血")
     @Test
     @Requires(Requires.Capability.CLIENT)
     void bleedingHeartHealsOwner(Game game, @Plot.Size(32) @Plot.Centered Plot plot, Player player, TestReporter reporter) {
@@ -162,6 +167,7 @@ class OwnerTest {
     }
 
     /** 熔岩狐叶：范围内自有女仆装备时主人免疫火焰/熔岩伤害并熄火；女仆离开范围、或只有别人的女仆时不保护。 */
+    @DisplayName("熔岩狐叶：范围内有自有女仆时主人免疫火焰与熔岩伤害，范围外或只有别人的女仆时不保护")
     @Test
     @Requires(Requires.Capability.CLIENT)
     void moltenFoxLeafSharedProtection(Game game, @Plot.Size(32) @Plot.Centered Plot plot, Player player, TestReporter reporter) {
@@ -188,6 +194,7 @@ class OwnerTest {
     }
 
     /** 熔岩狐叶：自有女仆在旁时，主人（真实客户端物理）站在熔岩池上不下沉、不掉血、不着火。 */
+    @DisplayName("熔岩狐叶：自有女仆在旁时主人站在熔岩池上不下沉、不掉血、不着火")
     @Test
     @Requires(Requires.Capability.CLIENT)
     void moltenFoxLeafOwnerWalksOnLava(Game game, @Plot.Size(32) @Plot.Centered Plot plot, Player player, TestReporter reporter) {
@@ -213,6 +220,7 @@ class OwnerTest {
      * 馥郁巧思：女仆经 TLM 真实的"喂食主人"任务把食物喂给饥饿的主人后，主人获得一个 1 级（放大 0）的正面效果，
      * 持续时间为配置值。
      */
+    @DisplayName("馥郁巧思：女仆经喂食主人任务喂饥饿的主人后，主人获得一个 1 级正面效果")
     @Test
     @Requires(Requires.Capability.CLIENT)
     void fragrantIngenuityFeedOwnerBuff(Game game, @Plot.Size(32) @Plot.Centered Plot plot, Player player, TestReporter reporter) {
@@ -246,6 +254,7 @@ class OwnerTest {
     }
 
     /** 春花-返：主人受到较大伤害时，同维度内有层数的自有女仆消耗一层给主人回复最大生命的 5%；小伤害不触发。 */
+    @DisplayName("春花-返：主人受较大伤害时消耗一层并回复最大生命的 5%，小伤害不触发")
     @Test
     @Requires(Requires.Capability.CLIENT)
     void springBloomReturnProtectsOwner(Game game, @Plot.Size(32) @Plot.Centered Plot plot, Player player, TestReporter reporter) {

@@ -4,6 +4,7 @@ import com.github.yimeng261.maidspell.stagewright.support.Stage;
 import net.magicterra.stagewright.test.Game;
 import net.magicterra.stagewright.test.Plot;
 import net.magicterra.stagewright.test.Scene;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestReporter;
 import com.github.yimeng261.maidspell.MaidSpellMod;
@@ -69,12 +70,14 @@ import static com.github.yimeng261.maidspell.stagewright.support.Checks.NS;
  * 星途终岸、观星塔、星落之庭相关：结构放置、观星术士名字、四幅新画、星之旅程与万法皆通两个成就页、观星罗盘、
  * 星落之庭补生成的放置次数落盘。
  */
+@DisplayName("星途终岸、观星塔与星落之庭")
 @Scene("tlms")
 class StellarStructureTest {
     private static final String COMPASS = NS + "starwatch_compass";
     private static final List<String> PAINTINGS = List.of("astronomical_object", "falling_star", "magic_wine_fox", "starry_flower_sea");
 
     /** 起始件加 7 个部件都放下，里面有一只星之魔女。 */
+    @DisplayName("星途终岸：放置起始件加 7 个部件，里面有一只星之魔女")
     @Test
     void endshorePlacedWithWitch(Game game, @Plot.Size(x = 176, y = 256, z = 176) @Plot.Centered Plot plot,
                                  TestReporter reporter) {
@@ -82,18 +85,21 @@ class StellarStructureTest {
         ctx.run(() -> endshore(ctx));
     }
 
+    @DisplayName("星途终岸固定锚点：任意种子都选出四个方向锚点之一且结果稳定")
     @Test
     void endshoreFixedAnchorSelection(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);
         ctx.run(() -> fixedAnchorSelection(ctx));
     }
 
+    @DisplayName("星途终岸的生物群系标签含末地荒地与末地小型岛屿")
     @Test
     void endshoreBiomeTagCoversEndBarrens(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);
         ctx.run(() -> endshoreBiomes(ctx));
     }
 
+    @DisplayName("观星塔：放置后塔里有一只观星术士")
     @Test
     void towerPlacedWithAstroMancer(Game game, @Plot.Size(x = 144, y = 256, z = 144) @Plot.Centered Plot plot,
                                     TestReporter reporter) {
@@ -101,6 +107,7 @@ class StellarStructureTest {
         ctx.run(() -> tower(ctx));
     }
 
+    @DisplayName("观星塔的雕纹书架保留一本横扫之刃 III 附魔书")
     @Test
     void towerBookshelfKeepsSweepingEdge(Game game, @Plot.Size(x = 144, y = 256, z = 144) @Plot.Centered Plot plot,
                                          TestReporter reporter) {
@@ -108,36 +115,42 @@ class StellarStructureTest {
         ctx.run(() -> sweepingEdgeBook(ctx));
     }
 
+    @DisplayName("观星术士的中英文名称正确")
     @Test
     void astroMancerName(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);
         ctx.run(() -> astroName(ctx));
     }
 
+    @DisplayName("四幅新画可随机挂出，中英文都有标题")
     @Test
     void paintingsPlaceableAndTitled(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);
         ctx.run(() -> paintings(ctx));
     }
 
+    @DisplayName("星之旅程与万法皆通两个成就页签的根、父子关系和背景正确")
     @Test
     void advancementTabs(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);
         ctx.run(() -> advancements(ctx));
     }
 
+    @DisplayName("观星罗盘在主世界右键：不绑定坐标，进入冷却，冷却中再点无反应")
     @Test
     void compassWrongDimensionCooldown(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
         Stage ctx = Stage.flat(game, plot, reporter);
         ctx.run(() -> compassOverworld(ctx));
     }
 
+    @DisplayName("观星罗盘在末地右键：一次搜索在 1 秒内结束")
     @Test
     void compassEndSearchFinishesQuickly(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);
         ctx.run(() -> compassEnd(ctx));
     }
 
+    @DisplayName("已绑定的观星罗盘右键磁石：坐标不变，物品名仍是观星罗盘")
     @Test
     void compassLodestoneKeepsTargetAndName(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
         Stage ctx = Stage.flat(game, plot, reporter);
@@ -145,6 +158,7 @@ class StellarStructureTest {
     }
 
     /** 出生点环带内的两次手动放置最多成功一次；已有庭院时都被拒绝，原版冰屋仍能放置。 */
+    @DisplayName("星落之庭每个世界最多一座：已有庭院时再放置被拒绝，原版冰屋仍能放置")
     @Test
     void starfallGardenOnlyOnePerWorld(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);
@@ -196,6 +210,7 @@ class StellarStructureTest {
      * 补生成开始放置时计的次数当场提交写盘（不等自动保存，崩服也算一次；NeoForge 在 IO 线程上写，等它落到文件）；
      * 正常停服退还的那一步把次数减回去。重启才能走到的上限分支归人工验收。
      */
+    @DisplayName("星落之庭补生成的放置次数当场写进存档文件，停服退还后减回")
     @Test
     void starfallGardenPlacementAttemptSavedImmediately(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);

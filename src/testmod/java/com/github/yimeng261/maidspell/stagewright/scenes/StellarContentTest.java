@@ -52,6 +52,7 @@ import net.minecraft.world.item.enchantment.Enchantments;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestReporter;
 
@@ -73,6 +74,7 @@ import static com.github.yimeng261.maidspell.stagewright.support.Checks.NS;
  * 星锚珍珠、归星配方、投枪投掷。
  */
 @Scene("tlms")
+@DisplayName("星之魔女系列内容")
 class StellarContentTest {
     private static final List<String> EXCLUSIVE_SPELLS = List.of("starfall_modified", "magic_shotgun", "void_phase",
             "sword_prison", "teleport_modified", "star_shadow_strike", "triple_star_arrow");
@@ -83,6 +85,7 @@ class StellarContentTest {
         return SpellRegistry.getSpell(ResourceLocation.fromNamespaceAndPath(MaidSpellMod.MOD_ID, path));
     }
 
+    @DisplayName("星之魔女专属法术已注册，不能在抄写台合成，也不会出现在战利品卷轴里")
     @Test
     void exclusiveNotCraftableOrLootable(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);
@@ -96,6 +99,7 @@ class StellarContentTest {
         });
     }
 
+    @DisplayName("伴星黑洞与破法回响能在抄写台合成")
     @Test
     void companionSpellsCraftable(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);
@@ -107,6 +111,7 @@ class StellarContentTest {
     }
 
     /** 名称（spell.&lt;ns&gt;.&lt;id&gt;）与说明（.guide）两种语言都有，图标贴图存在。 */
+    @DisplayName("星之魔女系列法术的名称与说明在中英文下都有，图标贴图存在")
     @Test
     void namesDescriptionsIcons(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);
@@ -147,6 +152,7 @@ class StellarContentTest {
     }
 
     /** 饰品页有星锚珍珠；杂项页有装备、材料、寻风之铃、花草、压制石和管理员工具，且排在饰品页之后。 */
+    @DisplayName("创造物品栏饰品页有星锚珍珠，杂项页有相关物品且排在饰品页之后")
     @Test
     void creativeTabs(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);
@@ -175,6 +181,7 @@ class StellarContentTest {
     }
 
     /** 附魔台/铁砧上能附的附魔：长剑剑类、法帽头盔类、法杖可附耐久、经验修补及剑类附魔、投枪三叉戟类。 */
+    @DisplayName("星之魔女系列装备与投枪在附魔台和铁砧上能附的附魔符合设计")
     @Test
     void enchantability(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);
@@ -209,6 +216,7 @@ class StellarContentTest {
     }
 
     /** 长剑自带虚空相变、可用紫水晶修复；法帽加法力上限、法术强度、冷却缩减；投枪伤害与三叉戟相同。 */
+    @DisplayName("星影长剑自带虚空相变且可用紫水晶修复，星之魔女法帽加法力上限、法术强度与冷却缩减，投枪伤害与三叉戟相同")
     @Test
     void longswordAndHat(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);
@@ -242,6 +250,7 @@ class StellarContentTest {
         return out;
     }
 
+    @DisplayName("四个秘银锭围着星陨石合成归星")
     @Test
     void returningStarRecipe(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);
@@ -259,6 +268,7 @@ class StellarContentTest {
     }
 
     /** 玩家右键：耗 8 点耐久、获得 35 秒虚空漫步并进入 30 秒冷却，期间虚空伤害减免 95%；耐久见底时碎掉；不可修复。 */
+    @DisplayName("星锚珍珠玩家右键：耗 8 点耐久、获得虚空漫步并进入冷却，期间虚空伤害减免 95%，耐久见底时碎掉且不可修复")
     @Test
     void playerUse(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
         Stage ctx = Stage.flat(game, plot, reporter);
@@ -294,6 +304,7 @@ class StellarContentTest {
     /**
      * 虚空漫步只减虚空伤害：摔落、生物攻击照常全额；在吸收之前结算，减免后的伤害再被吸收扣除；效果结束后虚空伤害恢复全额。
      */
+    @DisplayName("虚空漫步只减虚空伤害，摔落照常全额，减免后的伤害再被吸收扣除，效果结束后恢复全额")
     @Test
     void voidWalkOnlyCutsVoidDamage(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
         Stage ctx = Stage.flat(game, plot, reporter);
@@ -325,6 +336,7 @@ class StellarContentTest {
     }
 
     /** 三种语言的 desc2 都写着减伤 95%，且格式化占位符个数与参数个数（耐久、秒数、冷却秒数）一致，百分号已转义。 */
+    @DisplayName("星锚珍珠三种语言的 desc2 都写着减伤 95%，占位符个数正确且百分号已转义")
     @Test
     void tooltipSays95(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);
@@ -343,6 +355,7 @@ class StellarContentTest {
         });
     }
 
+    @DisplayName("戴星锚珍珠的女仆受虚空伤害时挡下一次，珍珠损耗 1 点耐久")
     @Test
     void maidBlocksVoid(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
         Stage ctx = Stage.flat(game, plot, reporter);
@@ -362,6 +375,7 @@ class StellarContentTest {
     }
 
     /** 生存模式投出：手上的投枪用掉，实体可捡回且捡回的是星影投枪；创造模式投出：手上不少，实体只许创造模式捡。 */
+    @DisplayName("投枪生存模式投出后手上用掉、实体可捡回，创造模式投出后手上不少、实体只许创造模式捡")
     @Test
     void throwSurvivalAndCreative(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
         Stage ctx = Stage.flat(game, plot, reporter);
@@ -417,6 +431,7 @@ class StellarContentTest {
     }
 
     /** 连段中途按接续窗口出手，最后一击等完整收招后才放开 AI。 */
+    @DisplayName("星之魔女近战连段中途按接续窗口出手，最后一击等完整收招后才放开 AI")
     @Test
     void meleeComboTimeline(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);
@@ -427,6 +442,7 @@ class StellarContentTest {
     }
 
     /** 只有剑系动作允许提前接续，其余动作的接续窗口就是总时长。 */
+    @DisplayName("只有剑系动作允许提前接续，其余动作的接续窗口等于总时长")
     @Test
     void followUpOnlySwordActions(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);
@@ -442,6 +458,7 @@ class StellarContentTest {
     }
 
     /** 剑系动作的事件都落在接续窗口之内，完整收招等于动画文件里的时长。 */
+    @DisplayName("剑系动作的事件都落在接续窗口之内，完整收招等于动画文件里的时长")
     @Test
     void swordFollowUpKeepsEventsAndRecovery(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);
@@ -483,6 +500,7 @@ class StellarContentTest {
      * 只留近战与常规法术决策两条路。法术决策以 {@code spellDecisionCooldown} 在非收招 tick 被重新拉高为准，
      * 不论这次决策最后放没放出法术。
      */
+    @DisplayName("星之魔女二阶段近战连段每套收招后先做一次法术决策，再起下一套")
     @Test
     void comboYieldsSpellTurn(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
         Stage ctx = Stage.flat(game, plot, reporter);
@@ -523,6 +541,10 @@ class StellarContentTest {
             int combo = Reflect.field(goal, type, "meleeComboRemaining");
             int decision = Reflect.field(goal, type, "spellDecisionCooldown");
             int at = ctx.tick() - start;
+            if (!boss.isPhaseTwo() && (events.isEmpty() || !events.getLast().startsWith("phase1@"))) {
+                events.add("phase1@" + at + "/" + String.format("%.1f/%.1f", boss.getHealth(), boss.getMaxHealth())
+                        + (boss.isAlive() ? "" : "/dead") + (boss.isRemoved() ? "/removed" : ""));
+            }
             if (previous[0] > 0 && combo == 0) {
                 events.add("end@" + at);
             } else if (previous[0] == 0 && combo > 0) {

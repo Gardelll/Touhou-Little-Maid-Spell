@@ -24,6 +24,7 @@ import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestReporter;
 
@@ -39,10 +40,12 @@ import static com.github.yimeng261.maidspell.stagewright.support.Checks.NS;
  * （成就定义、授予幂等、30 秒无目标判负的二阶段落败也授予、台词与语言键）。
  */
 @Scene("tlms")
+@DisplayName("星之魔女誓约进度与「虚空之秘」成就")
 class WinefoxProgressTest {
     private static final ResourceLocation VOID_SECRET = ResourceLocation.fromNamespaceAndPath("touhou_little_maid_spell", "star_journey/void_secret");
 
     /** 归星提示与动作栏的文案：0~1 场只有进度，两场后等专属胜利，齐了提示献上归星；未计入时用“未计入”文案；进度显示封顶 2。 */
+    @DisplayName("归星提示与动作栏文案随誓约进度变化，进度显示封顶为 2 场且各语言文案齐全")
     @Test
     void textsFollowProgress(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);
@@ -50,6 +53,7 @@ class WinefoxProgressTest {
     }
 
     /** 同步包的编解码保持次数与专属胜利标记；不同进度互不相等。 */
+    @DisplayName("誓约进度同步包编码再解码后保持次数与专属胜利标记，且无多余字节")
     @Test
     void packetRoundTrip(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);
@@ -57,6 +61,7 @@ class WinefoxProgressTest {
     }
 
     /** 进度、已听教学写进存档 NBT 再读回来不丢；别的玩家不受影响。 */
+    @DisplayName("誓约进度与已听教学写进存档再读回不丢失，别的玩家不受影响")
     @Test
     void savedDataRoundTrip(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);
@@ -64,6 +69,7 @@ class WinefoxProgressTest {
     }
 
     /** 成就挂在星途终岸之下、隐藏、图标是星锚珍珠，数据包加载后能按 id 取到。 */
+    @DisplayName("「虚空之秘」成就挂在星途终岸之下，隐藏、会弹 toast 与聊天播报，图标为星锚珍珠")
     @Test
     void advancementHiddenUnderEndshore(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);
@@ -71,6 +77,7 @@ class WinefoxProgressTest {
     }
 
     /** 授予一次后成就完成，再授予不报错、不改变状态。 */
+    @DisplayName("授予「虚空之秘」成就一次后完成，重复授予不报错也不改变状态")
     @Test
     void grantIsIdempotent(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
         Stage ctx = Stage.flat(game, plot, reporter);
@@ -81,12 +88,14 @@ class WinefoxProgressTest {
      * 挑战者没跑远却 30 秒没有目标：二阶段同样判负，授予成就；一阶段不授予。
      * 直接把无目标计数拨到宽限的最后一 tick，再跑一次收场判断。
      */
+    @DisplayName("二阶段挑战者 30 秒没有目标判负时授予「虚空之秘」成就")
     @Test
     void thirtySecondLossInPhaseTwoGrants(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
         Stage ctx = Stage.flat(game, plot, reporter);
         ctx.run(() -> thirtySecondLoss(ctx, true));
     }
 
+    @DisplayName("一阶段挑战者 30 秒没有目标判负时不授予「虚空之秘」成就")
     @Test
     void thirtySecondLossInPhaseOneDoesNot(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
         Stage ctx = Stage.flat(game, plot, reporter);
@@ -94,6 +103,7 @@ class WinefoxProgressTest {
     }
 
     /** 教学四句与落败台词在三种语言里都有；简中的教学第一句不再与任何一句落败台词相同；已删的语言键不再出现。 */
+    @DisplayName("教学四句与落败台词在三种语言里齐全，简中教学第一句不与落败台词重复，已删语言键不再出现")
     @Test
     void langKeysAndDistinctFirstLine(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);

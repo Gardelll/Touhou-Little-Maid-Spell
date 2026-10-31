@@ -4,6 +4,7 @@ import com.github.yimeng261.maidspell.stagewright.support.Stage;
 import net.magicterra.stagewright.test.Game;
 import net.magicterra.stagewright.test.Plot;
 import net.magicterra.stagewright.test.Scene;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestReporter;
 import com.github.yimeng261.maidspell.MaidSpellMod;
@@ -60,6 +61,7 @@ import java.util.function.Function;
  * 结构内容：每个结构放置一次，依次检查方块 / 方块实体 / 容器 / 实体 / 女仆，外加村庄补充街道与房屋、模板内容和已知缺陷。
  * <p>每个测试各自在超平坦场地放置一次结构（场地互相独立，不能共享放置）；场地按结构的占地加大。
  */
+@DisplayName("结构内容")
 @Scene("tlms")
 class StructureTest {
     /** 单模板结构（optional_mod_template）：要放置的模板、所属结构名、是否带结构女仆。 */
@@ -106,6 +108,7 @@ class StructureTest {
 
     private static final String PAINTING = "minecraft:painting";
 
+    @DisplayName("隐世之境：放置后方块、容器、女仆与实体都与模板一致，生物不死不卡墙")
     @Test
     void hiddenRetreat(Game game, @Plot.Size(x = 176, y = 256, z = 176) @Plot.Centered Plot plot, TestReporter reporter) {
         Stage ctx = Stage.wideFlat(game, plot, reporter);
@@ -113,72 +116,84 @@ class StructureTest {
     }
 
     /** 狐狸的落地高度由 {@link #foxOnGround} 单独检查，这里不计入死亡与卡墙。 */
+    @DisplayName("隐世樱花树：放置后内容与模板一致（狐狸另测落地高度）")
     @Test
     void hiddenCherryTree(Game game, @Plot.Size(x = 80, y = 128, z = 80) @Plot.Centered Plot plot, TestReporter reporter) {
         Stage ctx = Stage.wideFlat(game, plot, reporter);
         structure(ctx, "hidden_cherry_tree", false, Set.of("minecraft:fox"));
     }
 
+    @DisplayName("妖精女仆咖啡厅：放置后内容与模板一致，结构女仆数据正确")
     @Test
     void fairyMaidCafe(Game game, @Plot.Size(x = 80, y = 128, z = 80) @Plot.Centered Plot plot, TestReporter reporter) {
         Stage ctx = Stage.wideFlat(game, plot, reporter);
         structure(ctx, "fairy_maid_cafe", true, Set.of());
     }
 
+    @DisplayName("阴阳祭坛：放置后内容与模板一致")
     @Test
     void yinYangAltar(Game game, @Plot.Size(x = 80, y = 128, z = 80) @Plot.Centered Plot plot, TestReporter reporter) {
         Stage ctx = Stage.wideFlat(game, plot, reporter);
         structure(ctx, "yin_yang_altar", false, Set.of());
     }
 
+    @DisplayName("圣遗礼拜堂：放置后内容与模板一致，结构女仆数据正确")
     @Test
     void relicSanctum(Game game, @Plot.Size(x = 144, y = 256, z = 144) @Plot.Centered Plot plot, TestReporter reporter) {
         Stage ctx = Stage.wideFlat(game, plot, reporter);
         structure(ctx, "relic_sanctum", true, Set.of());
     }
 
+    @DisplayName("堕天圣堂：放置后内容与模板一致，结构女仆数据正确")
     @Test
     void fallenSanctum(Game game, @Plot.Size(x = 240, y = 256, z = 240) @Plot.Centered Plot plot, TestReporter reporter) {
         Stage ctx = Stage.wideFlat(game, plot, reporter);
         structure(ctx, "fallen_sanctum", true, Set.of());
     }
 
+    @DisplayName("精灵秘境：放置后内容与模板一致，结构女仆数据正确")
     @Test
     void elvenRealm(Game game, @Plot.Size(x = 208, y = 256, z = 208) @Plot.Centered Plot plot, TestReporter reporter) {
         Stage ctx = Stage.wideFlat(game, plot, reporter);
         structure(ctx, "elven_realm", true, Set.of());
     }
 
+    @DisplayName("魔女足迹-林间栖所：放置后内容与模板一致")
     @Test
     void woodsPerch(Game game, @Plot.Size(x = 80, y = 128, z = 80) @Plot.Centered Plot plot, TestReporter reporter) {
         Stage ctx = Stage.wideFlat(game, plot, reporter);
         structure(ctx, "woods_perch", false, Set.of());
     }
 
+    @DisplayName("魔女足迹-蘑菇岛屋：放置后内容与模板一致")
     @Test
     void enchantressFootstepsMushroomFields(Game game, @Plot.Size(x = 80, y = 128, z = 80) @Plot.Centered Plot plot, TestReporter reporter) {
         Stage ctx = Stage.wideFlat(game, plot, reporter);
         structure(ctx, "enchantress_footsteps_mushroom_fields", false, Set.of());
     }
 
+    @DisplayName("魔女足迹-雪原冰屋：放置后内容与模板一致")
     @Test
     void enchantressFootstepsIgloo(Game game, @Plot.Size(x = 80, y = 128, z = 80) @Plot.Centered Plot plot, TestReporter reporter) {
         Stage ctx = Stage.wideFlat(game, plot, reporter);
         structure(ctx, "enchantress_footsteps_igloo", false, Set.of());
     }
 
+    @DisplayName("魔女足迹-掠夺者前哨站：放置后内容与模板一致")
     @Test
     void enchantressFootstepsOutpost(Game game, @Plot.Size(x = 144, y = 256, z = 144) @Plot.Centered Plot plot, TestReporter reporter) {
         Stage ctx = Stage.wideFlat(game, plot, reporter);
         structure(ctx, "enchantress_footsteps_outpost", false, Set.of());
     }
 
+    @DisplayName("魔女足迹-墓园：放置后内容与模板一致")
     @Test
     void enchantressFootstepsGraveyard(Game game, @Plot.Size(x = 80, y = 128, z = 80) @Plot.Centered Plot plot, TestReporter reporter) {
         Stage ctx = Stage.wideFlat(game, plot, reporter);
         structure(ctx, "enchantress_footsteps_graveyard", false, Set.of());
     }
 
+    @DisplayName("落樱厨舍：按模板直接放置后内容与模板一致，结构女仆数据正确")
     @Test
     void cherryCabin(Game game, @Plot.Size(x = 80, y = 128, z = 80) @Plot.Centered Plot plot, TestReporter reporter) {
         Stage ctx = Stage.wideFlat(game, plot, reporter);
@@ -186,24 +201,28 @@ class StructureTest {
     }
 
     /** 不装铁魔法时代替 cherry_cabin 的模板。 */
+    @DisplayName("落樱厨舍：不装铁魔法时的替代模板放置后内容与模板一致，结构女仆数据正确")
     @Test
     void cherryCabinWithoutIss(Game game, @Plot.Size(x = 80, y = 128, z = 80) @Plot.Centered Plot plot, TestReporter reporter) {
         Stage ctx = Stage.wideFlat(game, plot, reporter);
         singleTemplate(ctx, new SingleTemplate("cherry_cabin_without_iss", "cherry_cabin", true));
     }
 
+    @DisplayName("魔女足迹-玄武岩锻坊：按模板直接放置后内容与模板一致")
     @Test
     void enchantressFootstepsBasaltForge(Game game, @Plot.Size(x = 80, y = 128, z = 80) @Plot.Centered Plot plot, TestReporter reporter) {
         Stage ctx = Stage.wideFlat(game, plot, reporter);
         singleTemplate(ctx, new SingleTemplate("enchantress_footsteps_basalt_forge", "enchantress_footsteps_basalt_forge", false));
     }
 
+    @DisplayName("魔女足迹-绯红林屋：按模板直接放置后内容与模板一致")
     @Test
     void enchantressFootstepsCrimsonCabin(Game game, @Plot.Size(x = 80, y = 128, z = 80) @Plot.Centered Plot plot, TestReporter reporter) {
         Stage ctx = Stage.wideFlat(game, plot, reporter);
         singleTemplate(ctx, new SingleTemplate("enchantress_footsteps_crimson_cabin", "enchantress_footsteps_crimson_cabin", false));
     }
 
+    @DisplayName("魔女足迹-魂谷一隅：按模板直接放置后内容与模板一致")
     @Test
     void enchantressFootstepsSoulvalleyNook(Game game, @Plot.Size(x = 80, y = 128, z = 80) @Plot.Centered Plot plot, TestReporter reporter) {
         Stage ctx = Stage.wideFlat(game, plot, reporter);
@@ -211,12 +230,14 @@ class StructureTest {
     }
 
     /** 不装 Goety 时代替 soulvalley_nook 的模板。 */
+    @DisplayName("魔女足迹-魂谷一隅：不装 Goety 时的替代模板放置后内容与模板一致")
     @Test
     void enchantressFootstepsSoulvalleyNookWithoutGoety(Game game, @Plot.Size(x = 80, y = 128, z = 80) @Plot.Centered Plot plot, TestReporter reporter) {
         Stage ctx = Stage.wideFlat(game, plot, reporter);
         singleTemplate(ctx, new SingleTemplate("enchantress_footsteps_soulvalley_nook_without_goety", "enchantress_footsteps_soulvalley_nook", false));
     }
 
+    @DisplayName("魔女足迹-诡林栖所：按模板直接放置后内容与模板一致")
     @Test
     void enchantressFootstepsWarpedPerch(Game game, @Plot.Size(x = 80, y = 128, z = 80) @Plot.Centered Plot plot, TestReporter reporter) {
         Stage ctx = Stage.wideFlat(game, plot, reporter);
@@ -224,6 +245,7 @@ class StructureTest {
     }
 
     /** 从补充街道池组装一层（相邻的原版街道/尽头片一并放置）。 */
+    @DisplayName("沙漠村庄补充街道：从街道池组装一层后方块与模板一致")
     @Test
     void villageDesertStreet(Game game, @Plot.Size(x = 112, y = 128, z = 112) @Plot.Centered Plot plot, TestReporter reporter) {
         Stage ctx = Stage.wideFlat(game, plot, reporter);
@@ -231,54 +253,63 @@ class StructureTest {
     }
 
     /** 直接从房屋池放置检查内容（自然村庄里经补充街道接入，见 NaturalTest#villageSupplementAppears）。 */
+    @DisplayName("沙漠村庄补充房屋：从房屋池放置后内容与模板一致")
     @Test
     void villageDesertHouse(Game game, @Plot.Size(x = 80, y = 128, z = 80) @Plot.Centered Plot plot, TestReporter reporter) {
         Stage ctx = Stage.wideFlat(game, plot, reporter);
         content(ctx, c -> placeHouse(c, "desert"), false, Set.of());
     }
 
+    @DisplayName("平原村庄补充街道：从街道池组装一层后方块与模板一致")
     @Test
     void villagePlainsStreet(Game game, @Plot.Size(x = 112, y = 128, z = 112) @Plot.Centered Plot plot, TestReporter reporter) {
         Stage ctx = Stage.wideFlat(game, plot, reporter);
         ctx.run(() -> blocks(ctx, StructureStage.placePool(ctx, "minecraft:village_plains", VILLAGE + "plains_streets", 1)));
     }
 
+    @DisplayName("平原村庄补充房屋：从房屋池放置后内容与模板一致（椅子另测）")
     @Test
     void villagePlainsHouse(Game game, @Plot.Size(x = 80, y = 128, z = 80) @Plot.Centered Plot plot, TestReporter reporter) {
         Stage ctx = Stage.wideFlat(game, plot, reporter);
         content(ctx, c -> placeHouse(c, "plains"), false, Set.of(CHAIR));
     }
 
+    @DisplayName("热带草原村庄补充街道：从街道池组装一层后方块与模板一致")
     @Test
     void villageSavannaStreet(Game game, @Plot.Size(x = 112, y = 128, z = 112) @Plot.Centered Plot plot, TestReporter reporter) {
         Stage ctx = Stage.wideFlat(game, plot, reporter);
         ctx.run(() -> blocks(ctx, StructureStage.placePool(ctx, "minecraft:village_savanna", VILLAGE + "savanna_streets", 1)));
     }
 
+    @DisplayName("热带草原村庄补充房屋：从房屋池放置后内容与模板一致")
     @Test
     void villageSavannaHouse(Game game, @Plot.Size(x = 80, y = 128, z = 80) @Plot.Centered Plot plot, TestReporter reporter) {
         Stage ctx = Stage.wideFlat(game, plot, reporter);
         content(ctx, c -> placeHouse(c, "savanna"), false, Set.of());
     }
 
+    @DisplayName("雪原村庄补充街道：从街道池组装一层后方块与模板一致")
     @Test
     void villageSnowyStreet(Game game, @Plot.Size(x = 112, y = 128, z = 112) @Plot.Centered Plot plot, TestReporter reporter) {
         Stage ctx = Stage.wideFlat(game, plot, reporter);
         ctx.run(() -> blocks(ctx, StructureStage.placePool(ctx, "minecraft:village_snowy", VILLAGE + "snowy_streets", 1)));
     }
 
+    @DisplayName("雪原村庄补充房屋：从房屋池放置后内容与模板一致")
     @Test
     void villageSnowyHouse(Game game, @Plot.Size(x = 80, y = 128, z = 80) @Plot.Centered Plot plot, TestReporter reporter) {
         Stage ctx = Stage.wideFlat(game, plot, reporter);
         content(ctx, c -> placeHouse(c, "snowy"), false, Set.of());
     }
 
+    @DisplayName("针叶林村庄补充街道：从街道池组装一层后方块与模板一致")
     @Test
     void villageTaigaStreet(Game game, @Plot.Size(x = 112, y = 128, z = 112) @Plot.Centered Plot plot, TestReporter reporter) {
         Stage ctx = Stage.wideFlat(game, plot, reporter);
         ctx.run(() -> blocks(ctx, StructureStage.placePool(ctx, "minecraft:village_taiga", VILLAGE + "taiga_streets", 1)));
     }
 
+    @DisplayName("针叶林村庄补充房屋：从房屋池放置后内容与模板一致")
     @Test
     void villageTaigaHouse(Game game, @Plot.Size(x = 80, y = 128, z = 80) @Plot.Centered Plot plot, TestReporter reporter) {
         Stage ctx = Stage.wideFlat(game, plot, reporter);
@@ -286,192 +317,224 @@ class StructureTest {
     }
 
     /** 街道的 minecraft:street 接口应指向本生物群系的原版街道池。 */
+    @DisplayName("沙漠补充街道的街道接口指向沙漠原版街道池")
     @Test
     void villageDesertStreetLinksOwnBiome(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);
         ctx.run(() -> streetLinksOwnBiome(ctx, "desert"));
     }
 
+    @DisplayName("平原补充街道的街道接口指向平原原版街道池")
     @Test
     void villagePlainsStreetLinksOwnBiome(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);
         ctx.run(() -> streetLinksOwnBiome(ctx, "plains"));
     }
 
+    @DisplayName("热带草原补充街道的街道接口指向热带草原原版街道池")
     @Test
     void villageSavannaStreetLinksOwnBiome(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);
         ctx.run(() -> streetLinksOwnBiome(ctx, "savanna"));
     }
 
+    @DisplayName("雪原补充街道的街道接口指向雪原原版街道池")
     @Test
     void villageSnowyStreetLinksOwnBiome(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);
         ctx.run(() -> streetLinksOwnBiome(ctx, "snowy"));
     }
 
+    @DisplayName("针叶林补充街道的街道接口指向针叶林原版街道池")
     @Test
     void villageTaigaStreetLinksOwnBiome(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);
         ctx.run(() -> streetLinksOwnBiome(ctx, "taiga"));
     }
 
+    @DisplayName("观星塔模板 1 不旋转：挂画的变体、挂靠格、朝向与模板一致且挂得住")
     @Test
     void paintingsStarwatchTowerStarwatchTower1None(Game game, @Plot.Size(x = 80, y = 128, z = 80) @Plot.Centered Plot plot, TestReporter reporter) {
         Stage ctx = Stage.wideFlat(game, plot, reporter);
         paintingsStayAnchored(ctx, PAINTING_TEMPLATES.get(0), Rotation.NONE);
     }
 
+    @DisplayName("观星塔模板 1 旋转 180°：挂画的变体、挂靠格、朝向与模板一致且挂得住")
     @Test
     void paintingsStarwatchTowerStarwatchTower1Clockwise180(Game game, @Plot.Size(x = 80, y = 128, z = 80) @Plot.Centered Plot plot, TestReporter reporter) {
         Stage ctx = Stage.wideFlat(game, plot, reporter);
         paintingsStayAnchored(ctx, PAINTING_TEMPLATES.get(0), Rotation.CLOCKWISE_180);
     }
 
+    @DisplayName("观星塔模板 2 不旋转：挂画的变体、挂靠格、朝向与模板一致且挂得住")
     @Test
     void paintingsStarwatchTowerStarwatchTower2None(Game game, @Plot.Size(x = 112, y = 128, z = 112) @Plot.Centered Plot plot, TestReporter reporter) {
         Stage ctx = Stage.wideFlat(game, plot, reporter);
         paintingsStayAnchored(ctx, PAINTING_TEMPLATES.get(1), Rotation.NONE);
     }
 
+    @DisplayName("观星塔模板 2 旋转 180°：挂画的变体、挂靠格、朝向与模板一致且挂得住")
     @Test
     void paintingsStarwatchTowerStarwatchTower2Clockwise180(Game game, @Plot.Size(x = 112, y = 128, z = 112) @Plot.Centered Plot plot, TestReporter reporter) {
         Stage ctx = Stage.wideFlat(game, plot, reporter);
         paintingsStayAnchored(ctx, PAINTING_TEMPLATES.get(1), Rotation.CLOCKWISE_180);
     }
 
+    @DisplayName("星落之庭模板 5 不旋转：挂画的变体、挂靠格、朝向与模板一致且挂得住")
     @Test
     void paintingsStarfallGarden5None(Game game, @Plot.Size(x = 112, y = 128, z = 112) @Plot.Centered Plot plot, TestReporter reporter) {
         Stage ctx = Stage.wideFlat(game, plot, reporter);
         paintingsStayAnchored(ctx, PAINTING_TEMPLATES.get(2), Rotation.NONE);
     }
 
+    @DisplayName("星落之庭模板 5 旋转 180°：挂画的变体、挂靠格、朝向与模板一致且挂得住")
     @Test
     void paintingsStarfallGarden5Clockwise180(Game game, @Plot.Size(x = 112, y = 128, z = 112) @Plot.Centered Plot plot, TestReporter reporter) {
         Stage ctx = Stage.wideFlat(game, plot, reporter);
         paintingsStayAnchored(ctx, PAINTING_TEMPLATES.get(2), Rotation.CLOCKWISE_180);
     }
 
+    @DisplayName("隐世之境主建筑不旋转：挂画的变体、挂靠格、朝向与模板一致且挂得住")
     @Test
     void paintingsHiddenRetreatHiddenRetreatBuildingNone(Game game, @Plot.Size(x = 80, y = 128, z = 80) @Plot.Centered Plot plot, TestReporter reporter) {
         Stage ctx = Stage.wideFlat(game, plot, reporter);
         paintingsStayAnchored(ctx, PAINTING_TEMPLATES.get(3), Rotation.NONE);
     }
 
+    @DisplayName("隐世之境主建筑旋转 180°：挂画的变体、挂靠格、朝向与模板一致且挂得住")
     @Test
     void paintingsHiddenRetreatHiddenRetreatBuildingClockwise180(Game game, @Plot.Size(x = 80, y = 128, z = 80) @Plot.Centered Plot plot, TestReporter reporter) {
         Stage ctx = Stage.wideFlat(game, plot, reporter);
         paintingsStayAnchored(ctx, PAINTING_TEMPLATES.get(3), Rotation.CLOCKWISE_180);
     }
 
+    @DisplayName("妖精女仆咖啡厅（妖怪们的归家官方版模板）不旋转：挂画的变体、挂靠格、朝向与模板一致且挂得住")
     @Test
     void paintingsFairyMaidCafeFairyMaidCafeNone(Game game, @Plot.Size(x = 80, y = 128, z = 80) @Plot.Centered Plot plot, TestReporter reporter) {
         Stage ctx = Stage.wideFlat(game, plot, reporter);
         paintingsStayAnchored(ctx, PAINTING_TEMPLATES.get(4), Rotation.NONE);
     }
 
+    @DisplayName("妖精女仆咖啡厅（妖怪们的归家官方版模板）旋转 180°：挂画的变体、挂靠格、朝向与模板一致且挂得住")
     @Test
     void paintingsFairyMaidCafeFairyMaidCafeClockwise180(Game game, @Plot.Size(x = 80, y = 128, z = 80) @Plot.Centered Plot plot, TestReporter reporter) {
         Stage ctx = Stage.wideFlat(game, plot, reporter);
         paintingsStayAnchored(ctx, PAINTING_TEMPLATES.get(4), Rotation.CLOCKWISE_180);
     }
 
+    @DisplayName("妖精女仆咖啡厅（妖怪们的归家移植版模板）不旋转：挂画的变体、挂靠格、朝向与模板一致且挂得住")
     @Test
     void paintingsFairyMaidCafeFairyMaidCafeYhPortNone(Game game, @Plot.Size(x = 80, y = 128, z = 80) @Plot.Centered Plot plot, TestReporter reporter) {
         Stage ctx = Stage.wideFlat(game, plot, reporter);
         paintingsStayAnchored(ctx, PAINTING_TEMPLATES.get(5), Rotation.NONE);
     }
 
+    @DisplayName("妖精女仆咖啡厅（妖怪们的归家移植版模板）旋转 180°：挂画的变体、挂靠格、朝向与模板一致且挂得住")
     @Test
     void paintingsFairyMaidCafeFairyMaidCafeYhPortClockwise180(Game game, @Plot.Size(x = 80, y = 128, z = 80) @Plot.Centered Plot plot, TestReporter reporter) {
         Stage ctx = Stage.wideFlat(game, plot, reporter);
         paintingsStayAnchored(ctx, PAINTING_TEMPLATES.get(5), Rotation.CLOCKWISE_180);
     }
 
+    @DisplayName("妖精女仆咖啡厅（Youkais' Feasts 模板）不旋转：挂画的变体、挂靠格、朝向与模板一致且挂得住")
     @Test
     void paintingsFairyMaidCafeFairyMaidCafeYoukaisfeastsNone(Game game, @Plot.Size(x = 80, y = 128, z = 80) @Plot.Centered Plot plot, TestReporter reporter) {
         Stage ctx = Stage.wideFlat(game, plot, reporter);
         paintingsStayAnchored(ctx, PAINTING_TEMPLATES.get(6), Rotation.NONE);
     }
 
+    @DisplayName("妖精女仆咖啡厅（Youkais' Feasts 模板）旋转 180°：挂画的变体、挂靠格、朝向与模板一致且挂得住")
     @Test
     void paintingsFairyMaidCafeFairyMaidCafeYoukaisfeastsClockwise180(Game game, @Plot.Size(x = 80, y = 128, z = 80) @Plot.Centered Plot plot, TestReporter reporter) {
         Stage ctx = Stage.wideFlat(game, plot, reporter);
         paintingsStayAnchored(ctx, PAINTING_TEMPLATES.get(6), Rotation.CLOCKWISE_180);
     }
 
+    @DisplayName("雪原村庄补充房屋模板不旋转：挂画的变体、挂靠格、朝向与模板一致且挂得住")
     @Test
     void paintingsEnchantressFootstepsVillageSnowyHouseNone(Game game, @Plot.Size(x = 80, y = 128, z = 80) @Plot.Centered Plot plot, TestReporter reporter) {
         Stage ctx = Stage.wideFlat(game, plot, reporter);
         paintingsStayAnchored(ctx, PAINTING_TEMPLATES.get(7), Rotation.NONE);
     }
 
+    @DisplayName("雪原村庄补充房屋模板旋转 180°：挂画的变体、挂靠格、朝向与模板一致且挂得住")
     @Test
     void paintingsEnchantressFootstepsVillageSnowyHouseClockwise180(Game game, @Plot.Size(x = 80, y = 128, z = 80) @Plot.Centered Plot plot, TestReporter reporter) {
         Stage ctx = Stage.wideFlat(game, plot, reporter);
         paintingsStayAnchored(ctx, PAINTING_TEMPLATES.get(7), Rotation.CLOCKWISE_180);
     }
 
+    @DisplayName("画的挂靠格经模板四种旋转变换后仍等于模板记录的 blockPos")
     @Test
     void paintingAnchorMechanism(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);
         ctx.run(() -> paintingAnchorMechanism(ctx));
     }
 
+    @DisplayName("本模组模板池里挂着画的模板，正好是测试列出的那些")
     @Test
     void paintingTemplatesListed(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);
         ctx.run(() -> paintingTemplatesListed(ctx));
     }
 
+    @DisplayName("服务器启动后五个原版村庄街道池都注入了补充街道（权重 1）")
     @Test
     void villagePoolInjection(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);
         ctx.run(() -> poolInjection(ctx));
     }
 
+    @DisplayName("隐世樱花树的狐狸生成在结构地面附近，不悬空也不埋在地下")
     @Test
     void foxOnGround(Game game, @Plot.Size(x = 80, y = 128, z = 80) @Plot.Centered Plot plot, TestReporter reporter) {
         Stage ctx = Stage.wideFlat(game, plot, reporter);
         ctx.run(() -> foxOnGround(ctx));
     }
 
+    @DisplayName("阴阳祭坛的缠魂水槽装着水")
     @Test
     void hauntedJugHasWater(Game game, @Plot.Size(x = 80, y = 128, z = 80) @Plot.Centered Plot plot, TestReporter reporter) {
         Stage ctx = Stage.wideFlat(game, plot, reporter);
         ctx.run(() -> hauntedJugHasWater(ctx));
     }
 
+    @DisplayName("平原房屋的炼药锅保留 250mb 罕见墨水")
     @Test
     void villagePlainsHouseCauldronKeepsInk(Game game, @Plot.Size(x = 80, y = 128, z = 80) @Plot.Centered Plot plot, TestReporter reporter) {
         Stage ctx = Stage.wideFlat(game, plot, reporter);
         ctx.run(() -> cauldronKeepsInk(ctx));
     }
 
+    @DisplayName("针叶林房屋展示台上的紫晶细剑保留名字、锋利 II 和召唤剑刃 2 级")
     @Test
     void villageTaigaHousePedestalRapierKeepsData(Game game, @Plot.Size(x = 80, y = 128, z = 80) @Plot.Centered Plot plot, TestReporter reporter) {
         Stage ctx = Stage.wideFlat(game, plot, reporter);
         ctx.run(() -> rapierKeepsData(ctx));
     }
 
+    @DisplayName("平原房屋模板里的椅子不嵌在实心方块里，也不在同一位置重复")
     @Test
     void villagePlainsHouseChairsNotInBlocks(Game game, @Plot.Size(x = 80, y = 128, z = 80) @Plot.Centered Plot plot, TestReporter reporter) {
         Stage ctx = Stage.wideFlat(game, plot, reporter);
         ctx.run(() -> chairsNotInBlocks(ctx));
     }
 
+    @DisplayName("模板里的方块都来自已注册的方块")
     @Test
     void templatesUseOnlyRegisteredBlocks(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);
         ctx.run(() -> onlyRegisteredBlocks(ctx));
     }
 
+    @DisplayName("模板里的女仆都带来源标记和预设效果快照，隐世之境的等待女仆带隐世女仆标记且没有主人")
     @Test
     void templateMaidsDeclareOrigin(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);
         ctx.run(() -> templateMaidsDeclareOrigin(ctx));
     }
 
+    @DisplayName("模板里物品框、容器、实体背包等处的物品都已注册")
     @Test
     void templatesUseOnlyRegisteredItems(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);

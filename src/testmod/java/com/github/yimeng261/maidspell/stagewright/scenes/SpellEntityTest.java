@@ -19,6 +19,7 @@ import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.projectile.Arrow;
 import net.minecraft.world.phys.Vec3;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestReporter;
 
@@ -30,20 +31,24 @@ import static com.github.yimeng261.maidspell.stagewright.support.Checks.NS;
 /**
  * 本模组的铁魔法法术实体：女仆黑洞只吞敌方的箭；改造飞弹能被实体选择器选中。
  */
+@DisplayName("铁魔法法术实体：伴星黑洞与魔法飞弹")
 @Scene("tlms")
 class SpellEntityTest {
     private static final float RADIUS = 3;
 
+    @DisplayName("伴星黑洞只吞敌方的箭：施法女仆自己的箭留下，野生女仆和他人女仆的箭被吞掉")
     @Test
     void consumesEnemyArrowsOnly(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
         blackHole(Stage.flat(game, plot, reporter), false);
     }
 
+    @DisplayName("伴星黑洞不吞主人和同主人女仆射出的箭")
     @Test
     void sparesOwnerSideArrows(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
         blackHole(Stage.flat(game, plot, reporter), true);
     }
 
+    @DisplayName("魔法飞弹实体能被按类型的实体选择器选中")
     @Test
     void selectableByType(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
         Stage ctx = Stage.flat(game, plot, reporter);

@@ -30,6 +30,7 @@ import net.minecraft.world.level.levelgen.structure.Structure;
 import net.minecraft.world.level.levelgen.structure.StructureStart;
 import net.minecraft.world.phys.AABB;
 import net.neoforged.neoforge.common.util.FakePlayer;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
@@ -75,6 +76,7 @@ import static com.github.yimeng261.maidspell.stagewright.scenes.RetreatFixtures.
 @Scene("tlms.integrated")
 @ResourceLock(RetreatFixtures.HOST_PLAYER)
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
+@DisplayName("寻风之铃与归隐之地")
 class RetreatTest {
     private static final String FIRST_USE = BELL_KEY + "first_use";
     private static final String NO_STRUCTURE = BELL_KEY + "no_structure";
@@ -85,6 +87,7 @@ class RetreatTest {
     private static final int FAR_SEARCH_TICKS = 1500;
 
     /** 主世界右键进入自己的私人归隐之地并提示；Shift+右键返回主世界并提示；两次都不消耗铃。 */
+    @DisplayName("主世界右键寻风之铃进入私人归隐之地，Shift+右键返回主世界，两次都有提示且不消耗铃")
     @Test
     @Order(1)
     @Requires(Requires.Capability.CLIENT)
@@ -121,6 +124,7 @@ class RetreatTest {
      * 归隐之地右键：先在动作栏提示等待，找到后聊天栏给出坐标、距离（点击填入 /tp 命令）、搜索耗时与首次使用说明；
      * 铃飞出、只消耗一个；坐标所在区块确有隐世之境起点，周围其它候选区块没有第二个。
      */
+    @DisplayName("归隐之地右键寻风之铃：先提示等待，找到隐世之境后给出坐标与传送命令，铃飞出且只消耗一个")
     @Test
     @Order(2)
     @Requires(Requires.Capability.CLIENT)
@@ -151,6 +155,7 @@ class RetreatTest {
     }
 
     /** 已找到后再次右键：直接给出同一坐标。 */
+    @DisplayName("已找到隐世之境后再次右键，直接给出同一坐标而不再等待搜索")
     @Test
     @Order(3)
     @Requires(Requires.Capability.CLIENT)
@@ -179,6 +184,7 @@ class RetreatTest {
      * 内存里的查找缓存丢失（服务器重启即如此）后重新搜索，仍应找到本维度里已生成的那一个隐世之境。
      * 宿主玩家从主世界原点附近进入，结构生成在进入点附近。
      */
+    @DisplayName("查找缓存丢失后重新搜索，仍找到本维度里已生成的同一个隐世之境")
     @Test
     @Order(4)
     @Requires(Requires.Capability.CLIENT)
@@ -203,6 +209,7 @@ class RetreatTest {
     /**
      * 驯服隐世之境里坐着的结构女仆时收到"您的手艺，一如既往呢"；在结构外驯服坐着的女仆不会收到。
      */
+    @DisplayName("驯服隐世之境里坐着的结构女仆收到提示，在结构外驯服坐着的女仆不会收到")
     @Test
     @Order(5)
     @Requires(Requires.Capability.CLIENT)
@@ -269,6 +276,7 @@ class RetreatTest {
      * 用一个全新 UUID 的私人维度和 NeoForge 模拟玩家（直接放在该维度的远处落点）走真实的右键流程；
      * 模拟玩家收不到消息，结果从服务器的查找缓存读取。
      */
+    @DisplayName("远离原点进入私人归隐之地，隐世之境随落点附近区块生成，第一次用铃搜索就能找到")
     @Test
     @Order(6)
     void searchFindsStructureAtFarEntry(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {

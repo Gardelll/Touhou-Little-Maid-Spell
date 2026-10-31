@@ -6,6 +6,7 @@ import com.github.yimeng261.maidspell.stagewright.support.Stage;
 import net.magicterra.stagewright.test.Game;
 import net.magicterra.stagewright.test.Plot;
 import net.magicterra.stagewright.test.Scene;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestReporter;
 import net.minecraft.core.component.DataComponents;
@@ -33,36 +34,42 @@ import java.util.regex.Pattern;
  * 旅行日记作者是 Stellar_Witch 并带旅行日记标记；书里的页与语言文件里的页一一对应。
  * 以及第 5 批改过的几处文案；日文语言包的日记页数、键集合与星落之庭译名。
  */
+@DisplayName("结构里预置的书与语言文件")
 @Scene("tlms")
 class BookTest {
     private static final String TRAVEL_DIARY = "item.touhou_little_maid_spell.loot.travel_diary.";
     private static final String DIARY_MARKER = MaidSpellMod.MOD_ID + ":travel_diary";
     private static final Pattern PAGE = Pattern.compile("^(.*)\\.page_(\\d+)$");
 
+    @DisplayName("结构模板里的书每页与书名都用语言键，两种语言都有，页数与语言文件对应")
     @Test
     void structureBooksUseLangKeys(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);
         ctx.run(() -> structureBooks(ctx));
     }
 
+    @DisplayName("中文各本书的页数与英文一致")
     @Test
     void samePageCountInBothLanguages(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);
         ctx.run(() -> pageCounts(ctx));
     }
 
+    @DisplayName("书页文案：归星说明写明秘银锭，针叶林村庄日记无多余的「欢」，英文星落之庭统一为 Starfall Garden")
     @Test
     void batch5Wording(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);
         ctx.run(() -> wording(ctx));
     }
 
+    @DisplayName("日文有的书页数都与英文一致，入魔骑士日记和全部旅行日记都有日文正文")
     @Test
     void japanesePagesMatchEnglish(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);
         ctx.run(() -> japanesePages(ctx));
     }
 
+    @DisplayName("日文没有英文里不存在的键，星落之庭统一译作「星降る庭園」")
     @Test
     void japaneseKeysAndNames(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);

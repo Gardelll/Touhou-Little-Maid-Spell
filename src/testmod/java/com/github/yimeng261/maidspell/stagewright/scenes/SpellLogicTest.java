@@ -20,6 +20,7 @@ import net.magicterra.stagewright.test.Scene;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import org.joml.Vector3f;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestReporter;
 
@@ -34,10 +35,12 @@ import java.util.Set;
  * 以及黑洞定位点从动画关键帧算出的释放姿态。
  */
 @Scene("tlms")
+@DisplayName("星之魔女专属法术：星影剑阵与掌心黑洞的计算")
 class SpellLogicTest {
     private static final double EPSILON = 1.0E-12D;
 
     /** 各等级剑数不变，每圈相隔 5 tick 依次出现。 */
+    @DisplayName("星影剑阵：各等级剑数不变，每圈相隔 5 tick 依次出现")
     @Test
     void swordCountsAndFiveTickRings(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);
@@ -45,6 +48,7 @@ class SpellLogicTest {
     }
 
     /** 弹道与逐 tick 加重力的推算一致，落到目标平面时正好停住，全程在包围盒内。 */
+    @DisplayName("星影剑阵：剑的弹道与逐 tick 加重力的推算一致，落到目标平面时正好停住，全程在包围盒内")
     @Test
     void trajectoryMatchesPerTickGravity(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);
@@ -52,6 +56,7 @@ class SpellLogicTest {
     }
 
     /** 插地后的寿命随等级增加；接触伤害每 8 tick 一次，一直到最后一刻。 */
+    @DisplayName("星影剑阵：插地后的寿命随等级增加，接触伤害每 8 tick 一次直到最后一刻")
     @Test
     void lifetimeAndContactHits(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);
@@ -59,6 +64,7 @@ class SpellLogicTest {
     }
 
     /** 每个法阵恰好一把中心剑，随最内圈出现并竖直落下。 */
+    @DisplayName("星影剑阵：每个法阵恰好一把中心剑，随最内圈出现并竖直落下")
     @Test
     void oneCentreSwordFallsVertically(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);
@@ -66,6 +72,7 @@ class SpellLogicTest {
     }
 
     /** 同一描述（等级、半径、种子）在服务端与晚加入的客户端算出完全相同的状态。 */
+    @DisplayName("星影剑阵：同一描述（等级、半径、种子）在服务端与晚加入的客户端算出完全相同的状态")
     @Test
     void descriptorRebuildsSameState(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);
@@ -73,6 +80,7 @@ class SpellLogicTest {
     }
 
     /** 跨越多个格子的大目标和边缘目标都能查到，同一目标只出现一次。 */
+    @DisplayName("碰撞索引：跨越多个格子的大目标和边缘目标都能查到，同一目标只出现一次")
     @Test
     void largeAndEdgeTargetsDeduplicated(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);
@@ -80,6 +88,7 @@ class SpellLogicTest {
     }
 
     /** 粗筛结果覆盖暴力遍历找到的所有相交目标。 */
+    @DisplayName("碰撞索引：粗筛结果覆盖暴力遍历找到的所有相交目标")
     @Test
     void neverMissesComparedWithBruteForce(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);
@@ -87,6 +96,7 @@ class SpellLogicTest {
     }
 
     /** 中心目标只被中心剑的接触盒碰到，各圈之间留有空隙。 */
+    @DisplayName("碰撞索引：中心目标只被中心剑的接触盒碰到，各圈之间留有空隙")
     @Test
     void onlyCentreSwordHitsCentre(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);
@@ -94,6 +104,7 @@ class SpellLogicTest {
     }
 
     /** 远离原点（含世界边界附近）时查询依然准确，平移 1000 格后查不到。 */
+    @DisplayName("碰撞索引：远离原点（含世界边界附近）时查询依然准确，平移 1000 格后查不到")
     @Test
     void worksFarFromOrigin(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);
@@ -101,6 +112,7 @@ class SpellLogicTest {
     }
 
     /** 爆炸预警覆盖冲击前 5 秒，冲击时结束。 */
+    @DisplayName("掌心黑洞：爆炸预警覆盖冲击前 5 秒，冲击时结束")
     @Test
     void warningCoversLastFiveSeconds(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);
@@ -108,6 +120,7 @@ class SpellLogicTest {
     }
 
     /** 脉冲从 2.5 秒开始每秒一次，直到冲击前。 */
+    @DisplayName("掌心黑洞：脉冲从 2.5 秒开始每秒一次，直到冲击前")
     @Test
     void pulsesEverySecondUntilImpact(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);
@@ -115,6 +128,7 @@ class SpellLogicTest {
     }
 
     /** 脉冲与爆炸伤害按受害者自己的最大生命计算。 */
+    @DisplayName("掌心黑洞：脉冲与爆炸伤害按受害者自己的最大生命计算")
     @Test
     void damageScalesWithMaxHealth(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);
@@ -122,6 +136,7 @@ class SpellLogicTest {
     }
 
     /** 脉冲范围是半径 10 格的圆，不是查询盒的四角。 */
+    @DisplayName("掌心黑洞：脉冲范围是半径 10 格的圆，不是查询盒的四角")
     @Test
     void pulseRadiusIsRound(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);
@@ -129,6 +144,7 @@ class SpellLogicTest {
     }
 
     /** 定位点升到顶后停 3 秒，再用 1 秒落到地面。 */
+    @DisplayName("掌心黑洞：定位点升到顶后停 3 秒，再用 1 秒落到地面")
     @Test
     void locatorHoldsThenFalls(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);
@@ -136,6 +152,7 @@ class SpellLogicTest {
     }
 
     /** 顶点偏移稳定，并随魔女朝向旋转。 */
+    @DisplayName("掌心黑洞：定位点顶点偏移稳定，并随魔女朝向旋转")
     @Test
     void topOffsetRotatesWithWitch(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);
@@ -143,6 +160,7 @@ class SpellLogicTest {
     }
 
     /** 脱手阶段保持释放时的缩放，直到标记消失。 */
+    @DisplayName("掌心黑洞：脱手阶段保持释放时的缩放，直到标记消失")
     @Test
     void detachedKeepsReleaseScale(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);
@@ -150,6 +168,7 @@ class SpellLogicTest {
     }
 
     /** 记住已命中的目标时，扩散的冲击波让每个距离都恰好被扫过一次。 */
+    @DisplayName("掌心黑洞：记住已命中的目标时，扩散的冲击波让每个距离都恰好被扫过一次")
     @Test
     void waveSweepsEveryDistanceOnce(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);
@@ -157,6 +176,7 @@ class SpellLogicTest {
     }
 
     /** 取释放那一帧，而不是最后一帧（那一帧把标记缩没了）。 */
+    @DisplayName("定位点关键帧采样：取释放那一帧，而不是把标记缩没的最后一帧")
     @Test
     void samplesReleaseKey(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);
@@ -164,6 +184,7 @@ class SpellLogicTest {
     }
 
     /** 两帧之间从前一帧的 post 插值到后一帧的 pre，正好在关键帧上取 post。 */
+    @DisplayName("定位点关键帧采样：两帧之间从前一帧的 post 插值到后一帧的 pre，正好在关键帧上取 post")
     @Test
     void interpolatesPostToPre(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);
@@ -171,6 +192,7 @@ class SpellLogicTest {
     }
 
     /** catmull-rom 插值会受后面手部复位的影响，即使前后两帧值相同也不是常量。 */
+    @DisplayName("定位点关键帧采样：catmull-rom 插值会受后面手部复位影响，前后两帧值相同也不是常量")
     @Test
     void catmullRomSeesLaterReset(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);
@@ -178,6 +200,7 @@ class SpellLogicTest {
     }
 
     /** 各朝向的释放变换有限且是刚体变换，共享的回退姿态不会被调用方改掉。 */
+    @DisplayName("定位点释放姿态：各朝向的释放变换有限且是刚体变换，共享的回退姿态不会被调用方改掉")
     @Test
     void releasePoseFiniteAndRigid(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);
@@ -185,6 +208,7 @@ class SpellLogicTest {
     }
 
     /** 动画里释放时刻的骨骼轨道，采样结果与 TLM 自己的关键帧处理器一致。 */
+    @DisplayName("定位点关键帧采样：释放时刻的骨骼轨道采样结果与车万女仆自己的关键帧处理器一致")
     @Test
     void matchesTlmKeyframeProcessor(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);

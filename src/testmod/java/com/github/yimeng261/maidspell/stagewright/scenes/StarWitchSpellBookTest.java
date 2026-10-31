@@ -18,6 +18,7 @@ import net.minecraft.nbt.Tag;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.component.CustomData;
 
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestReporter;
 
@@ -32,6 +33,7 @@ import static com.github.yimeng261.maidspell.stagewright.support.Checks.NS;
  * 不参与女仆入世流程。纯 NBT 部分覆盖容器组件、越界过滤、残缺数据与幂等性；
  * 另外核对出厂魂符里的法术书是 20 格，以及星之魔女女仆入世、读档后背包里的法术书保持原容量。
  */
+@DisplayName("星之魔女魂符出厂时的法术书容量归一化")
 @Scene("tlms")
 class StarWitchSpellBookTest {
     private static final String CONTAINER = "irons_spellbooks:spell_container";
@@ -39,42 +41,49 @@ class StarWitchSpellBookTest {
     private static final String ONE_SLOT_BOOK = "irons_spellbooks:gold_spell_book[irons_spellbooks:spell_container="
             + "{maxSpells:1,mustEquip:false,spellWheel:true,data:[{id:\"irons_spellbooks:firebolt\",index:0,level:1,locked:false}]}]";
 
+    @DisplayName("法术书容器容量抬到出厂的 20 格，法术条目与属性保留")
     @Test
     void containerRaisedKeepsSpells(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);
         ctx.run(() -> containerRaised(ctx));
     }
 
+    @DisplayName("数据包把容量写到 20 格以上时保持原值，不被降低")
     @Test
     void largerContainerNotLowered(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);
         ctx.run(() -> largerContainer(ctx));
     }
 
+    @DisplayName("星影长剑等非法术书物品自带的容器容量不被修改")
     @Test
     void nonSpellBooksUntouched(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);
         ctx.run(() -> nonSpellBooks(ctx));
     }
 
+    @DisplayName("其它模组的法术书容量不被修改")
     @Test
     void otherNamespacesUntouched(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);
         ctx.run(() -> otherNamespaces(ctx));
     }
 
+    @DisplayName("背包缺失、条目缺 id 或缺组件等残缺数据被静默跳过，不凭空补出容器组件")
     @Test
     void brokenDataTolerated(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);
         ctx.run(() -> brokenData(ctx));
     }
 
+    @DisplayName("重复升级两遍的结果与升级一遍相同（幂等）")
     @Test
     void upgradeIdempotent(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);
         ctx.run(() -> idempotent(ctx));
     }
 
+    @DisplayName("出厂魂符里的铁魔法法术书是 20 格容量、带 15 条法术")
     @Test
     void soulCharmShipsTwentySlots(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);
@@ -179,6 +188,7 @@ class StarWitchSpellBookTest {
     }
 
     /** 星之魔女女仆背包里的 1 格法术书：入世与按区块存档重建之后都还是 1 格。 */
+    @DisplayName("星之魔女女仆入世与读档重建后，背包里的 1 格法术书仍是 1 格")
     @Test
     void joinAndReloadKeepCapacity(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
         Stage ctx = Stage.flat(game, plot, reporter);

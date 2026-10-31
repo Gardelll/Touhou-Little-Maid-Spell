@@ -12,6 +12,7 @@ import com.mojang.blaze3d.vertex.MeshData;
 import net.magicterra.stagewright.test.Game;
 import net.magicterra.stagewright.test.Plot;
 import net.magicterra.stagewright.test.Scene;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestReporter;
 import net.minecraft.client.renderer.MultiBufferSource;
@@ -52,6 +53,7 @@ import java.util.function.DoubleSupplier;
  * 法术渲染器的客户端几何：七星指引切换渲染类型后的线框批次、剑阵缓存网格与剔除包围盒、超新星黑洞模型与动画资源。
  */
 @Scene("tlms.integrated")
+@DisplayName("法术渲染器客户端几何")
 class SpellRendererClientTest {
     private static final ResourceLocation CRYSTAL_FACE = ClientAssets.id("textures/entity/seven_star_guidance/crystal_face.png");
     private static final ResourceLocation SWORD_MODEL = ResourceLocation.fromNamespaceAndPath("irons_spellbooks", "geo/summoned_sword.geo.json");
@@ -61,102 +63,119 @@ class SpellRendererClientTest {
     private static final String SUPERNOVA_IDLE = "animation.supernova_black_hole.idle";
 
     /** 先画过晶体（实体格式）后，锁定括号重新请求线框缓冲，不会写进已结束的晶体批次。 */
+    @DisplayName("七星指引：先画过晶体后，锁定括号重新请求线框缓冲，不会写进已结束的晶体批次")
     @Test
     void lockBracketsBackToLinesAfterCrystals(Game game, Plot plot, TestReporter reporter) {
         ClientSide.verify(Stage.sky(game, plot, reporter), "client.sevenStar.lockBracketsBackToLinesAfterCrystals", SpellRendererClientTest::lockBrackets);
     }
 
     /** 光束层之后的打击环和最终准星也切回线框。 */
+    @DisplayName("七星指引：光束层之后的打击环和最终准星也切回线框")
     @Test
     void ringsAndReticlesBackToLinesAfterBeams(Game game, Plot plot, TestReporter reporter) {
         ClientSide.verify(Stage.sky(game, plot, reporter), "client.sevenStar.ringsAndReticlesBackToLinesAfterBeams", SpellRendererClientTest::ringsAndReticles);
     }
 
     /** 终幕晶体在连线光束和碎边之后用自己的贴图单独成批。 */
+    @DisplayName("七星指引：终幕晶体在连线光束和碎边之后用自己的贴图单独成批")
     @Test
     void finaleCrystalsOwnBatch(Game game, Plot plot, TestReporter reporter) {
         ClientSide.verify(Stage.sky(game, plot, reporter), "client.sevenStar.finaleCrystalsOwnBatch", SpellRendererClientTest::finaleCrystals);
     }
 
     /** 缓存网格保留原模型的每个面、原样的贴图坐标（可以超出 0~1）和单位法线；重载时重新烘焙结果一致。 */
+    @DisplayName("星影剑阵：缓存网格保留原模型的每个面、原样贴图坐标和单位法线，重载时重新烘焙结果一致")
     @Test
     void meshKeepsFacesUvsAndNormals(Game game, Plot plot, TestReporter reporter) {
         ClientSide.verify(Stage.sky(game, plot, reporter), "client.swordArray.meshKeepsFacesUvsAndNormals", SpellRendererClientTest::swordMesh);
     }
 
     /** 共享模型被其他召唤武器的动画改过姿态后，缓存仍按静止姿态烘焙，而且不改回别人的姿态。 */
+    @DisplayName("星影剑阵：共享模型被其他召唤武器的动画改过姿态后，缓存仍按静止姿态烘焙且不改回别人的姿态")
     @Test
     void meshUsesRestPose(Game game, Plot plot, TestReporter reporter) {
         ClientSide.verify(Stage.sky(game, plot, reporter), "client.swordArray.meshUsesRestPose", SpellRendererClientTest::swordRestPose);
     }
 
     /** 不管随机滚转多少，飞行和插地时剑身都保持竖长。 */
+    @DisplayName("星影剑阵：不管随机滚转多少，飞行和插地时剑身都保持竖长")
     @Test
     void swordsStayUpright(Game game, Plot plot, TestReporter reporter) {
         ClientSide.verify(Stage.sky(game, plot, reporter), "client.swordArray.swordsStayUpright", SpellRendererClientTest::swordsUpright);
     }
 
     /** 飞行和插地时模型前方都指向剑的运动方向。 */
+    @DisplayName("星影剑阵：飞行和插地时模型前方都指向剑的运动方向")
     @Test
     void rotationFollowsTrajectory(Game game, Plot plot, TestReporter reporter) {
         ClientSide.verify(Stage.sky(game, plot, reporter), "client.swordArray.rotationFollowsTrajectory", SpellRendererClientTest::swordsFaceForward);
     }
 
     /** 剔除包围盒在飞行、落地和消失前都包住每个渲染顶点。 */
+    @DisplayName("星影剑阵：剔除包围盒在飞行、落地和消失前都包住每个渲染顶点")
     @Test
     void cullingBoundsContainMesh(Game game, Plot plot, TestReporter reporter) {
         ClientSide.verify(Stage.sky(game, plot, reporter), "client.swordArray.cullingBoundsContainMesh", SpellRendererClientTest::cullingBounds);
     }
 
     /** 逐把剔除：视野边缘的剑保留，视野外和身后的剑跳过。 */
+    @DisplayName("星影剑阵：逐把剔除，视野边缘的剑保留，视野外和身后的剑跳过")
     @Test
     void frustumCullsEachSword(Game game, Plot plot, TestReporter reporter) {
         ClientSide.verify(Stage.sky(game, plot, reporter), "client.swordArray.frustumCullsEachSword", SpellRendererClientTest::frustumCulling);
     }
 
     /** 速度为零时朝正下方，旋转仍是有限值。 */
+    @DisplayName("星影剑阵：速度为零时剑朝正下方，旋转仍是有限值")
     @Test
     void stationaryRotationFinite(Game game, Plot plot, TestReporter reporter) {
         ClientSide.verify(Stage.sky(game, plot, reporter), "client.swordArray.stationaryRotationFinite", SpellRendererClientTest::stationaryRotation);
     }
 
     /** GeckoLib 能烘焙整个模型：19 根骨骼、604 个方块，核心枢轴在原点，每个方块都有贴图面且坐标在 0~1。 */
+    @DisplayName("超新星黑洞：GeckoLib 能烘焙整个模型，骨骼与方块数正确，核心枢轴在原点，每个方块都有贴图面且坐标在 0~1")
     @Test
     void modelBakesWithValidUvs(Game game, Plot plot, TestReporter reporter) {
         ClientSide.verify(Stage.sky(game, plot, reporter), "client.supernova.modelBakesWithValidUvs", SpellRendererClientTest::supernovaModel);
     }
 
     /** 待机动画循环播放，8 条骨骼动画都对应模型里的骨骼，吸积盘每秒转 12 圈。 */
+    @DisplayName("超新星黑洞：待机动画循环播放，骨骼动画都对应模型里的骨骼，吸积盘每秒转 12 圈")
     @Test
     void idleLoopBonesExist(Game game, Plot plot, TestReporter reporter) {
         ClientSide.verify(Stage.sky(game, plot, reporter), "client.supernova.idleLoopBonesExist", SpellRendererClientTest::supernovaIdle);
     }
 
     /** 吸积盘 64 块瓦片的底面法线朝下，贴图坐标与顶面逐点一致，厚 0.01。 */
+    @DisplayName("超新星黑洞：吸积盘 64 块瓦片的底面法线朝下，贴图坐标与顶面逐点一致，厚度正确")
     @Test
     void diskUndersideMatchesTop(Game game, Plot plot, TestReporter reporter) {
         ClientSide.verify(Stage.sky(game, plot, reporter), "client.supernova.diskUndersideMatchesTop", SpellRendererClientTest::diskUnderside);
     }
 
     /** 原模型相邻瓦片在接缝处重叠（发光叠加）；裁剪后两两不重叠，底面与顶面一致，贴图坐标按原面插值。 */
+    @DisplayName("超新星黑洞：吸积盘瓦片裁剪后两两不重叠，底面与顶面一致，贴图坐标按原面插值")
     @Test
     void clippedDiskTilesDoNotOverlap(Game game, Plot plot, TestReporter reporter) {
         ClientSide.verify(Stage.sky(game, plot, reporter), "client.supernova.clippedDiskTilesDoNotOverlap", SpellRendererClientTest::clippedDisk);
     }
 
     /** 吸积盘的倾斜抖动和缩放抖动在旋转循环重置时仍持续变化，幅度保持在原设计范围内。 */
+    @DisplayName("超新星黑洞：吸积盘倾斜与缩放抖动在旋转循环重置时仍持续变化，幅度保持在设计范围内")
     @Test
     void diskTrembleKeepsChanging(Game game, Plot plot, TestReporter reporter) {
         ClientSide.verify(Stage.sky(game, plot, reporter), "client.supernova.diskTrembleKeepsChanging", SpellRendererClientTest::diskTremble);
     }
 
     /** 贴图 1024×1024，保留透明区域、不透明纯黑核心与紫色边。 */
+    @DisplayName("超新星黑洞：贴图 1024×1024，保留透明区域、不透明纯黑核心与紫色边")
     @Test
     void textureTransparentBlackAndPurple(Game game, Plot plot, TestReporter reporter) {
         ClientSide.verify(Stage.sky(game, plot, reporter), "client.supernova.textureTransparentBlackAndPurple", SpellRendererClientTest::supernovaTexture);
     }
 
     /** 开背面剔除时从各个角度看核心都是纯黑；关掉剔除则能看到朝内的紫色面（证明这个场景能复现问题）。 */
+    @DisplayName("超新星黑洞：开背面剔除时从各个角度看核心都是纯黑，关掉剔除则能看到朝内的紫色面")
     @Test
     void culledCoreShowsBlack(Game game, Plot plot, TestReporter reporter) {
         ClientSide.verify(Stage.sky(game, plot, reporter), "client.supernova.culledCoreShowsBlack", SpellRendererClientTest::culledCore);

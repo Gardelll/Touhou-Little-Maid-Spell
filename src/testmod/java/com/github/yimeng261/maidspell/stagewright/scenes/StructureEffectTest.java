@@ -15,6 +15,7 @@ import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.attributes.Attributes;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestReporter;
 
@@ -27,16 +28,19 @@ import static com.github.yimeng261.maidspell.stagewright.support.Checks.NS;
  * 结构里预置生物身上的效果：效果带来的属性加成随效果消失（不残留旧版转换出的 legacy_effect_ 修饰符）；
  * 圣遗礼拜堂顶层首领女仆的效果都是永久。
  */
+@DisplayName("结构里预置生物身上的效果")
 @Scene("tlms")
 class StructureEffectTest {
     private static final int SETTLE_TICKS = 5;
 
+    @DisplayName("精灵秘境：预置生物的效果加成随效果消失，不残留 legacy_effect_ 修饰符")
     @Test
     void elvenRealmEffectBonusesEndWithEffects(Game game,
             @Plot.Size(x = 208, y = 256, z = 208) @Plot.Centered Plot plot, TestReporter reporter) {
         bonusesEnd(Stage.wideFlat(game, plot, reporter), "elven_realm");
     }
 
+    @DisplayName("堕天圣堂：预置生物的效果加成随效果消失，不残留 legacy_effect_ 修饰符")
     @Test
     void fallenSanctumEffectBonusesEndWithEffects(Game game,
             @Plot.Size(x = 240, y = 256, z = 240) @Plot.Centered Plot plot, TestReporter reporter) {
@@ -44,6 +48,7 @@ class StructureEffectTest {
     }
 
     /** 带雷暴效果的就是顶层首领女仆：她身上的每个效果都是永久的。 */
+    @DisplayName("圣遗礼拜堂：带雷暴效果的顶层首领女仆，身上的每个效果都是永久")
     @Test
     void relicSanctumBossEffectsPermanent(Game game,
             @Plot.Size(x = 144, y = 256, z = 144) @Plot.Centered Plot plot, TestReporter reporter) {

@@ -15,6 +15,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.level.storage.ServerLevelData;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestReporter;
 import org.junit.jupiter.api.parallel.ResourceLock;
@@ -33,12 +34,14 @@ import static com.github.yimeng261.maidspell.stagewright.scenes.RetreatFixtures.
  * 归隐之地的搜索缓存与维度：摇铃后不留强加载、reset 命令清缓存、找不到时的负缓存约 5 分钟后过期、
  * 不同玩家的私人归隐之地地形不同。
  */
+@DisplayName("归隐之地：搜索缓存与维度")
 @Scene("tlms.integrated")
 @ResourceLock(RetreatFixtures.HOST_PLAYER)
 class RetreatCacheTest {
     /** 负缓存有效期（游戏刻），与寻风之铃「约 5 分钟内再用直接提示没有」对应。 */
     private static final long NEGATIVE_TTL = 6000;
 
+    @DisplayName("寻风之铃摇铃找到结构后，归隐之地不留强加载区块")
     @Test
     @Requires(Requires.Capability.CLIENT)
     void searchLeavesNoForcedChunks(Game game, @Plot.Size(32) @Plot.Centered Plot plot, Player player, TestReporter reporter) {
@@ -52,6 +55,7 @@ class RetreatCacheTest {
         ctx.check(ctx.get(() -> host.serverLevel().getForcedChunks().size())).as("摇铃找到结构后归隐之地的强加载区块数").isEqualTo(0);
     }
 
+    @DisplayName("maidspell retreat reset 命令清掉玩家的搜索缓存")
     @Test
     @Requires(Requires.Capability.CLIENT)
     void resetCommandClearsCache(Game game, @Plot.Size(32) @Plot.Centered Plot plot, Player player, TestReporter reporter) {
@@ -80,6 +84,7 @@ class RetreatCacheTest {
     }
 
     /** 负缓存在记下后 6000 刻内有效，之后当作没有缓存重新搜索（临时把主世界游戏时间往后拨再拨回）。 */
+    @DisplayName("找不到结构的负缓存约 5 分钟（6000 刻）内有效，之后失效重新搜索")
     @Test
     @Requires(Requires.Capability.CLIENT)
     void negativeCacheExpires(Game game, @Plot.Size(32) @Plot.Centered Plot plot, Player player, TestReporter reporter) {
@@ -105,6 +110,7 @@ class RetreatCacheTest {
     }
 
     /** 宿主和另一名玩家的私人归隐之地，同一批坐标上的地表高度不全相同。 */
+    @DisplayName("不同玩家的私人归隐之地同一批坐标的地表高度不全相同")
     @Test
     @Requires(Requires.Capability.CLIENT)
     void privateTerrainDiffersPerPlayer(Game game, @Plot.Size(32) @Plot.Centered Plot plot, Player player, TestReporter reporter) {

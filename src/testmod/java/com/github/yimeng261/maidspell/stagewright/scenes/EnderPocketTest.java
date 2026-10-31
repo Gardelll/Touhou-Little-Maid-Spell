@@ -38,6 +38,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestReporter;
 
@@ -55,6 +56,7 @@ import static com.github.yimeng261.maidspell.stagewright.support.Checks.NS;
  *
  * <p>另含其它末影腰包测试类共用的工具：造戴腰包的女仆、读远程会话、走完远程打开流程。
  */
+@DisplayName("末影腰包：授权、远程会话与编码上限")
 @Scene("tlms")
 class EnderPocketTest {
     static final String POCKET = NS + "ender_pocket";
@@ -132,6 +134,7 @@ class EnderPocketTest {
     // ---- 测试 ----
 
     /** 列表只有自己的、存活的、戴末影腰包的女仆；别人的和没戴的打不开。 */
+    @DisplayName("列表只含自己的、存活的、戴末影腰包的女仆，别人的和没戴的打不开")
     @Test
     void listShowsOwnLivingPocketMaids(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
         Stage ctx = Stage.flat(game, plot, reporter);
@@ -151,26 +154,31 @@ class EnderPocketTest {
         });
     }
 
+    @DisplayName("女仆摘下末影腰包后，远程会话失效且再点按钮打不开")
     @Test
     void sessionEndsWhenPocketRemoved(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
         sessionEnds(Stage.flat(game, plot, reporter), "pocket");
     }
 
+    @DisplayName("女仆睡觉后，远程会话失效且再点按钮打不开")
     @Test
     void sessionEndsWhenMaidSleeps(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
         sessionEnds(Stage.flat(game, plot, reporter), "sleep");
     }
 
+    @DisplayName("女仆死亡后，远程会话失效且再点按钮打不开")
     @Test
     void sessionEndsWhenMaidDies(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
         sessionEnds(Stage.flat(game, plot, reporter), "death");
     }
 
+    @DisplayName("女仆被别人收养后，远程会话失效且再点按钮打不开")
     @Test
     void sessionEndsWhenMaidAdopted(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
         sessionEnds(Stage.flat(game, plot, reporter), "adopted");
     }
 
+    @DisplayName("女仆被收进魂符后，远程会话失效且再点按钮打不开")
     @Test
     void sessionEndsWhenMaidInSlab(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
         sessionEnds(Stage.flat(game, plot, reporter), "slab");
@@ -201,6 +209,7 @@ class EnderPocketTest {
     }
 
     /** 会话过期（10 分钟不操作）后不再解析到女仆。 */
+    @DisplayName("远程会话 10 分钟不操作后过期，不再解析到女仆")
     @Test
     void sessionExpires(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
         Stage ctx = Stage.flat(game, plot, reporter);
@@ -221,6 +230,7 @@ class EnderPocketTest {
     }
 
     /** 1 秒内连发打开请求：只有第一次真的建立会话，其余被限流丢弃，不报错。 */
+    @DisplayName("1 秒内连发打开请求被限流，只有第一次建立会话")
     @Test
     void openRequestsRateLimited(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
         Stage ctx = Stage.flat(game, plot, reporter);
@@ -239,6 +249,7 @@ class EnderPocketTest {
     }
 
     /** 70 只戴腰包的女仆：列表消息截到 64 条，编码解码不出错。 */
+    @DisplayName("70 只戴腰包的女仆，列表与状态栏消息截到 64 条且编解码正常")
     @Test
     void listCappedAt64(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
         Stage ctx = Stage.flat(game, plot, reporter);
@@ -257,6 +268,7 @@ class EnderPocketTest {
     }
 
     /** 名字超过 64 个字符：编码解码不出错，名字原样保留。 */
+    @DisplayName("超过 64 个字符的女仆名编解码不出错，名字原样保留")
     @Test
     void longNameKept(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
         Stage ctx = Stage.flat(game, plot, reporter);
@@ -272,6 +284,7 @@ class EnderPocketTest {
     }
 
     /** 名字是翻译组件：编码解码后仍是同一个翻译键，由客户端按自身语言解析，而不是服务端解析好的文本。 */
+    @DisplayName("翻译组件的女仆名编解码后仍是同一个翻译键")
     @Test
     void translatableNameStaysTranslatable(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
         Stage ctx = Stage.flat(game, plot, reporter);
@@ -289,6 +302,7 @@ class EnderPocketTest {
     }
 
     /** 嵌套 300 层的名字超过客户端解码的 512 层上限：退化为纯文本后能正常解码；不深的带样式名字保持原样。 */
+    @DisplayName("嵌套 300 层的女仆名退化为纯文本，不深的名字保持原样")
     @Test
     void deepNameFlattened(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
         Stage ctx = Stage.flat(game, plot, reporter);
@@ -322,6 +336,7 @@ class EnderPocketTest {
      * 主人在主世界、女仆在下界：远程会话里发来的车万女仆操作包（切任务、改拾取/骑乘配置、换模型、改名、换音效、
      * 请求药水效果）都作用到下界的女仆。
      */
+    @DisplayName("跨维度远程会话里的车万女仆操作包都作用到下界的女仆")
     @Test
     void remoteOperationsApplyAcrossDimensions(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
         Stage ctx = Stage.flat(game, plot, reporter);
@@ -353,6 +368,7 @@ class EnderPocketTest {
     }
 
     /** 另一名玩家伪造 Dev 远程女仆的实体 ID 发包：打不中这只女仆，也不给 Dev 的会话续期。 */
+    @DisplayName("他人伪造远程女仆的实体 ID 发包打不中女仆，也不给会话续期")
     @Test
     void forgedEntityIdMissesOthersSession(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
         Stage ctx = Stage.flat(game, plot, reporter);

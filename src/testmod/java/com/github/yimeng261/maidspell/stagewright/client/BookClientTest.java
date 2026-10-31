@@ -12,6 +12,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.resources.language.ClientLanguage;
 import net.minecraft.network.chat.FormattedText;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestReporter;
 
@@ -22,12 +23,14 @@ import java.util.Map;
 /**
  * 书的每页在成书界面里放得下：按客户端字体折行后不超过一页的行数，中英日文都一样。
  */
+@DisplayName("书页排版：成书界面分页")
 @Scene("tlms.integrated")
 class BookClientTest {
     /** 成书界面的文字区宽 114 像素、高 128 像素，一行 9 像素。 */
     private static final int PAGE_WIDTH = 114;
     private static final int PAGE_LINES = 128 / 9;
 
+    @DisplayName("书的每页按客户端字体折行后不超过一页行数，中英日文都放得下")
     @Test
     @Requires(Requires.Capability.CLIENT)
     void everyPageFits(Game game, @Plot.Size(32) @Plot.Centered Plot plot, Player player, TestReporter reporter) {

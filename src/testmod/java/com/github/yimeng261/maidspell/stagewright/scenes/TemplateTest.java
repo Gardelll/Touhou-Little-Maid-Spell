@@ -4,6 +4,7 @@ import com.github.yimeng261.maidspell.stagewright.support.Stage;
 import net.magicterra.stagewright.test.Game;
 import net.magicterra.stagewright.test.Plot;
 import net.magicterra.stagewright.test.Scene;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestReporter;
 import com.github.tartaricacid.touhoulittlemaid.entity.passive.EntityMaid;
@@ -51,12 +52,14 @@ import static com.github.yimeng261.maidspell.stagewright.support.Checks.NS;
  * 《万法皆通》手册分类；月铃兰在不会有精灵秘境的维度里不拖慢服务器。
  */
 @Scene("tlms")
+@DisplayName("1.21 格式模板与结构内容")
 class TemplateTest {
     private static final Pattern CJK = Pattern.compile("[\\u4e00-\\u9fff]");
     private static final String BOOK = "/assets/touhou_little_maid/patchouli_books/memorizable_gensokyo/en_us/";
     private static final ResourceLocation STEP_ID = ResourceLocation.fromNamespaceAndPath(MaidSpellMod.MOD_ID, "maid_step_height");
 
     /** 冰屋与热带草原村庄房屋模板里的旗帜都带图案。 */
+    @DisplayName("冰屋与热带草原村庄房屋模板里的旗帜都带图案")
     @Test
     void iglooAndSavannaBannersHavePatterns(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);
@@ -64,12 +67,14 @@ class TemplateTest {
     }
 
     /** 实体与物品上的自定义名字不是写死的中文（应是可翻译文本）。 */
+    @DisplayName("模板里实体与物品的自定义名字不是写死的中文，而是可翻译文本")
     @Test
     void noHardcodedChineseNames(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);
         ctx.run(() -> noChineseNames(ctx));
     }
 
+    @DisplayName("放置阴阳祭坛后日志里没有空物品或无效流体的报错")
     @Test
     void yinYangAltarPlacesWithoutLogErrors(Game game, @Plot.Size(x = 80, y = 128, z = 80) @Plot.Centered Plot plot,
                                             TestReporter reporter) {
@@ -87,30 +92,35 @@ class TemplateTest {
         ctx.check(bad).as("放置阴阳祭坛后日志里的报错").isEmpty();
     }
 
+    @DisplayName("隐世之境里的女仆步高为 1.6 且只有本模组一个步高修饰符，其他生物步高不为 0")
     @Test
     void hiddenRetreatStepHeight(Game game, @Plot.Size(x = 176, y = 256, z = 176) @Plot.Centered Plot plot,
                                  TestReporter reporter) {
         stepHeight(Stage.wideFlat(game, plot, reporter), "hidden_retreat");
     }
 
+    @DisplayName("堕天圣堂里的女仆步高为 1.6 且只有本模组一个步高修饰符，其他生物步高不为 0")
     @Test
     void fallenSanctumStepHeight(Game game, @Plot.Size(x = 240, y = 256, z = 240) @Plot.Centered Plot plot,
                                  TestReporter reporter) {
         stepHeight(Stage.wideFlat(game, plot, reporter), "fallen_sanctum");
     }
 
+    @DisplayName("圣遗礼拜堂里的女仆步高为 1.6 且只有本模组一个步高修饰符，其他生物步高不为 0")
     @Test
     void relicSanctumStepHeight(Game game, @Plot.Size(x = 144, y = 256, z = 144) @Plot.Centered Plot plot,
                                 TestReporter reporter) {
         stepHeight(Stage.wideFlat(game, plot, reporter), "relic_sanctum");
     }
 
+    @DisplayName("精灵秘境里的女仆步高为 1.6 且只有本模组一个步高修饰符，其他生物步高不为 0")
     @Test
     void elvenRealmStepHeight(Game game, @Plot.Size(x = 208, y = 256, z = 208) @Plot.Centered Plot plot,
                               TestReporter reporter) {
         stepHeight(Stage.wideFlat(game, plot, reporter), "elven_realm");
     }
 
+    @DisplayName("妖精女仆咖啡厅里的女仆步高为 1.6 且只有本模组一个步高修饰符，其他生物步高不为 0")
     @Test
     void fairyMaidCafeStepHeight(Game game, @Plot.Size(x = 80, y = 128, z = 80) @Plot.Centered Plot plot,
                                  TestReporter reporter) {
@@ -118,6 +128,7 @@ class TemplateTest {
     }
 
     /** 分类图标是梦云水晶；三个条目的图标、配图存在；所有文本键两种语言都有。 */
+    @DisplayName("《万法皆通》手册分类：图标为梦云水晶，条目图标与配图存在，文本键中英文都有")
     @Test
     void patchouliWanfaJietongCategory(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);
@@ -125,6 +136,7 @@ class TemplateTest {
     }
 
     /** 下界里种 16 株月铃兰，之后 100 tick 服务器平均每 tick 耗时仍在 50 毫秒以内。 */
+    @DisplayName("下界里种 16 株月铃兰后 100 tick，服务器平均每 tick 耗时仍在 50 毫秒以内")
     @Test
     void yueLinglanNetherTickCost(Game game, @Plot.In("minecraft:the_nether") Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);

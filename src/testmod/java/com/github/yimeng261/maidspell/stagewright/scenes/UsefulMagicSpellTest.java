@@ -28,6 +28,7 @@ import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.component.ItemContainerContents;
 import net.minecraft.world.phys.AABB;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.DynamicTest;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestFactory;
@@ -50,6 +51,7 @@ import java.util.stream.Collectors;
 @Scene("tlms.integrated")
 @Requires(mods = "usefulmagic")
 @ResourceLock("stagewright.player:TlmsSpellOwner")
+@DisplayName("实用魔法：全部法术球施法")
 class UsefulMagicSpellTest {
     private static final String MOD = "usefulmagic";
     /** 首选的法杖；装不下的高阶球再换别的法杖。 */
@@ -73,6 +75,7 @@ class UsefulMagicSpellTest {
     private static final int SETTLE = 200;
 
     /** 本类列的法术与注册表里的法术球完全一致。 */
+    @DisplayName("本测试列出的法术与注册表里的法术球完全一致")
     @Test
     void allSpellsListed(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);
@@ -87,6 +90,7 @@ class UsefulMagicSpellTest {
     }
 
     /** 逐颗法术球施法，每颗球一个动态测试；各项共用同一个主人，每项结束后清掉自己的女仆与目标。 */
+    @DisplayName("女仆逐颗法术球施法：能开始、能结束、进入冷却、球被卸回、蓄力态清除")
     @TestFactory
     List<DynamicTest> cast(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
         Stage ctx = Stage.flat(game, plot, reporter);

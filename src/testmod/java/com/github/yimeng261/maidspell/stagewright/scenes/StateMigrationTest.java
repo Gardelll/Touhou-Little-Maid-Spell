@@ -22,6 +22,7 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.scores.PlayerTeam;
 import net.minecraft.world.scores.Scoreboard;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestReporter;
 
@@ -35,6 +36,7 @@ import static com.github.yimeng261.maidspell.stagewright.support.Checks.NS;
 /**
  * 旧状态迁移与配置：旧版结盟队伍的清理、配置项、春归计时改用主世界时间及旧物品计时迁移。
  */
+@DisplayName("旧状态迁移与配置")
 @Scene("tlms")
 class StateMigrationTest {
     private static final String SPRING_BLOOM = NS + "spring_bloom_return";
@@ -49,6 +51,7 @@ class StateMigrationTest {
     // ---- 结盟与配置 ----
 
     /** 以 maidspell_alliance_ 开头的旧队伍都被删掉，玩家自己建的队伍不动。 */
+    @DisplayName("清掉 maidspell_alliance_ 开头的旧结盟队伍，玩家自建的队伍不动")
     @Test
     void allianceTeamsRemoved(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);
@@ -70,6 +73,7 @@ class StateMigrationTest {
     }
 
     /** 新生成的归隐之地配置文件里没有 autoAllianceEnabled。 */
+    @DisplayName("新生成的归隐之地配置文件里没有 autoAllianceEnabled 配置项")
     @Test
     void autoAllianceRemoved(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);
@@ -85,6 +89,7 @@ class StateMigrationTest {
     }
 
     /** retreatRecordRetentionDays 默认 0（不清理）。 */
+    @DisplayName("归隐记录保留天数默认为 0，即不清理")
     @Test
     void retreatRecordRetentionDaysDefault(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);
@@ -94,6 +99,7 @@ class StateMigrationTest {
     // ---- 春归 ----
 
     /** 层数按主世界时间到期消失。 */
+    @DisplayName("春花-返的层数按主世界时间到期消失")
     @Test
     void stacksExpire(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
         Stage ctx = Stage.flat(game, plot, reporter);
@@ -113,6 +119,7 @@ class StateMigrationTest {
     }
 
     /** 下界里施法：层数的到期时间是主世界时间 + 持续时间，不会立即过期也不会永不过期。 */
+    @DisplayName("下界施法时春花-返层数的到期时间按主世界时间计算")
     @Test
     void timersUseOverworldClockInNether(Game game, @Plot.In("minecraft:the_nether") Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);
@@ -134,6 +141,7 @@ class StateMigrationTest {
      * 旧物品（没有时钟版本号、按所在维度时间记录）：层数和冷却大致保留（剩余时间最多多出迁移余量），
      * 不会变成永久冷却，也不会一次性清空。
      */
+    @DisplayName("旧春花-返物品的层数和冷却迁移后大致保留，不变成永久冷却也不被清空")
     @Test
     void legacyTimersMigrate(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
         Stage ctx = Stage.flat(game, plot, reporter);
@@ -165,6 +173,7 @@ class StateMigrationTest {
     }
 
     /** 春归交给另一只在下界的女仆后重新装备：层数与到期时间不变。 */
+    @DisplayName("春花-返交给下界的另一只女仆重新装备后，层数与到期时间不变")
     @Test
     void timersFollowItemAcrossMaids(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
         Stage ctx = Stage.flat(game, plot, reporter);
@@ -196,6 +205,7 @@ class StateMigrationTest {
     }
 
     /** 好感度 2 级：触发时按比例退还法术冷却。 */
+    @DisplayName("好感度 2 级的春花-返触发时按比例退还法术冷却")
     @Test
     void refundsCooldownAtFavorabilityLevel2(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
         Stage ctx = Stage.flat(game, plot, reporter);

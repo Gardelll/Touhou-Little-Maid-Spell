@@ -18,6 +18,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.Level;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestReporter;
 
@@ -29,8 +30,10 @@ import static com.github.yimeng261.maidspell.stagewright.scenes.AnchorTest.here;
 
 /** 锚定核心的强加载记录（集成服，需要真实主人在线）：记录写在主人身上，女仆死亡后删除，主人在别的维度时也跟着更新。 */
 @Scene("tlms.integrated")
+@DisplayName("锚定核心：强加载记录（需真实主人在线）")
 class AnchorIntegratedTest {
     /** 主人在线：记录写在主人身上；女仆被杀后立刻删掉。 */
+    @DisplayName("主人在线时记录写在主人身上，女仆被杀后立刻删除")
     @Test
     @Requires(Requires.Capability.CLIENT)
     void onlineOwnerRecordOnPlayer(Game game, @Plot.Size(32) @Plot.Centered Plot plot, Player host, TestReporter reporter) {
@@ -51,6 +54,7 @@ class AnchorIntegratedTest {
     }
 
     /** 主人在主世界，锚定女仆在下界换区块：主人身上的记录跟着更新。 */
+    @DisplayName("主人在别的维度时，下界女仆换区块后主人身上的记录跟着更新")
     @Test
     @Requires(Requires.Capability.CLIENT)
     void recordUpdatesWhileOwnerInOtherDimension(Game game, @Plot.Size(32) @Plot.Centered Plot plot, Player host,

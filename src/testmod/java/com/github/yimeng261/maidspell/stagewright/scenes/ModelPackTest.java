@@ -11,6 +11,7 @@ import net.magicterra.stagewright.test.Game;
 import net.magicterra.stagewright.test.Plot;
 import net.magicterra.stagewright.test.Scene;
 import net.neoforged.fml.loading.FMLPaths;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestReporter;
 
@@ -26,6 +27,7 @@ import java.util.stream.Stream;
  * 车万女仆模型包：不再内置旧的 geckolib 兼容包，启动时删掉旧版装到游戏目录的残留，
  * 星之魔女酒狐模型包按配置解压并被车万女仆读到。
  */
+@DisplayName("车万女仆模型包：旧包清理与星之魔女酒狐包安装")
 @Scene("tlms")
 class ModelPackTest {
     private static final Path PACK_DIR = FMLPaths.GAMEDIR.get().resolve("tlm_custom_pack");
@@ -33,6 +35,7 @@ class ModelPackTest {
     private static final Path STAR_WITCH = PACK_DIR.resolve("star_witch_winefox-1.0.0");
     private static final String REMOVED_LOG = "Removed obsolete Touhou Little Maid compatibility model pack";
 
+    @DisplayName("不再内置旧的 geckolib 兼容模型包，服务端模型表里也没有它的模型")
     @Test
     void noBundledGeckolibPack(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);
@@ -44,6 +47,7 @@ class ModelPackTest {
     }
 
     /** 放一个带子目录的旧包和一个同级的其他包，清理后只删旧包，日志记一行。 */
+    @DisplayName("清理时只删旧版残留包，同级的其他包保留，日志记一行")
     @Test
     void legacyPackRemovedOthersKept(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);
@@ -62,6 +66,7 @@ class ModelPackTest {
         });
     }
 
+    @DisplayName("旧版残留目录不存在时，清理器报告未删除")
     @Test
     void cleanerWithoutLegacyDir(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);
@@ -74,6 +79,7 @@ class ModelPackTest {
     }
 
     /** 首次启动后解压出的星之魔女酒狐包文件齐全，车万女仆服务端读到了这个模型和 1.5.3 自带的两个酒狐模型。 */
+    @DisplayName("首次启动后星之魔女酒狐包文件齐全，车万女仆服务端读到其模型和两个自带酒狐模型")
     @Test
     void starWitchPackInstalled(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);
@@ -88,6 +94,7 @@ class ModelPackTest {
     }
 
     /** 关掉 autoInstallTlmModelPack 时不解压（先把已解压的包挪开，测试结束挪回）。 */
+    @DisplayName("关闭自动安装模型包配置时不解压星之魔女酒狐包")
     @Test
     void autoInstallOffSkipsUnpack(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);

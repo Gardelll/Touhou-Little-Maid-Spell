@@ -17,6 +17,7 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
 import net.neoforged.neoforge.event.entity.player.ItemTooltipEvent;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestReporter;
 
@@ -27,10 +28,12 @@ import java.util.List;
  * 归星的工具提示按客户端缓存的誓约进度显示：进度未同步时不加行；已同步时第一行是灰色进度，
  * 两场常规胜利后追加紫色的下一步提示；其他物品不受影响。
  */
+@DisplayName("归星的誓约进度工具提示")
 @Scene("tlms.integrated")
 class WinefoxProgressClientTest {
     private static final String PREFIX = "item.touhou_little_maid_spell.returning_star.";
 
+    @DisplayName("归星工具提示随客户端缓存的誓约进度变化：未同步不加行，已同步显示进度与下一步提示，其他物品不受影响")
     @Test
     @Requires(Requires.Capability.CLIENT)
     void tooltipFollowsCache(Game game, @Plot.Size(32) @Plot.Centered Plot plot, Player player, TestReporter reporter) {

@@ -20,6 +20,7 @@ import net.minecraft.world.level.storage.loot.entries.LootPoolEntryContainer;
 import net.minecraft.world.level.storage.loot.parameters.LootContextParamSets;
 import net.neoforged.fml.ModList;
 import net.neoforged.neoforgespi.language.IModInfo;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestReporter;
 
@@ -38,31 +39,37 @@ import static com.github.yimeng261.maidspell.stagewright.support.Checks.NS;
  * 模组信息声明的可选依赖与版本下限。
  */
 @Scene("tlms")
+@DisplayName("缺模组拓扑的全套模组对照")
 class MissingModTest {
+    @DisplayName("装了农夫乐事时，暗影刺客掉落的细剑带锋利 5 与背刺 3")
     @Test
     void shadowAssassinRapierWithFarmersDelight(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
         Stage ctx = Stage.flat(game, plot, reporter);
         ctx.run(() -> MissingModFixtures.rapierEnchantments(ctx, Map.of("minecraft:sharpness", 5, "farmersdelight:backstabbing", 3)));
     }
 
+    @DisplayName("联动模组在场时，战利品表里的联动物品正常掉落")
     @Test
     void optionalItemsDropWhenModsPresent(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);
         ctx.run(() -> optionalItemsDropWhenPresent(ctx));
     }
 
+    @DisplayName("可选物品条目指向不存在的物品时被跳过，战利品表照常加载并掉落其余条目")
     @Test
     void optionalModItemSkipsUnknownItem(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);
         ctx.run(() -> optionalItemSkipsUnknown(ctx));
     }
 
+    @DisplayName("可选物品条目在物品存在时按权重与品质展开，物品不存在时不展开")
     @Test
     void optionalModItemKeepsWeightAndQuality(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);
         ctx.run(() -> optionalItemWeight(ctx));
     }
 
+    @DisplayName("模组信息声明的可选依赖与版本下限符合预期")
     @Test
     void optionalDependencies(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);

@@ -4,6 +4,7 @@ import com.github.yimeng261.maidspell.stagewright.support.Stage;
 import net.magicterra.stagewright.test.Game;
 import net.magicterra.stagewright.test.Plot;
 import net.magicterra.stagewright.test.Scene;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestReporter;
 import com.github.yimeng261.maidspell.Config;
@@ -53,6 +54,7 @@ import java.util.OptionalInt;
  * <p>选址用合成地形直接调用判定函数；避让用合成的区块和结构起点逐条核对规则。
  */
 @Scene("tlms")
+@DisplayName("可选模组模板结构选址与星落之庭补生成避让")
 class OptionalWorldgenTest {
     /** 地形柱的数组长度，覆盖 y=0~255。 */
     private static final int COLUMN_HEIGHT = 256;
@@ -61,24 +63,28 @@ class OptionalWorldgenTest {
     private static final int MIN_FLOOR = 32;
     private static final int MAX_TOP = 122;
 
+    @DisplayName("下界洞穴地面选址：避开基岩顶、岩浆、水、悬崖和过低的顶板，选出合适的地面高度")
     @Test
     void netherFloorSelection(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);
         ctx.run(() -> netherFloorSelection(ctx));
     }
 
+    @DisplayName("星落之庭补生成：已存结构起点只有与庭院竖直范围重叠才挡住补生成")
     @Test
     void starfallGardenGuardSavedStartsBlockOnlyWhenVerticallyOverlapping(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);
         ctx.run(() -> savedStartsOverlap(ctx));
     }
 
+    @DisplayName("星落之庭补生成：失败的起点和庭院自己的起点不挡补生成")
     @Test
     void starfallGardenGuardInvalidStartsAndGardenItselfDoNotBlock(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);
         ctx.run(() -> savedStarts(ctx));
     }
 
+    @DisplayName("星落之庭补生成：只存了别的结构引用时不挡补生成")
     @Test
     void starfallGardenGuardSavedReferencesAloneDoNotBlock(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);
@@ -89,6 +95,7 @@ class OptionalWorldgenTest {
      * 总开关关闭时三道闸门都不放行：找不到生成点、手动 generate（/place structure 走的路径）得到无效起点、
      * 旧存档补生成直接返回且不写「已尝试」标记；测试结束后还原开关。
      */
+    @DisplayName("星落之庭总开关关闭时，找不到生成点、手动 generate 得到无效起点、补生成不写已尝试标记")
     @Test
     void starfallGardenSwitchOffClosesGates(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);

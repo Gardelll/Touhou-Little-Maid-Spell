@@ -9,6 +9,7 @@ import com.github.yimeng261.maidspell.stagewright.support.Stage;
 import net.magicterra.stagewright.test.Game;
 import net.magicterra.stagewright.test.Plot;
 import net.magicterra.stagewright.test.Scene;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestReporter;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -27,6 +28,7 @@ import static com.github.yimeng261.maidspell.stagewright.support.Checks.NS;
  * 只装车万女仆（其余联动都不装）时的资源与内容：联动内容不注册，隐世之境箱子改开替代物品，女仆照常生成与驯服。
  * <p>这个类在缺模组的拓扑里加载，只能引用原版、NeoForge、车万女仆与本模组的通用类。
  */
+@DisplayName("只装车万女仆时的资源与内容")
 @Scene("tlms.minimal")
 class MissingModMinimalTest {
     /** 挂在铁魔法条件下的结构；不装铁魔法时结构与结构集都不应注册。 */
@@ -71,54 +73,63 @@ class MissingModMinimalTest {
                     "minecraft:glowstone_dust", "minecraft:blaze_powder", "touhou_little_maid:power_point"));
 
 
+    @DisplayName("只装车万女仆时本模组的数据加载没有错误")
     @Test
     void noDataLoadErrors(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);
         ctx.run(() -> MissingModFixtures.noDataLoadErrors(ctx, NS));
     }
 
+    @DisplayName("不装铁魔法时，依赖它的物品、实体、配方、战利品表都不注册")
     @Test
     void ironsContentNotRegistered(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);
         ctx.run(() -> ironsContentAbsent(ctx));
     }
 
+    @DisplayName("不装铁魔法时，依赖它的结构与结构集都不注册")
     @Test
     void ironsStructuresNotRegistered(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);
         ctx.run(() -> structuresAbsent(ctx, IRONS_STRUCTURES, IRONS_STRUCTURE_SETS));
     }
 
+    @DisplayName("不装 Goety 时，依赖它的结构与结构集都不注册")
     @Test
     void goetyStructuresNotRegistered(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);
         ctx.run(() -> structuresAbsent(ctx, GOETY_STRUCTURES, GOETY_STRUCTURE_SETS));
     }
 
+    @DisplayName("不装 Goety 时，虚拟法杖物品不注册")
     @Test
     void goetyVirtualWandNotRegistered(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);
         ctx.run(() -> goetyVirtualWandAbsent(ctx));
     }
 
+    @DisplayName("不依赖可选模组的结构在只装车万女仆时仍然注册")
     @Test
     void baseStructuresRegistered(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);
         ctx.run(() -> baseStructuresPresent(ctx));
     }
 
+    @DisplayName("不装铁魔法时，隐世之境三类箱子改开替代物品且不含铁魔法物品")
     @Test
     void retreatChestsFallBack(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);
         ctx.run(() -> retreatChestsFallBack(ctx));
     }
 
+    @DisplayName("含可选物品的战利品表照常加载，抽不出未安装模组的物品")
     @Test
     void optionalItemTablesSkipAbsentItems(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);
         ctx.run(() -> MissingModFixtures.optionalItemTables(ctx, Set.of("irons_spellbooks", "farmersdelight", "goety")));
     }
 
+    @DisplayName("只装车万女仆时女仆照常生成并能被驯服")
     @Test
     void maidSpawnsAndTames(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
         Stage ctx = Stage.flat(game, plot, reporter);
@@ -126,6 +137,7 @@ class MissingModMinimalTest {
     }
 
     /** 没有 Curios 时梦云水晶仍是女仆饰品：戴上后第一次致死被救下。 */
+    @DisplayName("没有 Curios 时梦云水晶仍是女仆饰品，戴上后第一次致死被救下")
     @Test
     void dreamCrystalWithoutCurios(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
         DreamCrystalFixtures.reviveFirstDeath(Stage.flat(game, plot, reporter));

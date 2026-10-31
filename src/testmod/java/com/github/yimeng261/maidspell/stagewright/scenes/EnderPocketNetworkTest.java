@@ -15,6 +15,7 @@ import net.magicterra.stagewright.test.Requires;
 import net.magicterra.stagewright.test.Scene;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.Level;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestReporter;
 
@@ -25,13 +26,16 @@ import static com.github.yimeng261.maidspell.stagewright.scenes.EnderPocketTest.
 
 /** 末影腰包经真实网络（专用服 + 加入的客户端）：数据包真正编码、传输、解码，远程打开背包，客户端不掉线。 */
 @Scene("tlms.withClient")
+@DisplayName("末影腰包：真实网络")
 class EnderPocketNetworkTest {
+    @DisplayName("经网络远程打开远处女仆的背包，客户端确认后会话激活")
     @Test
     @Requires(Requires.Capability.CLIENT)
     void openFarMaidOverNetwork(Game game, @Plot.Size(32) @Plot.Centered Plot plot, Player host, TestReporter reporter) {
         openOverNetwork(Stage.flat(game, plot, reporter), host, false);
     }
 
+    @DisplayName("经网络远程打开跨维度（下界）女仆的背包，客户端确认后会话激活")
     @Test
     @Requires(Requires.Capability.CLIENT)
     void openCrossDimensionMaidOverNetwork(Game game, @Plot.Size(32) @Plot.Centered Plot plot, Player host, TestReporter reporter) {
@@ -56,6 +60,7 @@ class EnderPocketNetworkTest {
     }
 
     /** 经网络推送 70 只女仆的列表（截到 64 条）：客户端不断开。 */
+    @DisplayName("经网络推送 70 只女仆的列表（截到 64 条），客户端不断开")
     @Test
     @Requires(Requires.Capability.CLIENT)
     void fullListStaysConnected(Game game, @Plot.Size(32) @Plot.Centered Plot plot, Player host, TestReporter reporter) {
@@ -75,6 +80,7 @@ class EnderPocketNetworkTest {
     }
 
     /** 远程界面开着时，客户端代理的生命值随服务端女仆变化。 */
+    @DisplayName("远程界面开着时，客户端代理的生命值随服务端女仆变化")
     @Test
     @Requires(Requires.Capability.CLIENT)
     void remoteDataPushedWhileOpen(Game game, @Plot.Size(32) @Plot.Centered Plot plot, Player host, TestReporter reporter) {
@@ -97,6 +103,7 @@ class EnderPocketNetworkTest {
     }
 
     /** 远处（客户端不追踪）女仆的名字嵌套 300 层：列表与 HUD 推送后客户端仍在线。 */
+    @DisplayName("远处女仆名字嵌套 300 层，列表推送后客户端仍在线")
     @Test
     @Requires(Requires.Capability.CLIENT)
     void deepNameStaysConnected(Game game, @Plot.Size(32) @Plot.Centered Plot plot, Player host, TestReporter reporter) {

@@ -18,6 +18,7 @@ import net.magicterra.worlddriver.api.methods.shared.CommonTypes;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.phys.Vec3;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestReporter;
 
@@ -36,6 +37,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * 按玩家的操作方式驱动客户端界面：
  * 右键法术白名单打开法术收集界面；按末影腰包按键打开女仆列表，点选后打开女仆背包。
  */
+@DisplayName("客户端界面操作流程")
 @Scene("tlms.integrated")
 class ScreenFlowClientTest {
     private static final String NS = "touhou_little_maid_spell:";
@@ -44,6 +46,7 @@ class ScreenFlowClientTest {
     private static final String POCKET_MAID = "TlmsPocketMaid";
 
     /** 手持法术白名单右键：打开"法术白名单 - 法术收集"界面，27 个卷轴格加玩家背包 36 格。 */
+    @DisplayName("手持法术白名单右键，打开 27 个卷轴格加玩家背包的法术收集界面")
     @Test
     @Requires(Requires.Capability.CLIENT)
     void blueNoteOpensSpellCollection(Game game, Client client, @Plot.Size(32) @Plot.Centered Plot plot, Player player,
@@ -73,6 +76,7 @@ class ScreenFlowClientTest {
     }
 
     /** 按末影腰包按键：列出装备末影腰包的自有女仆，点选后打开她的背包界面。 */
+    @DisplayName("按末影腰包按键列出戴腰包的自有女仆，点选后打开她的背包界面")
     @Test
     @Requires(Requires.Capability.CLIENT)
     void enderPocketKeyOpensMaidBackpack(Game game, Client client, @Plot.Size(32) @Plot.Centered Plot plot, Player player,

@@ -12,6 +12,7 @@ import net.magicterra.stagewright.test.Scene;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.item.ItemStack;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestReporter;
 
@@ -19,12 +20,14 @@ import java.util.ArrayList;
 import java.util.List;
 
 /** 法术黑名单配置。 */
+@DisplayName("法术黑名单配置")
 @Scene("tlms")
 class SpellBlacklistTest {
     private static final String FIREBOLT_BOOK = "irons_spellbooks:gold_spell_book[irons_spellbooks:spell_container="
             + "{maxSpells:1,mustEquip:false,spellWheel:true,data:[{id:\"irons_spellbooks:firebolt\",index:0,level:1,locked:false}]}]";
 
     /** 黑名单里的铁魔法法术女仆不会施放；移出黑名单后照常施放。 */
+    @DisplayName("黑名单里的铁魔法法术女仆不会施放，移出黑名单后照常施放")
     @Test
     void blocksIronsSpell(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
         Stage ctx = Stage.flat(game, plot, reporter);

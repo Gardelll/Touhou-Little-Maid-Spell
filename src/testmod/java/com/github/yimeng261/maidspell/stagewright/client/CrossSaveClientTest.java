@@ -12,6 +12,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.levelgen.Heightmap;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestReporter;
 import org.junit.jupiter.api.parallel.Isolated;
@@ -24,6 +25,7 @@ import java.util.concurrent.CompletableFuture;
  * 重新打开同一存档再进归隐之地。两者都要求客户端不崩溃、能照常进入归隐之地。
  * <p>切换存档期间不能有别的测试在跑，也不能租 plot；测试结束时框架重新打开场景原来的存档。
  */
+@DisplayName("跨存档进入归隐之地")
 @Scene("tlms.integrated")
 @Isolated
 class CrossSaveClientTest {
@@ -36,6 +38,7 @@ class CrossSaveClientTest {
     private static final int NEAR_ORIGIN = 8;
 
     /** 当前存档进入归隐之地 → 退出到标题 → 新建另一个存档 → 在新存档里摇铃照常进入归隐之地。 */
+    @DisplayName("进入归隐之地后退到标题、新建另一个存档，用寻风之铃仍能照常进入归隐之地")
     @Test
     @Requires(Requires.Capability.CLIENT)
     void retreatAfterSwitchingSaves(Game game) {
@@ -50,6 +53,7 @@ class CrossSaveClientTest {
      * 新建存档后摇铃，维度创建挂起时退出，随后确认挂起的归隐维度创建请求已了结（取消，或在服务器停下前建完），不会悬着；
      * 重新打开同一存档、传到主世界出生点附近再摇铃，照常进入归隐之地。
      */
+    @DisplayName("归隐维度创建中途退出存档，挂起的创建请求已了结，重开同一存档仍能进入归隐之地")
     @Test
     @Requires(Requires.Capability.CLIENT)
     void quitWhileRetreatCreating(Game game, TestReporter reporter) {

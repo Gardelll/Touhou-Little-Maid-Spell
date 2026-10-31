@@ -6,6 +6,7 @@ import com.github.yimeng261.maidspell.stagewright.support.Actors;
 import com.github.yimeng261.maidspell.stagewright.support.Maids;
 import com.github.yimeng261.maidspell.stagewright.support.Stage;
 import net.magicterra.stagewright.test.Game;
+import net.magicterra.stagewright.test.Locks;
 import net.magicterra.stagewright.test.Plot;
 import net.magicterra.stagewright.test.Scene;
 import net.minecraft.server.level.ServerLevel;
@@ -18,6 +19,7 @@ import net.minecraft.world.phys.Vec3;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestReporter;
+import org.junit.jupiter.api.parallel.ResourceLock;
 
 import java.util.List;
 import java.util.UUID;
@@ -29,6 +31,7 @@ import static com.github.yimeng261.maidspell.stagewright.support.Checks.NS;
  * 卸下、死亡、卸载、换维度时清理，被复活饰品救下时保留。魂之书的主人保护见 {@link BaubleRuntimeIntegratedTest}。
  */
 @DisplayName("饰品运行态：按女仆隔离与清理")
+@ResourceLock(Locks.TICK_RATE)
 @Scene("tlms")
 class BaubleRuntimeTest {
     static final String SOUL_BOOK = NS + "soul_book";
@@ -45,7 +48,7 @@ class BaubleRuntimeTest {
     @DisplayName("魂之书卸下再装备后旧受伤时间被清掉，隔过阈值的下一次受击照常扣血")
     @Test
     void intervalAfterReequip(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
-        Stage ctx = Stage.flat(game, plot, reporter);
+        Stage ctx = Stage.flat(game, plot, reporter).fastForward();
         EntityMaid maid = ctx.get(() -> {
             EntityMaid sitting = Actors.sittingMaid(ctx, 0, 0, 0);
             Actors.equipBauble(sitting, SOUL_BOOK);
@@ -85,7 +88,7 @@ class BaubleRuntimeTest {
     @DisplayName("破愈咒锋拦下被女仆打过的敌人回血，记录次数用完后恢复正常回血")
     @Test
     void blocksHealingUntilUsedUp(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
-        Stage ctx = Stage.flat(game, plot, reporter);
+        Stage ctx = Stage.flat(game, plot, reporter).fastForward();
         EntityMaid maid = ctx.get(() -> {
             EntityMaid sitting = Actors.sittingMaid(ctx, 0, 0, 0);
             Actors.equipBauble(sitting, WOUND_RIME);
@@ -119,7 +122,7 @@ class BaubleRuntimeTest {
     @DisplayName("破愈咒锋不记录玩家和女仆，被打的女仆照常回血")
     @Test
     void skipsPlayersAndMaids(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
-        Stage ctx = Stage.flat(game, plot, reporter);
+        Stage ctx = Stage.flat(game, plot, reporter).fastForward();
         EntityMaid maid = ctx.get(() -> {
             EntityMaid sitting = Actors.sittingMaid(ctx, 0, 0, 0);
             Actors.equipBauble(sitting, WOUND_RIME);
@@ -140,19 +143,19 @@ class BaubleRuntimeTest {
     @DisplayName("敌人死亡后破愈咒锋的禁疗记录被清掉，同 UUID 实体回来照常回血")
     @Test
     void noResidueAfterDeath(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
-        woundRimeResidue(Stage.flat(game, plot, reporter), "death");
+        woundRimeResidue(Stage.flat(game, plot, reporter).fastForward(), "death");
     }
 
     @DisplayName("敌人卸载后破愈咒锋的禁疗记录被清掉，同 UUID 实体回来照常回血")
     @Test
     void noResidueAfterUnload(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
-        woundRimeResidue(Stage.flat(game, plot, reporter), "unload");
+        woundRimeResidue(Stage.flat(game, plot, reporter).fastForward(), "unload");
     }
 
     @DisplayName("敌人换维度后破愈咒锋的禁疗记录被清掉，同 UUID 实体回来照常回血")
     @Test
     void noResidueAfterDimensionChange(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
-        woundRimeResidue(Stage.flat(game, plot, reporter), "dimension");
+        woundRimeResidue(Stage.flat(game, plot, reporter).fastForward(), "dimension");
     }
 
     /** 敌人死亡、卸载或换维度后记录被清掉：同 UUID 的实体回来后照常回血。 */
@@ -199,7 +202,7 @@ class BaubleRuntimeTest {
     @DisplayName("紫荆银冠的受伤计数在卸下饰品后清空，重新装备后从头计")
     @Test
     void resetOnTakeOff(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
-        Stage ctx = Stage.flat(game, plot, reporter);
+        Stage ctx = Stage.flat(game, plot, reporter).fastForward();
         EntityMaid maid = ctx.get(() -> {
             EntityMaid sitting = Actors.sittingMaid(ctx, 0, 0, 0);
             Actors.equipBauble(sitting, CERCIS);
@@ -236,7 +239,7 @@ class BaubleRuntimeTest {
     @DisplayName("被梦云水晶救下后，魂之书、破愈咒锋、紫荆银冠的运行态都保留")
     @Test
     void runtimeKeptWhenRevived(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
-        Stage ctx = Stage.flat(game, plot, reporter);
+        Stage ctx = Stage.flat(game, plot, reporter).fastForward();
         EntityMaid maid = ctx.get(() -> {
             EntityMaid sitting = Actors.sittingMaid(ctx, 0, 0, 0);
             Maids.equip(sitting, CRYSTAL, SOUL_BOOK, WOUND_RIME, CERCIS);
@@ -262,7 +265,7 @@ class BaubleRuntimeTest {
     @DisplayName("女仆真正死亡时，魂之书、破愈咒锋、紫荆银冠三种运行态都清掉")
     @Test
     void runtimeClearedOnDeath(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
-        Stage ctx = Stage.flat(game, plot, reporter);
+        Stage ctx = Stage.flat(game, plot, reporter).fastForward();
         EntityMaid maid = ctx.get(() -> {
             EntityMaid sitting = Actors.sittingMaid(ctx, 0, 0, 0);
             Maids.equip(sitting, SOUL_BOOK, WOUND_RIME, CERCIS);

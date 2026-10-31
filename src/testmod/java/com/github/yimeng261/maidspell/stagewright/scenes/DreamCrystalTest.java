@@ -8,6 +8,7 @@ import com.github.yimeng261.maidspell.stagewright.support.Maids;
 import com.github.yimeng261.maidspell.stagewright.support.Owners;
 import com.github.yimeng261.maidspell.stagewright.support.Stage;
 import net.magicterra.stagewright.test.Game;
+import net.magicterra.stagewright.test.Locks;
 import net.magicterra.stagewright.test.Plot;
 import net.magicterra.stagewright.test.Scene;
 import net.minecraft.resources.ResourceLocation;
@@ -23,6 +24,7 @@ import net.minecraft.world.phys.Vec3;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestReporter;
+import org.junit.jupiter.api.parallel.ResourceLock;
 import top.theillusivec4.curios.api.CuriosApi;
 import top.theillusivec4.curios.api.type.ISlotType;
 
@@ -43,6 +45,7 @@ import static com.github.yimeng261.maidspell.stagewright.support.Checks.NS;
  */
 @Scene("tlms")
 @DisplayName("梦云水晶（女仆佩戴）")
+@ResourceLock(Locks.TICK_RATE)
 class DreamCrystalTest {
     private static final String FROZEN_TAG = NS + "dream_crystal_frozen_until";
     private static final ResourceLocation NEARBY_BOOST = ResourceLocation.parse(NS + "dream_crystal_nearby_boost");
@@ -57,7 +60,7 @@ class DreamCrystalTest {
     @DisplayName("女仆打到敌人后敌人不会被定住，也没有时停标记")
     @Test
     void hitDoesNotFreeze(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
-        Stage ctx = Stage.flat(game, plot, reporter);
+        Stage ctx = Stage.flat(game, plot, reporter).fastForward();
         EntityMaid maid = ctx.get(() -> {
             EntityMaid spawned = Actors.sittingMaid(ctx, 0, 0, 0);
             Actors.equipBauble(spawned, CRYSTAL);
@@ -82,7 +85,7 @@ class DreamCrystalTest {
     @DisplayName("本来就是 NoAI 的生物被打后仍保持 NoAI，也不打时停标记")
     @Test
     void hitKeepsNoAiMobs(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
-        Stage ctx = Stage.flat(game, plot, reporter);
+        Stage ctx = Stage.flat(game, plot, reporter).fastForward();
         EntityMaid maid = ctx.get(() -> {
             EntityMaid spawned = Actors.sittingMaid(ctx, 0, 0, 0);
             Actors.equipBauble(spawned, CRYSTAL);
@@ -100,13 +103,13 @@ class DreamCrystalTest {
     @DisplayName("旧存档遗留的定身生物重进主世界后恢复 AI 并清掉时停标记")
     @Test
     void legacyFrozenReleasedOnJoin(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
-        legacyFrozenReleased(Stage.flat(game, plot, reporter));
+        legacyFrozenReleased(Stage.flat(game, plot, reporter).fastForward());
     }
 
     @DisplayName("旧存档遗留的定身生物在下界重进世界后同样恢复 AI 并清掉时停标记")
     @Test
     void legacyFrozenReleasedInOtherDimension(Game game, @Plot.In("minecraft:the_nether") Plot plot, TestReporter reporter) {
-        legacyFrozenReleased(Stage.sky(game, plot, reporter));
+        legacyFrozenReleased(Stage.sky(game, plot, reporter).fastForward());
     }
 
     /** 旧存档里带时停标记的 NoAI 生物重新进入世界：恢复 AI 并清掉标记。 */
@@ -131,7 +134,7 @@ class DreamCrystalTest {
     @DisplayName("没有时停标记的 NoAI 生物重进世界后保持 NoAI")
     @Test
     void legacyNoAiWithoutTagKept(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
-        Stage ctx = Stage.flat(game, plot, reporter);
+        Stage ctx = Stage.flat(game, plot, reporter).fastForward();
         Mob statue = ctx.get(() -> Actors.spawn(ctx, "minecraft:zombie", 0, 0, 2, true));
         Entity loaded = Maids.reload(ctx, statue, 2);
         ctx.ticks(2);
@@ -144,7 +147,7 @@ class DreamCrystalTest {
     @DisplayName("20 格内其他女仆获得攻击加成，20 格外没有，佩戴者走远后加成消失")
     @Test
     void rangeBoost(Game game, @Plot.Size(x = 128, y = 32, z = 128) @Plot.Centered Plot plot, TestReporter reporter) {
-        Stage ctx = Stage.flat(game, plot, reporter);
+        Stage ctx = Stage.flat(game, plot, reporter).fastForward();
         plot.fill(-64, 0, -64, 63, 0, 63, Blocks.GRASS_BLOCK);
         EntityMaid wearer = ctx.get(() -> {
             EntityMaid spawned = Actors.sittingMaid(ctx, 0, 0, 0);
@@ -173,14 +176,14 @@ class DreamCrystalTest {
     @DisplayName("第一次致死时复活并回满生命，获得 15 秒无敌且记下一条复活时间")
     @Test
     void firstDeath(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
-        DreamCrystalFixtures.reviveFirstDeath(Stage.flat(game, plot, reporter));
+        DreamCrystalFixtures.reviveFirstDeath(Stage.flat(game, plot, reporter).fastForward());
     }
 
     /** 无敌到期后解除（按主世界时间），之后照常受伤。 */
     @DisplayName("复活无敌到期后按主世界时间解除，之后照常受伤")
     @Test
     void invulnerabilityExpires(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
-        Stage ctx = Stage.flat(game, plot, reporter);
+        Stage ctx = Stage.flat(game, plot, reporter).fastForward();
         EntityMaid maid = ctx.get(() -> Actors.sittingMaid(ctx, 0, 0, 0));
         ItemStack crystal = ctx.get(() -> Actors.equipBauble(maid, CRYSTAL));
         ctx.run(() -> {
@@ -202,7 +205,7 @@ class DreamCrystalTest {
     @DisplayName("120 秒内每复活一次概率降 10%：无记录必复活，5 条约一半，窗口外旧记录不计")
     @Test
     void chanceByRecentCount(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
-        Stage ctx = Stage.flat(game, plot, reporter);
+        Stage ctx = Stage.flat(game, plot, reporter).fastForward();
         ctx.run(() -> {
             EntityMaid maid = Actors.stillMaid(ctx, 0, 0, 0);
             long now = now(ctx);
@@ -238,7 +241,7 @@ class DreamCrystalTest {
     @DisplayName("120 秒内已复活 10 次后不再复活，女仆真正死亡")
     @Test
     void tenRecentNeverRevives(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
-        Stage ctx = Stage.flat(game, plot, reporter);
+        Stage ctx = Stage.flat(game, plot, reporter).fastForward();
         EntityMaid maid = ctx.get(() -> Actors.sittingMaid(ctx, 0, 0, 0));
         ItemStack crystal = ctx.get(() -> Actors.equipBauble(maid, CRYSTAL));
         ctx.ticks(2);
@@ -253,14 +256,14 @@ class DreamCrystalTest {
     @DisplayName("旧版本留下的复活记录升级后第一次复活按近期没有复活过，之后按主世界时间记录")
     @Test
     void legacyHistoryCountsAsNone(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
-        Stage ctx = Stage.flat(game, plot, reporter);
+        Stage ctx = Stage.flat(game, plot, reporter).fastForward();
         ctx.run(() -> legacyHistory(ctx));
     }
 
     @DisplayName("旧版本复活记录在下界升级后同样按近期没有复活过，之后按主世界时间记录")
     @Test
     void legacyHistoryInOtherDimension(Game game, @Plot.In("minecraft:the_nether") Plot plot, TestReporter reporter) {
-        Stage ctx = Stage.sky(game, plot, reporter);
+        Stage ctx = Stage.sky(game, plot, reporter).fastForward();
         ctx.run(() -> legacyHistory(ctx));
     }
 
@@ -282,7 +285,7 @@ class DreamCrystalTest {
     @DisplayName("主世界复活几次后到下界，复活记录按主世界时间延续，不清零也不卡满")
     @Test
     void historyCarriesAcrossDimensions(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
-        Stage ctx = Stage.flat(game, plot, reporter);
+        Stage ctx = Stage.flat(game, plot, reporter).fastForward();
         ctx.run(() -> {
             EntityMaid maid = Actors.stillMaid(ctx, 0, 0, 0);
             long now = now(ctx);
@@ -313,7 +316,7 @@ class DreamCrystalTest {
     @DisplayName("旧存档里按剩余 tick 记的复活无敌升级后换成截止时间，到点结束")
     @Test
     void legacyInvulnerableTicksMigrate(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
-        Stage ctx = Stage.flat(game, plot, reporter);
+        Stage ctx = Stage.flat(game, plot, reporter).fastForward();
         EntityMaid maid = ctx.get(() -> Actors.sittingMaid(ctx, 0, 0, 0));
         ItemStack worn = ctx.get(() -> {
             ItemStack stack = Actors.stack(CRYSTAL);
@@ -341,7 +344,7 @@ class DreamCrystalTest {
     @DisplayName("普通怪物不以佩戴者为目标，Boss 只在女仆打过它之后才以她为目标")
     @Test
     void bossNeutral(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
-        Stage ctx = Stage.flat(game, plot, reporter);
+        Stage ctx = Stage.flat(game, plot, reporter).fastForward();
         ctx.run(() -> {
             EntityMaid maid = Actors.stillMaid(ctx, 0, 0, 0);
             Actors.equipBauble(maid, CRYSTAL);
@@ -362,7 +365,7 @@ class DreamCrystalTest {
     @DisplayName("受击间隔内被挡下的第二击不追加真伤，只结算第一击及其真伤")
     @Test
     void blockedHitAddsNoTrueDamage(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
-        Stage ctx = Stage.flat(game, plot, reporter);
+        Stage ctx = Stage.flat(game, plot, reporter).fastForward();
         Mob pig = ctx.get(() -> {
             EntityMaid maid = Actors.stillMaid(ctx, 0, 0, 0);
             Actors.equipBauble(maid, CRYSTAL);
@@ -382,7 +385,7 @@ class DreamCrystalTest {
     @DisplayName("玩家没有 curio 栏，无法通过 Curios 佩戴梦云水晶等本模组饰品")
     @Test
     void playersCannotWear(Game game, Plot plot, TestReporter reporter) {
-        Stage ctx = Stage.sky(game, plot, reporter);
+        Stage ctx = Stage.sky(game, plot, reporter).fastForward();
         ctx.run(() -> {
             ServerPlayer player = Owners.visitor(ctx, "TlmsCurioPlayer", 2, 0, 0);
             ctx.check(CuriosApi.getEntitySlots(player).containsKey("curio")).as("玩家有 curio 栏").isFalse();

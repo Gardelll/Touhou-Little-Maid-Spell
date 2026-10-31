@@ -13,6 +13,7 @@ import com.github.yimeng261.maidspell.stagewright.support.Owners;
 import com.github.yimeng261.maidspell.stagewright.support.Players;
 import com.github.yimeng261.maidspell.stagewright.support.Stage;
 import net.magicterra.stagewright.test.Game;
+import net.magicterra.stagewright.test.Locks;
 import net.magicterra.stagewright.test.Plot;
 import net.magicterra.stagewright.test.Requires;
 import net.magicterra.stagewright.test.Scene;
@@ -51,6 +52,7 @@ import java.util.stream.Collectors;
 @Scene("tlms.integrated")
 @Requires(mods = "usefulmagic")
 @ResourceLock("stagewright.player:TlmsSpellOwner")
+@ResourceLock(Locks.TICK_RATE)
 @DisplayName("实用魔法：全部法术球施法")
 class UsefulMagicSpellTest {
     private static final String MOD = "usefulmagic";
@@ -78,7 +80,7 @@ class UsefulMagicSpellTest {
     @DisplayName("本测试列出的法术与注册表里的法术球完全一致")
     @Test
     void allSpellsListed(Game game, Plot plot, TestReporter reporter) {
-        Stage ctx = Stage.sky(game, plot, reporter);
+        Stage ctx = Stage.sky(game, plot, reporter).fastForward();
         ctx.run(() -> {
             Set<String> registered = BuiltInRegistries.ITEM.entrySet().stream()
                     .filter(entry -> entry.getKey().location().getNamespace().equals(MOD) && entry.getValue() instanceof MagicItem)
@@ -93,7 +95,7 @@ class UsefulMagicSpellTest {
     @DisplayName("女仆逐颗法术球施法：能开始、能结束、进入冷却、球被卸回、蓄力态清除")
     @TestFactory
     List<DynamicTest> cast(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
-        Stage ctx = Stage.flat(game, plot, reporter);
+        Stage ctx = Stage.flat(game, plot, reporter).fastForward();
         ISpellBookProvider<?, ?> provider = SpellBookManager.getProvider(MOD);
         if (provider == null) {
             throw ctx.fail(MOD + " 的法术提供者未注册");

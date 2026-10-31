@@ -9,11 +9,13 @@ import com.github.yimeng261.maidspell.stagewright.support.Owners;
 import com.github.yimeng261.maidspell.stagewright.support.Reflect;
 import com.github.yimeng261.maidspell.stagewright.support.Stage;
 import net.magicterra.stagewright.test.Game;
+import net.magicterra.stagewright.test.Locks;
 import net.magicterra.stagewright.test.Plot;
 import net.magicterra.stagewright.test.Scene;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestReporter;
+import org.junit.jupiter.api.parallel.ResourceLock;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.core.Holder;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -37,6 +39,7 @@ import static com.github.yimeng261.maidspell.stagewright.support.Checks.NS;
  * 精灵守卫索敌与同盟、铁魔法雷暴按施法者归属保护友方女仆、随机增益效果黑名单默认含 goety:explosive 且旧默认值会迁移补上。
  */
 @DisplayName("精灵守卫、雷暴归属保护与随机增益黑名单")
+@ResourceLock(Locks.TICK_RATE)
 @Scene("tlms")
 class GuardTest {
     private static final String TEMPLAR = NS + "elf_templar";
@@ -47,43 +50,43 @@ class GuardTest {
     @DisplayName("精灵守卫主动攻击僵尸")
     @Test
     void targetsZombie(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
-        targets(Stage.flat(game, plot, reporter), "minecraft:zombie", true);
+        targets(Stage.flat(game, plot, reporter).fastForward(), "minecraft:zombie", true);
     }
 
     @DisplayName("精灵守卫主动攻击骷髅")
     @Test
     void targetsSkeleton(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
-        targets(Stage.flat(game, plot, reporter), "minecraft:skeleton", true);
+        targets(Stage.flat(game, plot, reporter).fastForward(), "minecraft:skeleton", true);
     }
 
     @DisplayName("精灵守卫主动攻击掠夺者")
     @Test
     void targetsPillager(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
-        targets(Stage.flat(game, plot, reporter), "minecraft:pillager", true);
+        targets(Stage.flat(game, plot, reporter).fastForward(), "minecraft:pillager", true);
     }
 
     @DisplayName("精灵守卫主动攻击劫掠兽")
     @Test
     void targetsRavager(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
-        targets(Stage.flat(game, plot, reporter), "minecraft:ravager", true);
+        targets(Stage.flat(game, plot, reporter).fastForward(), "minecraft:ravager", true);
     }
 
     @DisplayName("精灵守卫不把苦力怕当目标")
     @Test
     void ignoresCreeper(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
-        targets(Stage.flat(game, plot, reporter), "minecraft:creeper", false);
+        targets(Stage.flat(game, plot, reporter).fastForward(), "minecraft:creeper", false);
     }
 
     @DisplayName("精灵守卫不把蜘蛛当目标")
     @Test
     void ignoresSpider(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
-        targets(Stage.flat(game, plot, reporter), "minecraft:spider", false);
+        targets(Stage.flat(game, plot, reporter).fastForward(), "minecraft:spider", false);
     }
 
     @DisplayName("精灵守卫不以没惹她的玩家和女仆为目标")
     @Test
     void ignoresPeacefulPlayerAndMaid(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
-        Stage ctx = Stage.flat(game, plot, reporter);
+        Stage ctx = Stage.flat(game, plot, reporter).fastForward();
         record Cast(ServerPlayer player, EntityMaid maid, Mob templar) {
         }
         Cast cast = ctx.get(() -> {
@@ -105,7 +108,7 @@ class GuardTest {
     @DisplayName("玩家打其中一个精灵守卫，周围同伴都把这名玩家当目标")
     @Test
     void companionsRetaliate(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
-        Stage ctx = Stage.flat(game, plot, reporter);
+        Stage ctx = Stage.flat(game, plot, reporter).fastForward();
         ServerPlayer attacker = ctx.get(() -> Owners.visitor(ctx, "TlmsAttacker", 6, 0, 0));
         Mob hit = ctx.get(() -> templar(ctx, 0, 0));
         List<Mob> companions = ctx.get(() -> List.of(templar(ctx, 0, 3), templar(ctx, 0, -3)));
@@ -135,7 +138,7 @@ class GuardTest {
     @DisplayName("精灵守卫的法术误伤同伴时，双方都不把对方当目标")
     @Test
     void noInfighting(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
-        Stage ctx = Stage.flat(game, plot, reporter);
+        Stage ctx = Stage.flat(game, plot, reporter).fastForward();
         Mob a = ctx.get(() -> templar(ctx, 0, 0));
         Mob b = ctx.get(() -> templar(ctx, 0, 3));
         ctx.run(() -> {
@@ -153,49 +156,49 @@ class GuardTest {
     @DisplayName("铁魔法雷暴：主人施放时不劈自己的女仆，敌对生物照常被劈")
     @Test
     void thunderstormOwnerSparesOwnMaid(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
-        Stage ctx = Stage.flat(game, plot, reporter);
+        Stage ctx = Stage.flat(game, plot, reporter).fastForward();
         ctx.run(() -> thunderstorm(ctx, true));
     }
 
     @DisplayName("铁魔法雷暴：敌人施放时照常劈女仆和敌对生物")
     @Test
     void thunderstormEnemyHitsMaid(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
-        Stage ctx = Stage.flat(game, plot, reporter);
+        Stage ctx = Stage.flat(game, plot, reporter).fastForward();
         ctx.run(() -> thunderstorm(ctx, false));
     }
 
     @DisplayName("铁魔法雷暴：敌人施放时劈其他玩家的宠物、敌对骑手和盯着玩家的北极熊，放过无主奶牛")
     @Test
     void thunderstormEnemyPetAndRiderHit(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
-        Stage ctx = Stage.flat(game, plot, reporter);
+        Stage ctx = Stage.flat(game, plot, reporter).fastForward();
         ctx.run(() -> thunderstormEnemySide(ctx));
     }
 
     @DisplayName("铁魔法雷暴：敌人施放时放过村民、铁傀儡、奶牛和没盯着谁的北极熊")
     @Test
     void thunderstormNeutralsSparedByEnemyCaster(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
-        Stage ctx = Stage.flat(game, plot, reporter);
+        Stage ctx = Stage.flat(game, plot, reporter).fastForward();
         ctx.run(() -> thunderstormNeutrals(ctx));
     }
 
     @DisplayName("铁魔法雷暴：主人施放时，主人宠物载着的敌对乘客整条链都不被劈")
     @Test
     void thunderstormOwnerSideVehicleCarriesPassenger(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
-        Stage ctx = Stage.flat(game, plot, reporter);
+        Stage ctx = Stage.flat(game, plot, reporter).fastForward();
         ctx.run(() -> thunderstormOwnerSideVehicle(ctx));
     }
 
     @DisplayName("梦云水晶与馥郁巧思的默认随机增益黑名单含 goety:explosive，候选效果里没有它")
     @Test
     void explosiveInEffectBlacklists(Game game, Plot plot, TestReporter reporter) {
-        Stage ctx = Stage.sky(game, plot, reporter);
+        Stage ctx = Stage.sky(game, plot, reporter).fastForward();
         ctx.run(() -> explosiveBlacklisted(ctx));
     }
 
     @DisplayName("随机增益黑名单迁移：两份各自判断，恰为旧默认才补上 goety:explosive，版本已到 1 不动")
     @Test
     void effectBlacklistMigrationCoversBoth(Game game, Plot plot, TestReporter reporter) {
-        Stage ctx = Stage.sky(game, plot, reporter);
+        Stage ctx = Stage.sky(game, plot, reporter).fastForward();
         ctx.run(() -> blacklistMigration(ctx));
     }
 

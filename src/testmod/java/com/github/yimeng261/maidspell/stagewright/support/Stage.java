@@ -26,6 +26,8 @@ import java.util.function.Supplier;
 public final class Stage {
     /** {@link #flat} 场地的半边长：地板覆盖相对坐标 x、z 的 [-16, 15]。 */
     public static final int FLAT_HALF = 16;
+    /** {@link #fastForward} 的目标 tick 速率：远高于服务端跟得上的速度，实际就是不停顿地连续 tick。 */
+    private static final float FAST_TICKS_PER_SECOND = 1000F;
 
     private final Game game;
     private final Plot plot;
@@ -119,6 +121,15 @@ public final class Stage {
     /** 服务端线程上计算并返回结果。 */
     public <T> T get(Supplier<T> work) {
         return game.onServer(s -> work.get());
+    }
+
+    /**
+     * 本测试余下部分让服务端尽快连续 tick（结束时恢复）：只等游戏逻辑的测试用，等区块生成、存盘等后台工作的测试别用，
+     * 按 tick 计的等待上限在墙钟上会变短。测试类须持有 {@code @ResourceLock(Locks.TICK_RATE)}（测试线程）。
+     */
+    public Stage fastForward() {
+        game.overrideTickRate(FAST_TICKS_PER_SECOND);
+        return this;
     }
 
     /** 让 n 个服务端 tick 过去（测试线程）。 */

@@ -20,6 +20,7 @@ import io.redspace.ironsspellbooks.api.spells.AbstractSpell;
 import io.redspace.ironsspellbooks.api.spells.ISpellContainer;
 import io.redspace.ironsspellbooks.api.spells.SpellSlot;
 import net.magicterra.stagewright.test.Game;
+import net.magicterra.stagewright.test.Locks;
 import net.magicterra.stagewright.test.Plot;
 import net.magicterra.stagewright.test.Scene;
 import net.minecraft.core.Holder;
@@ -55,6 +56,7 @@ import net.minecraft.world.phys.Vec3;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestReporter;
+import org.junit.jupiter.api.parallel.ResourceLock;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -75,6 +77,7 @@ import static com.github.yimeng261.maidspell.stagewright.support.Checks.NS;
  */
 @Scene("tlms")
 @DisplayName("星之魔女系列内容")
+@ResourceLock(Locks.TICK_RATE)
 class StellarContentTest {
     private static final List<String> EXCLUSIVE_SPELLS = List.of("starfall_modified", "magic_shotgun", "void_phase",
             "sword_prison", "teleport_modified", "star_shadow_strike", "triple_star_arrow");
@@ -88,7 +91,7 @@ class StellarContentTest {
     @DisplayName("星之魔女专属法术已注册，不能在抄写台合成，也不会出现在战利品卷轴里")
     @Test
     void exclusiveNotCraftableOrLootable(Game game, Plot plot, TestReporter reporter) {
-        Stage ctx = Stage.sky(game, plot, reporter);
+        Stage ctx = Stage.sky(game, plot, reporter).fastForward();
         ctx.run(() -> {
             for (String id : EXCLUSIVE_SPELLS) {
                 AbstractSpell spell = spell(id);
@@ -102,7 +105,7 @@ class StellarContentTest {
     @DisplayName("伴星黑洞与破法回响能在抄写台合成")
     @Test
     void companionSpellsCraftable(Game game, Plot plot, TestReporter reporter) {
-        Stage ctx = Stage.sky(game, plot, reporter);
+        Stage ctx = Stage.sky(game, plot, reporter).fastForward();
         ctx.run(() -> {
             for (String id : OBTAINABLE_SPELLS) {
                 ctx.check(spell(id).allowCrafting()).as(id + " 能在抄写台合成").isTrue();
@@ -114,7 +117,7 @@ class StellarContentTest {
     @DisplayName("星之魔女系列法术的名称与说明在中英文下都有，图标贴图存在")
     @Test
     void namesDescriptionsIcons(Game game, Plot plot, TestReporter reporter) {
-        Stage ctx = Stage.sky(game, plot, reporter);
+        Stage ctx = Stage.sky(game, plot, reporter).fastForward();
         ctx.run(() -> {
             Map<String, String> en = Lang.read("en_us");
             Map<String, String> zh = Lang.read("zh_cn");
@@ -155,7 +158,7 @@ class StellarContentTest {
     @DisplayName("创造物品栏饰品页有星锚珍珠，杂项页有相关物品且排在饰品页之后")
     @Test
     void creativeTabs(Game game, Plot plot, TestReporter reporter) {
-        Stage ctx = Stage.sky(game, plot, reporter);
+        Stage ctx = Stage.sky(game, plot, reporter).fastForward();
         ctx.run(() -> {
             Set<String> baubles = tabItems(ctx, MaidSpellCreativeTab.MAID_SPELL_BAUBLE_TAB.get());
             Set<String> misc = tabItems(ctx, MaidSpellCreativeTab.MAID_SPELL_MISC_TAB.get());
@@ -184,7 +187,7 @@ class StellarContentTest {
     @DisplayName("星之魔女系列装备与投枪在附魔台和铁砧上能附的附魔符合设计")
     @Test
     void enchantability(Game game, Plot plot, TestReporter reporter) {
-        Stage ctx = Stage.sky(game, plot, reporter);
+        Stage ctx = Stage.sky(game, plot, reporter).fastForward();
         ctx.run(() -> {
             Map<String, Boolean> actual = new TreeMap<>();
             Map<String, Boolean> expected = new TreeMap<>();
@@ -219,7 +222,7 @@ class StellarContentTest {
     @DisplayName("星影长剑自带虚空相变且可用紫水晶修复，星之魔女法帽加法力上限、法术强度与冷却缩减，投枪伤害与三叉戟相同")
     @Test
     void longswordAndHat(Game game, Plot plot, TestReporter reporter) {
-        Stage ctx = Stage.sky(game, plot, reporter);
+        Stage ctx = Stage.sky(game, plot, reporter).fastForward();
         ctx.run(() -> {
             ItemStack sword = Actors.stack(NS + "star_shadow_longsword");
             List<String> spells = new ArrayList<>();
@@ -253,7 +256,7 @@ class StellarContentTest {
     @DisplayName("四个秘银锭围着星陨石合成归星")
     @Test
     void returningStarRecipe(Game game, Plot plot, TestReporter reporter) {
-        Stage ctx = Stage.sky(game, plot, reporter);
+        Stage ctx = Stage.sky(game, plot, reporter).fastForward();
         ctx.run(() -> {
             ItemStack mithril = Actors.stack("irons_spellbooks:mithril_ingot");
             ItemStack meteorite = Actors.stack(NS + "star_meteorite");
@@ -271,7 +274,7 @@ class StellarContentTest {
     @DisplayName("星锚珍珠玩家右键：耗 8 点耐久、获得虚空漫步并进入冷却，期间虚空伤害减免 95%，耐久见底时碎掉且不可修复")
     @Test
     void playerUse(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
-        Stage ctx = Stage.flat(game, plot, reporter);
+        Stage ctx = Stage.flat(game, plot, reporter).fastForward();
         ctx.run(() -> {
             ServerPlayer player = Owners.visitor(ctx, "TlmsPearlUser", 0, 0, 0);
             ItemStack pearl = Actors.stack(NS + "staranchor_pearl");
@@ -307,7 +310,7 @@ class StellarContentTest {
     @DisplayName("虚空漫步只减虚空伤害，摔落照常全额，减免后的伤害再被吸收扣除，效果结束后恢复全额")
     @Test
     void voidWalkOnlyCutsVoidDamage(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
-        Stage ctx = Stage.flat(game, plot, reporter);
+        Stage ctx = Stage.flat(game, plot, reporter).fastForward();
         ctx.run(() -> {
             ServerPlayer player = Owners.visitor(ctx, "TlmsPearlVoid", 0, 0, 0);
             player.addEffect(new net.minecraft.world.effect.MobEffectInstance(MaidSpellEffects.VOID_WALK, 200, 0));
@@ -339,7 +342,7 @@ class StellarContentTest {
     @DisplayName("星锚珍珠三种语言的 desc2 都写着减伤 95%，占位符个数正确且百分号已转义")
     @Test
     void tooltipSays95(Game game, Plot plot, TestReporter reporter) {
-        Stage ctx = Stage.sky(game, plot, reporter);
+        Stage ctx = Stage.sky(game, plot, reporter).fastForward();
         ctx.run(() -> {
             String key = "item.touhou_little_maid_spell.staranchor_pearl.desc2";
             for (String code : List.of("zh_cn", "en_us", "ja_jp")) {
@@ -358,7 +361,7 @@ class StellarContentTest {
     @DisplayName("戴星锚珍珠的女仆受虚空伤害时挡下一次，珍珠损耗 1 点耐久")
     @Test
     void maidBlocksVoid(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
-        Stage ctx = Stage.flat(game, plot, reporter);
+        Stage ctx = Stage.flat(game, plot, reporter).fastForward();
         EntityMaid maid = ctx.get(() -> {
             EntityMaid spawned = Actors.stillMaid(ctx, 0, 0, 0);
             Actors.equipBauble(spawned, NS + "staranchor_pearl");
@@ -378,7 +381,7 @@ class StellarContentTest {
     @DisplayName("投枪生存模式投出后手上用掉、实体可捡回，创造模式投出后手上不少、实体只许创造模式捡")
     @Test
     void throwSurvivalAndCreative(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
-        Stage ctx = Stage.flat(game, plot, reporter);
+        Stage ctx = Stage.flat(game, plot, reporter).fastForward();
         ctx.run(() -> {
             ServerLevel level = ctx.level();
             ServerPlayer player = Owners.visitor(ctx, "TlmsSpearThrower", 0, 0, 0);
@@ -434,7 +437,7 @@ class StellarContentTest {
     @DisplayName("星之魔女近战连段中途按接续窗口出手，最后一击等完整收招后才放开 AI")
     @Test
     void meleeComboTimeline(Game game, Plot plot, TestReporter reporter) {
-        Stage ctx = Stage.sky(game, plot, reporter);
+        Stage ctx = Stage.sky(game, plot, reporter).fastForward();
         ctx.run(() -> {
             ctx.check(comboTimeline(ctx, 3)).as("三连击时间线").isEqualTo(List.of(0, 12, 24, 42));
             ctx.check(comboTimeline(ctx, 4)).as("四连击时间线").isEqualTo(List.of(0, 12, 24, 36, 55));
@@ -445,7 +448,7 @@ class StellarContentTest {
     @DisplayName("只有剑系动作允许提前接续，其余动作的接续窗口等于总时长")
     @Test
     void followUpOnlySwordActions(Game game, Plot plot, TestReporter reporter) {
-        Stage ctx = Stage.sky(game, plot, reporter);
+        Stage ctx = Stage.sky(game, plot, reporter).fastForward();
         ctx.run(() -> {
             List<String> early = new ArrayList<>();
             for (WinefoxAction action : WinefoxAction.values()) {
@@ -461,7 +464,7 @@ class StellarContentTest {
     @DisplayName("剑系动作的事件都落在接续窗口之内，完整收招等于动画文件里的时长")
     @Test
     void swordFollowUpKeepsEventsAndRecovery(Game game, Plot plot, TestReporter reporter) {
-        Stage ctx = Stage.sky(game, plot, reporter);
+        Stage ctx = Stage.sky(game, plot, reporter).fastForward();
         ctx.run(() -> {
             JsonObject animations;
             try (InputStream in = StellarContentTest.class.getResourceAsStream(WINEFOX_ARM_ANIMATION)) {
@@ -503,7 +506,7 @@ class StellarContentTest {
     @DisplayName("星之魔女二阶段近战连段每套收招后先做一次法术决策，再起下一套")
     @Test
     void comboYieldsSpellTurn(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
-        Stage ctx = Stage.flat(game, plot, reporter);
+        Stage ctx = Stage.flat(game, plot, reporter).fastForward();
         MagicalWinefoxBossEntity boss = ctx.get(() -> Actors.spawn(ctx, NS + "stellar_witch", 0, 0, 0, false));
         Mob dummy = ctx.get(() -> {
             Mob husk = Actors.spawn(ctx, "minecraft:husk", 2, 0, 0, true);

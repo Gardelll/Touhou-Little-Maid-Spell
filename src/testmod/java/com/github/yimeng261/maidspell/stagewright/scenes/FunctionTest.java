@@ -8,6 +8,7 @@ import com.github.yimeng261.maidspell.spell.manager.SpellBookManager;
 import com.github.yimeng261.maidspell.stagewright.support.Actors;
 import com.github.yimeng261.maidspell.stagewright.support.Stage;
 import net.magicterra.stagewright.test.Game;
+import net.magicterra.stagewright.test.Locks;
 import net.magicterra.stagewright.test.Plot;
 import net.magicterra.stagewright.test.Scene;
 import net.minecraft.core.BlockPos;
@@ -36,6 +37,7 @@ import net.neoforged.neoforge.event.entity.living.MobSpawnEvent;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestReporter;
+import org.junit.jupiter.api.parallel.ResourceLock;
 
 import java.util.ArrayList;
 import java.util.EnumSet;
@@ -52,6 +54,7 @@ import static com.github.yimeng261.maidspell.stagewright.support.Checks.NS;
  */
 @Scene("tlms")
 @DisplayName("花、镇石与饰品的功能行为")
+@ResourceLock(Locks.TICK_RATE)
 class FunctionTest {
     /** 花的光环半径：AABB(花).inflate(3)，距花 3 格的生物在内、4 格的在外。 */
     private static final int INSIDE = 3;
@@ -78,7 +81,7 @@ class FunctionTest {
     @DisplayName("猩红朱华光环：范围内生物得力量 II，非女仆非入魔骑士另得凋零 I，商人 NPC 与范围外生物不受影响")
     @Test
     void scarletZhuhuaAura(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
-        scarletZhuhua(Stage.flat(game, plot, reporter), "scarlet_zhuhua");
+        scarletZhuhua(Stage.flat(game, plot, reporter).fastForward(), "scarlet_zhuhua");
     }
 
     /**
@@ -88,35 +91,35 @@ class FunctionTest {
     @DisplayName("盆栽猩红朱华光环：范围内生物得力量 II，非女仆非入魔骑士另得凋零 I，商人 NPC 与范围外生物不受影响")
     @Test
     void pottedScarletZhuhuaAura(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
-        scarletZhuhua(Stage.flat(game, plot, reporter), "potted_scarlet_zhuhua");
+        scarletZhuhua(Stage.flat(game, plot, reporter).fastForward(), "potted_scarlet_zhuhua");
     }
 
     /** 月铃兰：范围内女仆获得生命恢复 I 与抗性提升 I（100 tick，非环境效果）；其他生物、距花 4 格的女仆不受影响。 */
     @DisplayName("月铃兰光环：范围内女仆得生命恢复 I 与抗性提升 I，其他生物与范围外女仆不受影响")
     @Test
     void yueLinglanAura(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
-        yueLinglan(Stage.flat(game, plot, reporter), "yue_linglan");
+        yueLinglan(Stage.flat(game, plot, reporter).fastForward(), "yue_linglan");
     }
 
     /** 盆栽版，月铃兰：范围内女仆获得生命恢复 I 与抗性提升 I（100 tick，非环境效果）；其他生物、距花 4 格的女仆不受影响。 */
     @DisplayName("盆栽月铃兰光环：范围内女仆得生命恢复 I 与抗性提升 I，其他生物与范围外女仆不受影响")
     @Test
     void pottedYueLinglanAura(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
-        yueLinglan(Stage.flat(game, plot, reporter), "potted_yue_linglan");
+        yueLinglan(Stage.flat(game, plot, reporter).fastForward(), "potted_yue_linglan");
     }
 
     /** 净墟幽兰：范围内女仆只移除有害效果；其他生物移除全部效果；距花 4 格的不受影响。 */
     @DisplayName("净墟幽兰光环：范围内女仆只移除有害效果，其他生物移除全部效果，范围外不受影响")
     @Test
     void jingxuYoulanPurge(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
-        jingxuYoulan(Stage.flat(game, plot, reporter), "jingxu_youlan");
+        jingxuYoulan(Stage.flat(game, plot, reporter).fastForward(), "jingxu_youlan");
     }
 
     /** 盆栽版，净墟幽兰：范围内女仆只移除有害效果；其他生物移除全部效果；距花 4 格的不受影响。 */
     @DisplayName("盆栽净墟幽兰光环：范围内女仆只移除有害效果，其他生物移除全部效果，范围外不受影响")
     @Test
     void pottedJingxuYoulanPurge(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
-        jingxuYoulan(Stage.flat(game, plot, reporter), "potted_jingxu_youlan");
+        jingxuYoulan(Stage.flat(game, plot, reporter).fastForward(), "potted_jingxu_youlan");
     }
 
     /**
@@ -219,7 +222,7 @@ class FunctionTest {
     @DisplayName("镇石拒绝 7×7 区块内敌对生物的生成位置检查（豁免方式除外），范围外与非敌对生物不受影响，拆除后不再拦截")
     @Test
     void positionCheck(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
-        Stage ctx = Stage.flat(game, plot, reporter);
+        Stage ctx = Stage.flat(game, plot, reporter).fastForward();
         record Spot(BlockPos stone, int sameX, int edgeX, int outsideX, int y, int z) { }
         Spot spot = ctx.get(() -> {
             ctx.setBlock(0, 0, 0, block("suppression_stone"));
@@ -274,7 +277,7 @@ class FunctionTest {
     @DisplayName("喋血之心：女仆造成伤害后按目标实际掉血的 10% 治疗自己，没有饰品的女仆不治疗")
     @Test
     void healsMaidOnHit(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
-        Stage ctx = Stage.flat(game, plot, reporter);
+        Stage ctx = Stage.flat(game, plot, reporter).fastForward();
         record Rig(EntityMaid maid, EntityMaid plain, Mob target, Mob otherTarget) { }
         Rig rig = ctx.get(() -> {
             EntityMaid maid = Actors.sittingMaid(ctx, 2, 0, 0);
@@ -308,7 +311,7 @@ class FunctionTest {
     @DisplayName("熔岩狐叶：免疫熔岩、火焰、燃烧、灼热地面伤害并熄火，绕过无敌的伤害照常生效，无饰品女仆照常受伤")
     @Test
     void fireImmunity(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
-        Stage ctx = Stage.flat(game, plot, reporter);
+        Stage ctx = Stage.flat(game, plot, reporter).fastForward();
         record Rig(EntityMaid maid, EntityMaid plain) { }
         Rig rig = ctx.get(() -> {
             EntityMaid maid = Actors.sittingMaid(ctx, 2, 0, 0);
@@ -348,7 +351,7 @@ class FunctionTest {
     @DisplayName("熔岩狐叶：女仆站在熔岩池上不下沉、不受伤、不着火")
     @Test
     void walksOnLava(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
-        Stage ctx = Stage.flat(game, plot, reporter);
+        Stage ctx = Stage.flat(game, plot, reporter).fastForward();
         EntityMaid maid = ctx.get(() -> {
             Actors.lavaPool(ctx, 3);
             EntityMaid spawned = Actors.spawn(ctx, Actors.MAID, 0, 0, 0, false);
@@ -375,7 +378,7 @@ class FunctionTest {
     @DisplayName("春花-返：施法获得层数（有获取冷却与上限、会过期），受到重击消耗一层并回复生命、进入触发冷却")
     @Test
     void stacksAndTrigger(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
-        Stage ctx = Stage.flat(game, plot, reporter);
+        Stage ctx = Stage.flat(game, plot, reporter).fastForward();
         record Rig(EntityMaid maid, EntityMaid plain, ItemStack bauble) { }
         Rig rig = ctx.get(() -> {
             EntityMaid maid = Actors.sittingMaid(ctx, 0, 0, 0);
@@ -435,7 +438,7 @@ class FunctionTest {
     @DisplayName("春花-返：好感度等级达到 3 时触发还会移除持续时间最长的一个负面效果")
     @Test
     void purgeAtFavorabilityLevel3(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
-        Stage ctx = Stage.flat(game, plot, reporter);
+        Stage ctx = Stage.flat(game, plot, reporter).fastForward();
         EntityMaid maid = ctx.get(() -> {
             EntityMaid spawned = Actors.sittingMaid(ctx, 0, 0, 0);
             Actors.equipBauble(spawned, NS + "spring_bloom_return");
@@ -459,7 +462,7 @@ class FunctionTest {
     @DisplayName("春花-返：女仆用 Iron's 法术书真实施法一次后获得一层")
     @Test
     void realIronsCast(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
-        Stage ctx = Stage.flat(game, plot, reporter);
+        Stage ctx = Stage.flat(game, plot, reporter).fastForward();
         record Rig(EntityMaid maid, ItemStack book, Mob target) { }
         Rig rig = ctx.get(() -> {
             EntityMaid maid = Actors.sittingMaid(ctx, 0, 0, 0);
@@ -485,7 +488,7 @@ class FunctionTest {
     @DisplayName("馥郁巧思：女仆进食后额外增加 2 点好感度，无饰品女仆不增加")
     @Test
     void eatFavorability(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
-        Stage ctx = Stage.flat(game, plot, reporter);
+        Stage ctx = Stage.flat(game, plot, reporter).fastForward();
         EntityMaid[] maids = ctx.get(() -> {
             EntityMaid maid = Actors.sittingMaid(ctx, 2, 0, 0);
             EntityMaid plain = Actors.sittingMaid(ctx, -2, 0, 0);

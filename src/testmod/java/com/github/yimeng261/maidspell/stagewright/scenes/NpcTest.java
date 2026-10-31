@@ -9,6 +9,7 @@ import com.mojang.brigadier.tree.CommandNode;
 import com.mojang.datafixers.util.Either;
 import com.github.yimeng261.maidspell.stagewright.support.Stage;
 import net.magicterra.stagewright.test.Game;
+import net.magicterra.stagewright.test.Locks;
 import net.magicterra.stagewright.test.Plot;
 import net.magicterra.stagewright.test.Scene;
 import net.minecraft.world.inventory.AbstractContainerMenu;
@@ -16,6 +17,7 @@ import net.minecraft.world.phys.Vec3;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestReporter;
+import org.junit.jupiter.api.parallel.ResourceLock;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -71,6 +73,7 @@ import static com.github.yimeng261.maidspell.stagewright.support.Checks.NS;
  * 以及星辉花簇和改用星云核心的梦云水晶祭坛配方。
  */
 @DisplayName("NPC：观星术士、精灵守卫与星之魔女")
+@ResourceLock(Locks.TICK_RATE)
 @Scene("tlms")
 class NpcTest {
     private static final String ASTRO = NS + "astro_mancer";
@@ -83,47 +86,47 @@ class NpcTest {
     @DisplayName("观星术士正与一名玩家交易时，第二名玩家打不开交易")
     @Test
     void astroMancerSecondPlayerCannotOpen(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
-        Stage ctx = Stage.flat(game, plot, reporter);
+        Stage ctx = Stage.flat(game, plot, reporter).fastForward();
         ctx.run(() -> secondPlayer(ctx, ASTRO));
     }
 
     @DisplayName("观星术士的交易玩家走远后释放，另一名玩家可以打开交易")
     @Test
     void astroMancerReleasedWhenTraderLeaves(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
-        traderLeaves(Stage.flat(game, plot, reporter), ASTRO);
+        traderLeaves(Stage.flat(game, plot, reporter).fastForward(), ASTRO);
     }
 
     @DisplayName("观星术士消失后，玩家的交易界面失效")
     @Test
     void astroMancerMenuInvalidWhenNpcGone(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
-        Stage ctx = Stage.flat(game, plot, reporter);
+        Stage ctx = Stage.flat(game, plot, reporter).fastForward();
         ctx.run(() -> npcGone(ctx, ASTRO));
     }
 
     @DisplayName("精灵守卫正与一名玩家交易时，第二名玩家打不开交易")
     @Test
     void elfTemplarSecondPlayerCannotOpen(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
-        Stage ctx = Stage.flat(game, plot, reporter);
+        Stage ctx = Stage.flat(game, plot, reporter).fastForward();
         ctx.run(() -> secondPlayer(ctx, TEMPLAR));
     }
 
     @DisplayName("精灵守卫的交易玩家走远后释放，另一名玩家可以打开交易")
     @Test
     void elfTemplarReleasedWhenTraderLeaves(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
-        traderLeaves(Stage.flat(game, plot, reporter), TEMPLAR);
+        traderLeaves(Stage.flat(game, plot, reporter).fastForward(), TEMPLAR);
     }
 
     @DisplayName("精灵守卫消失后，玩家的交易界面失效")
     @Test
     void elfTemplarMenuInvalidWhenNpcGone(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
-        Stage ctx = Stage.flat(game, plot, reporter);
+        Stage ctx = Stage.flat(game, plot, reporter).fastForward();
         ctx.run(() -> npcGone(ctx, TEMPLAR));
     }
 
     @DisplayName("普通村民的交易不受互斥影响，A 关掉后 B 可继续交易")
     @Test
     void villagerUnaffected(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
-        Stage ctx = Stage.flat(game, plot, reporter);
+        Stage ctx = Stage.flat(game, plot, reporter).fastForward();
         ctx.run(() -> villager(ctx));
     }
 
@@ -132,14 +135,14 @@ class NpcTest {
     @DisplayName("观星术士收购墨水、奥术精华和食物，出售星锚珍珠等，价格不随需求上涨")
     @Test
     void offers(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
-        Stage ctx = Stage.flat(game, plot, reporter);
+        Stage ctx = Stage.flat(game, plot, reporter).fastForward();
         ctx.run(() -> astroOffers(ctx));
     }
 
     @DisplayName("观星术士保持中立，被玩家打了才以玩家为目标，两只之间不互相为敌")
     @Test
     void neutralAndRetaliates(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
-        Stage ctx = Stage.flat(game, plot, reporter);
+        Stage ctx = Stage.flat(game, plot, reporter).fastForward();
         Brawl brawl = ctx.get(() -> {
             Mob a = Actors.spawn(ctx, ASTRO, 0, 0, 0, false);
             Mob b = Actors.spawn(ctx, ASTRO, 0, 0, 3, false);
@@ -162,7 +165,7 @@ class NpcTest {
     @DisplayName("观星术士被击杀后只按战利品表掉落")
     @Test
     void dropsFromTableOnly(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
-        Stage ctx = Stage.flat(game, plot, reporter);
+        Stage ctx = Stage.flat(game, plot, reporter).fastForward();
         ctx.run(() -> LootTest.checkKillDrops(ctx, ASTRO, NS + "entities/astro_mancer"));
     }
 
@@ -171,21 +174,21 @@ class NpcTest {
     @DisplayName("星之魔女戴的法帽不加护甲和韧性")
     @Test
     void hatAddsNoArmor(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
-        Stage ctx = Stage.flat(game, plot, reporter);
+        Stage ctx = Stage.flat(game, plot, reporter).fastForward();
         ctx.run(() -> witchHat(ctx));
     }
 
     @DisplayName("星之魔女附近的床对生存玩家不安全且重生点不变，创造模式不受影响")
     @Test
     void bedUnsafeNearby(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
-        Stage ctx = Stage.flat(game, plot, reporter);
+        Stage ctx = Stage.flat(game, plot, reporter).fastForward();
         ctx.run(() -> witchBed(ctx));
     }
 
     @DisplayName("星之魔女被击杀或虚空伤害后既不死亡也不被移除")
     @Test
     void survivesKill(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
-        Stage ctx = Stage.flat(game, plot, reporter);
+        Stage ctx = Stage.flat(game, plot, reporter).fastForward();
         Mob witch = ctx.get(() -> {
             Mob spawned = npc(ctx, WITCH);
             spawned.kill();
@@ -202,7 +205,7 @@ class NpcTest {
     @DisplayName("星之魔女生命周期命令仅 OP 可用，子命令齐全")
     @Test
     void lifecycleCommandNeedsOp(Game game, Plot plot, TestReporter reporter) {
-        Stage ctx = Stage.sky(game, plot, reporter);
+        Stage ctx = Stage.sky(game, plot, reporter).fastForward();
         ctx.run(() -> witchCommand(ctx));
     }
 
@@ -213,7 +216,7 @@ class NpcTest {
     @DisplayName("星之魔女最大生命为权威配置值，外部修饰符改不动，属性值每 tick 回到权威值")
     @Test
     void maxHealthIsAuthoritative(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
-        Stage ctx = Stage.flat(game, plot, reporter);
+        Stage ctx = Stage.flat(game, plot, reporter).fastForward();
         float expected = (float) Config.winefoxMaxHealth;
         Mob witch = ctx.get(() -> {
             Mob spawned = npc(ctx, WITCH);
@@ -258,7 +261,7 @@ class NpcTest {
     @DisplayName("星之魔女经命令、刷怪蛋或直接创建生成时都是满血")
     @Test
     void spawnsAtFullHealth(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
-        Stage ctx = Stage.flat(game, plot, reporter);
+        Stage ctx = Stage.flat(game, plot, reporter).fastForward();
         Mob[] witches = ctx.get(() -> {
             Mob created = npc(ctx, WITCH);
             String tag = "tlms_spawn_health";
@@ -293,7 +296,7 @@ class NpcTest {
     @DisplayName("权威最大生命的注入只作用于星之魔女，其他生物仍按属性值计算")
     @Test
     void otherMaxHealthUnaffected(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
-        Stage ctx = Stage.flat(game, plot, reporter);
+        Stage ctx = Stage.flat(game, plot, reporter).fastForward();
         ctx.run(() -> otherMaxHealth(ctx));
     }
 
@@ -301,14 +304,14 @@ class NpcTest {
     @DisplayName("星荧花簇最多 4 朵，破坏时按朵数掉落，属于花")
     @Test
     void starGlowFlowerClusterBehavesLikePetals(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
-        Stage ctx = Stage.flat(game, plot, reporter);
+        Stage ctx = Stage.flat(game, plot, reporter).fastForward();
         ctx.run(() -> flowerCluster(ctx));
     }
 
     @DisplayName("梦云水晶的祭坛配方改用星云核心")
     @Test
     void altarRecipesUseNebulaCore(Game game, Plot plot, TestReporter reporter) {
-        Stage ctx = Stage.sky(game, plot, reporter);
+        Stage ctx = Stage.sky(game, plot, reporter).fastForward();
         ctx.run(() -> altarRecipes(ctx));
     }
 

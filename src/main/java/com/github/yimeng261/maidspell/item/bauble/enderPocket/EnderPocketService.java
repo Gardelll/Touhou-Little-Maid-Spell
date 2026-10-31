@@ -13,8 +13,13 @@ import com.github.yimeng261.maidspell.spell.manager.BaubleStateManager;
 import io.netty.buffer.ByteBuf;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.HolderLookup;
 import net.minecraft.core.UUIDUtil;
 import net.minecraft.core.registries.Registries;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.NbtOps;
+import net.minecraft.nbt.Tag;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.ComponentSerialization;
@@ -64,6 +69,9 @@ public class EnderPocketService {
         public final String modelId;
 
         public static final int MAX_RESOURCE_ID_LENGTH = 256;
+        public static final int MAX_NAME_NBT_DEPTH = 64;
+        public static final int MAX_NAME_NBT_BYTES = 65536;
+        public static final int MAX_FALLBACK_NAME_LENGTH = 256;
 
         private static final StreamCodec<ByteBuf, String> RESOURCE_ID_CODEC = ByteBufCodecs.stringUtf8(MAX_RESOURCE_ID_LENGTH);
         private static final StreamCodec<ByteBuf, ResourceKey<Level>> LEVEL_KEY_CODEC = ResourceKey.streamCodec(Registries.DIMENSION);
@@ -131,6 +139,38 @@ public class EnderPocketService {
             return maidUUID;
         }
 
+        /**
+         * 名称组件过深或过大时退化为截断的纯文本。
+         *
+         * <p>客户端按 {@link ComponentSerialization#STREAM_CODEC} 解码，每个名字限 512 层嵌套、2MB；
+         * 超出即解码失败、整个连接断开。HUD 定时推送列表，用命令设了这种名字的女仆
+         * 会让主人在任何距离反复掉线，所以服务端先按编码后的 NBT 把关。
+         */
+        public static Component syncName(Component name, HolderLookup.Provider registries) {
+            Tag tag = ComponentSerialization.CODEC.encodeStart(registries.createSerializationContext(NbtOps.INSTANCE), name)
+                    .result().orElse(null);
+            if (tag != null && depth(tag) <= MAX_NAME_NBT_DEPTH && tag.sizeInBytes() <= MAX_NAME_NBT_BYTES) {
+                return name.copy();
+            }
+            return Component.literal(truncate(name.getString(), MAX_FALLBACK_NAME_LENGTH));
+        }
+
+        private static int depth(Tag tag) {
+            int children = 0;
+            if (tag instanceof CompoundTag compound) {
+                for (String key : compound.getAllKeys()) {
+                    children = Math.max(children, depth(Objects.requireNonNull(compound.get(key))));
+                }
+            } else if (tag instanceof ListTag list) {
+                for (Tag element : list) {
+                    children = Math.max(children, depth(element));
+                }
+            } else {
+                return 0;
+            }
+            return children + 1;
+        }
+
         private static String truncate(String value, int maxLength) {
             if (value == null) {
                 return "";
@@ -159,7 +199,7 @@ public class EnderPocketService {
                         maid.getUUID(),
                         // 保留翻译组件而不是服务端解析后的纯文本：专用服务端没有客户端的模组/模型语言文件，
                         // getString() 只会得到原始翻译键（如 model.geckolib.xxx.name），必须由客户端自行解析。
-                        maid.getName().copy(),
+                        EnderPocketMaidInfo.syncName(maid.getName(), maid.registryAccess()),
                         maid.level().dimension(),
                         maid.getId(),
                         maid.getHealth(),

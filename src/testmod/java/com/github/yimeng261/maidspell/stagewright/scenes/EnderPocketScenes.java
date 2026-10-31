@@ -74,6 +74,7 @@ public final class EnderPocketScenes {
         scenes.add(Checks.superflat("ender_pocket.listCappedAt64", 40, EnderPocketScenes::listCapped));
         scenes.add(Checks.superflat("ender_pocket.longNameKept", 20, EnderPocketScenes::longName));
         scenes.add(Checks.superflat("ender_pocket.translatableNameStaysTranslatable", 20, EnderPocketScenes::translatableName));
+        scenes.add(Checks.superflat("ender_pocket.deepNameFlattened", 20, EnderPocketScenes::deepName));
         scenes.add(Checks.superflat("ender_pocket.remoteOperationsApplyAcrossDimensions", 40, EnderPocketScenes::remoteOperations));
         scenes.add(Checks.superflat("ender_pocket.forgedEntityIdMissesOthersSession", 40, EnderPocketScenes::forgedPacket));
         return scenes;
@@ -95,6 +96,7 @@ public final class EnderPocketScenes {
         scenes.add(Players.hostScene("remote.openCrossDimensionMaidOverNetwork", 200, (ctx, player) -> openOverNetwork(ctx, player, true)));
         scenes.add(Players.hostScene("remote.fullListStaysConnected", 80, EnderPocketScenes::fullListOverNetwork));
         scenes.add(Players.hostScene("remote.remoteDataPushedWhileOpen", 280, EnderPocketScenes::pushedWhileOpen));
+        scenes.add(Players.hostScene("remote.deepNameStaysConnected", 80, EnderPocketScenes::deepNameOverNetwork));
         return scenes;
     }
 
@@ -256,6 +258,44 @@ public final class EnderPocketScenes {
         ctx.check(list.maidInfos().size()).as("解码后的条数").isEqualTo(1);
         ctx.check(list.maidInfos().getFirst().maidName.getContents() instanceof TranslatableContents contents
                 && contents.getKey().equals(key)).as("解码后的名字仍是翻译键 " + key).isTrue();
+    }
+
+    /** 嵌套 300 层的名字超过客户端解码的 512 层上限：退化为纯文本后能正常解码；不深的带样式名字保持原样。 */
+    private static void deepName(SceneContext ctx) {
+        ServerPlayer owner = Owners.visitor(ctx, "TlmsPocketDeep", 0, 0, -3);
+        EntityMaid maid = pocketMaid(ctx, owner, 0, 0, 3);
+        maid.setCustomName(nestedName(300));
+        S2CEnderPocketMaidList list = roundTrip(ctx, S2CEnderPocketMaidList.STREAM_CODEC,
+                new S2CEnderPocketMaidList(EnderPocketService.getPlayerEnderPocketMaids(owner), false));
+        Component decoded = list.maidInfos().getFirst().maidName;
+        ctx.check(decoded.getSiblings().isEmpty()).as("过深名字退化为纯文本").isTrue();
+        ctx.check(decoded.getString()).as("退化后的文本").isEqualTo("n".repeat(256));
+
+        Component shallow = nestedName(10);
+        Component kept = EnderPocketService.EnderPocketMaidInfo.syncName(shallow, ctx.level().registryAccess());
+        ctx.check(kept).as("10 层名字原样保留").isEqualTo(shallow);
+    }
+
+    static net.minecraft.network.chat.MutableComponent nestedName(int depth) {
+        net.minecraft.network.chat.MutableComponent root = Component.literal("n");
+        net.minecraft.network.chat.MutableComponent current = root;
+        for (int i = 0; i < depth; i++) {
+            net.minecraft.network.chat.MutableComponent next = Component.literal("n");
+            current.append(next);
+            current = next;
+        }
+        return root;
+    }
+
+    /** 远处（客户端不追踪）女仆的名字嵌套 300 层：列表与 HUD 推送后客户端仍在线。 */
+    private static void deepNameOverNetwork(SceneContext ctx, ServerPlayer player) {
+        EntityMaid maid = pocketMaid(ctx, player, 0, 0, REMOTE);
+        maid.setCustomName(nestedName(300));
+        player.connection.send(new S2CEnderPocketMaidList(EnderPocketService.getPlayerEnderPocketMaids(player), false));
+        Checks.after(ctx, 40, () -> {
+            ctx.check(ctx.server().getPlayerList().getPlayer(player.getUUID())).as("推送后客户端仍在线").isNotNull();
+            ctx.check(player.hasDisconnected()).as("推送后客户端断开").isFalse();
+        });
     }
 
     private static <T> T roundTrip(SceneContext ctx, net.minecraft.network.codec.StreamCodec<RegistryFriendlyByteBuf, T> codec,

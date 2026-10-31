@@ -5,7 +5,6 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.mojang.serialization.JsonOps;
 import it.unimi.dsi.fastutil.longs.LongSet;
-import net.magicterra.stagewright.scene.SceneContext;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.core.RegistryAccess;
@@ -42,7 +41,7 @@ import java.util.Map;
 import java.util.Optional;
 
 /**
- * 在场景场地里按自然生成的方式放置结构。
+ * 在测试场地里按自然生成的方式放置结构。
  * <p>用 {@link JigsawPlacement} 组装拼图，先把 StructureStart 和引用写进区块再逐区块放置，
  * 所以处理器、实体 finalize、依赖"是否在结构内"的 mixin 都和自然生成一致；只绕过各结构类型
  * 自己的选址/地形判定（那部分由自然生成场景覆盖）。放置前算出每个拼图片预期的方块和实体，供保真度比对。
@@ -71,7 +70,7 @@ public final class StructureStage {
                           int maxDistance, LiquidSettings liquid) {
     }
 
-    public static Placed place(SceneContext ctx, String structureId) {
+    public static Placed place(Stage ctx, String structureId) {
         ServerLevel level = ctx.level();
         RegistryAccess access = level.registryAccess();
         Structure structure = access.registryOrThrow(Registries.STRUCTURE)
@@ -81,7 +80,7 @@ public final class StructureStage {
     }
 
     /** 从指定模板池组装（村庄补充街道这种没有独立结构的内容），起点注册在 registerAs 结构名下。 */
-    public static Placed placePool(SceneContext ctx, String registerAs, String poolId, int size) {
+    public static Placed placePool(Stage ctx, String registerAs, String poolId, int size) {
         ServerLevel level = ctx.level();
         RegistryAccess access = level.registryAccess();
         Structure structure = access.registryOrThrow(Registries.STRUCTURE)
@@ -97,7 +96,7 @@ public final class StructureStage {
      * 按指定旋转单独放置模板池里的一个拼图元素（不展开它的拼图接口），起点注册在 registerAs 结构名下。
      * 拼图片按原版默认的含水设置放置。
      */
-    public static Placed placeElement(SceneContext ctx, String registerAs, SinglePoolElement element, Rotation rotation) {
+    public static Placed placeElement(Stage ctx, String registerAs, SinglePoolElement element, Rotation rotation) {
         ServerLevel level = ctx.level();
         StructureTemplateManager templates = level.getStructureManager();
         BlockPos position = new BlockPos(ctx.originX(), ctx.surfaceY(0, 0), ctx.originZ());
@@ -107,7 +106,7 @@ public final class StructureStage {
         return placeCentered(ctx, Worldgen.structure(level, registerAs).value(), new PiecesContainer(List.of(piece)));
     }
 
-    private static Jigsaw jigsawOf(SceneContext ctx, Structure structure, String structureId) {
+    private static Jigsaw jigsawOf(Stage ctx, Structure structure, String structureId) {
         RegistryAccess access = ctx.level().registryAccess();
         RegistryOps<JsonElement> ops = RegistryOps.create(JsonOps.INSTANCE, access);
         JsonObject json = Structure.DIRECT_CODEC.encodeStart(ops, structure)
@@ -148,11 +147,12 @@ public final class StructureStage {
                             ? Optional.of(ResourceLocation.parse(json.get("start_jigsaw_name").getAsString()))
                             : Optional.empty(),
                     size,
-                    at(ctx, json.getAsJsonObject("start_height").get("absolute").getAsInt()),
+                    // 投影到高度图的结构：起点 = 起始高度 + 起点列的地表上一格；场地地板就是地表，所以直接落在原点高度上，
+                    // 不能交给生成器按 plot 所在位置的自然地形去投影（那样会落到 plot 之外）
+                    at(ctx, json.getAsJsonObject("start_height").get("absolute").getAsInt()
+                            + (json.has("project_start_to_heightmap") ? ctx.originY() : 0)),
                     json.has("use_expansion_hack") && json.get("use_expansion_hack").getAsBoolean(),
-                    json.has("project_start_to_heightmap")
-                            ? Optional.of(Heightmap.Types.CODEC.parse(ops, json.get("project_start_to_heightmap")).getOrThrow())
-                            : Optional.empty(),
+                    Optional.empty(),
                     maxDistance(json.get("max_distance_from_center")),
                     json.has("liquid_settings")
                             ? LiquidSettings.CODEC.parse(ops, json.get("liquid_settings")).getOrThrow()
@@ -165,11 +165,11 @@ public final class StructureStage {
         return element.isJsonObject() ? element.getAsJsonObject().get("horizontal").getAsInt() : element.getAsInt();
     }
 
-    private static BlockPos at(SceneContext ctx, int y) {
+    private static BlockPos at(Stage ctx, int y) {
         return new BlockPos(ctx.originX(), y, ctx.originZ());
     }
 
-    private static Placed assemble(SceneContext ctx, Structure structure, Jigsaw jigsaw) {
+    private static Placed assemble(Stage ctx, Structure structure, Jigsaw jigsaw) {
         ServerLevel level = ctx.level();
         ChunkGenerator generator = level.getChunkSource().getGenerator();
         ChunkPos chunkPos = new ChunkPos(jigsaw.start());
@@ -186,7 +186,7 @@ public final class StructureStage {
     }
 
     /** 拼图可能向任意方向延伸，水平居中到场地原点，让强制加载范围对称覆盖。 */
-    private static Placed placeCentered(SceneContext ctx, Structure structure, PiecesContainer container) {
+    private static Placed placeCentered(Stage ctx, Structure structure, PiecesContainer container) {
         BoundingBox raw = container.calculateBoundingBox();
         int dx = ctx.originX() - raw.getCenter().getX();
         int dz = ctx.originZ() - raw.getCenter().getZ();
@@ -195,7 +195,7 @@ public final class StructureStage {
         return placeStart(ctx, structure, start);
     }
 
-    private static Placed placeStart(SceneContext ctx, Structure structure, StructureStart start) {
+    private static Placed placeStart(Stage ctx, Structure structure, StructureStart start) {
         ServerLevel level = ctx.level();
         List<Piece> pieces = expectedPieces(level, start);
         BoundingBox box = start.getBoundingBox();
@@ -203,11 +203,13 @@ public final class StructureStage {
             box = BoundingBox.encapsulatingBoxes(List.of(box, piece.extent())).orElse(box);
         }
         ctx.record("structureBox", box.toString());
-        for (int[] corner : new int[][]{{box.minX(), box.minZ()}, {box.maxX(), box.maxZ()},
-                {box.minX(), box.maxZ()}, {box.maxX(), box.minZ()}}) {
-            if (ctx.outsideForcedChunks(corner[0] - ctx.originX(), corner[1] - ctx.originZ())) {
-                throw new IllegalStateException("结构包围盒 " + box + " 超出强制加载范围（chunkRadius="
-                        + ctx.chunkRadius() + "），需要调大场景的区块半径");
+        // 包围盒可能伸出 plot：强制加载它覆盖的区块，测试结束时解除
+        for (int cx = box.minX() >> 4; cx <= box.maxX() >> 4; cx++) {
+            for (int cz = box.minZ() >> 4; cz <= box.maxZ() >> 4; cz++) {
+                if (level.setChunkForced(cx, cz, true)) {
+                    int x = cx, z = cz;
+                    ctx.cleanup(() -> level.setChunkForced(x, z, false));
+                }
             }
         }
 

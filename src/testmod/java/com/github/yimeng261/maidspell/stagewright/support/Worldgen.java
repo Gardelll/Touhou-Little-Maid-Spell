@@ -1,7 +1,6 @@
 package com.github.yimeng261.maidspell.stagewright.support;
 
 import com.mojang.datafixers.util.Either;
-import net.magicterra.stagewright.scene.SceneContext;
 import net.minecraft.Util;
 import net.minecraft.core.Holder;
 import net.minecraft.core.QuartPos;
@@ -55,7 +54,7 @@ public final class Worldgen {
     private Worldgen() {
     }
 
-    public static ServerLevel level(SceneContext ctx, String dimension) {
+    public static ServerLevel level(Stage ctx, String dimension) {
         ServerLevel level = ctx.server().getLevel(ResourceKey.create(Registries.DIMENSION, ResourceLocation.parse(dimension)));
         if (level == null) {
             throw new IllegalStateException("维度未加载：" + dimension);
@@ -165,7 +164,7 @@ public final class Worldgen {
     /**
      * 把区块按真实流程完整生成（含结构放置与地形适配），票据挂到场景结束才移除；不在主线程阻塞等待。
      */
-    public static CompletableFuture<Void> loadFull(SceneContext ctx, ServerLevel level, Collection<ChunkPos> chunks) {
+    public static CompletableFuture<Void> loadFull(Stage ctx, ServerLevel level, Collection<ChunkPos> chunks) {
         DistanceManager tickets = Reflect.field(level.getChunkSource(), ServerChunkCache.class, "distanceManager");
         int ticketLevel = ChunkLevel.byStatus(ChunkStatus.FULL);
         List<CompletableFuture<?>> loading = new ArrayList<>();

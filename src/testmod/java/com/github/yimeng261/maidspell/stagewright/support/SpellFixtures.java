@@ -6,7 +6,6 @@ import com.github.yimeng261.maidspell.api.ISpellBookProvider;
 import com.hollingsworth.arsnouveau.api.registry.SpellCasterRegistry;
 import com.hollingsworth.arsnouveau.common.spell.effect.EffectHarm;
 import com.hollingsworth.arsnouveau.common.spell.method.MethodProjectile;
-import net.magicterra.stagewright.scene.SceneContext;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.server.level.ServerPlayer;
@@ -28,7 +27,7 @@ import java.util.List;
 public final class SpellFixtures {
     private SpellFixtures() { }
 
-    public static ItemStack equip(SceneContext ctx, String mod, ISpellBookProvider<?, ?> provider,
+    public static ItemStack equip(Stage ctx, String mod, ISpellBookProvider<?, ?> provider,
                                   ServerPlayer owner, EntityMaid maid) {
         ItemStack book = switch (mod) {
             case "irons_spellbooks" -> Actors.parse(ctx, "irons_spellbooks:gold_spell_book[irons_spellbooks:spell_container="

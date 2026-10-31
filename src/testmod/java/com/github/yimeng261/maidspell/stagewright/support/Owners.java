@@ -2,7 +2,6 @@ package com.github.yimeng261.maidspell.stagewright.support;
 
 import com.github.tartaricacid.touhoulittlemaid.entity.passive.EntityMaid;
 import com.mojang.authlib.GameProfile;
-import net.magicterra.stagewright.scene.SceneContext;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
@@ -54,7 +53,7 @@ public final class Owners {
     }
 
     /** 按名字固定 UUID 的服务端玩家，使用不发送数据包的连接；场景结束时移出所有登记表。 */
-    public static ServerPlayer visitor(SceneContext ctx, String name, int dx, int dy, int dz) {
+    public static ServerPlayer visitor(Stage ctx, String name, int dx, int dy, int dz) {
         ServerLevel level = ctx.level();
         GameProfile profile = new GameProfile(UUID.nameUUIDFromBytes(name.getBytes(StandardCharsets.UTF_8)), name);
         ServerPlayer player = new TickingPlayer(ctx.server(), level, profile);
@@ -100,7 +99,7 @@ public final class Owners {
     }
 
     /** 主人为 owner 的女仆（入世前写好主人，与游戏里读档进来的女仆一样登记到主人名下），无 AI、位置固定。 */
-    public static EntityMaid maid(SceneContext ctx, Player owner, int dx, int dy, int dz) {
+    public static EntityMaid maid(Stage ctx, Player owner, int dx, int dy, int dz) {
         return Actors.spawn(ctx, Actors.MAID, dx, dy, dz, true, (EntityMaid maid) -> {
             maid.setTame(true, false);
             maid.setOwnerUUID(owner.getUUID());
@@ -108,12 +107,12 @@ public final class Owners {
     }
 
     /** 驯服给 owner 的原版宠物（狼、猫等）。 */
-    public static TamableAnimal pet(SceneContext ctx, String type, Player owner, int dx, int dy, int dz) {
+    public static TamableAnimal pet(Stage ctx, String type, Player owner, int dx, int dy, int dz) {
         return Actors.spawn(ctx, type, dx, dy, dz, true, (TamableAnimal pet) -> pet.tame(owner));
     }
 
     /** 生成 type 并把主人设为 owner（见 {@link #own}）；type 未注册时返回 null 并记一条。 */
-    public static Entity owned(SceneContext ctx, String type, LivingEntity owner, int dx, int dy, int dz) {
+    public static Entity owned(Stage ctx, String type, LivingEntity owner, int dx, int dy, int dz) {
         if (!BuiltInRegistries.ENTITY_TYPE.containsKey(ResourceLocation.parse(type))) {
             ctx.record("unregistered:" + type, true);
             return null;
@@ -187,7 +186,7 @@ public final class Owners {
     }
 
     /** 新建记分板队伍并把这些玩家加进去；场景结束时删除。 */
-    public static PlayerTeam team(SceneContext ctx, String name, boolean friendlyFire, Player... members) {
+    public static PlayerTeam team(Stage ctx, String name, boolean friendlyFire, Player... members) {
         Scoreboard scoreboard = ctx.server().getScoreboard();
         PlayerTeam existing = scoreboard.getPlayerTeam(name);
         if (existing != null) {

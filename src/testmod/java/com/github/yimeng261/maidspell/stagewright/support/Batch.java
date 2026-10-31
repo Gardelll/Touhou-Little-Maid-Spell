@@ -1,6 +1,5 @@
 package com.github.yimeng261.maidspell.stagewright.support;
 
-import net.magicterra.stagewright.scene.SceneContext;
 
 import java.util.Iterator;
 import java.util.List;
@@ -19,25 +18,23 @@ public final class Batch {
     }
 
     /**
-     * 逐项处理 items，work 返回 true 表示可以提前结束；全部完成后运行 done。
-     * @param maxTicks 等待上限（需小于场景预算）
+     * 逐项处理 items，work 返回 true 表示可以提前结束；处理完或提前结束后返回（测试线程）。
+     * @param maxTicks 等待上限
      */
-    public static <T> void run(SceneContext ctx, List<T> items, Predicate<T> work, int maxTicks, Runnable done) {
-        runAsync(ctx, items, item -> CompletableFuture.completedFuture(work.test(item)), maxTicks, done);
+    public static <T> void run(Stage ctx, List<T> items, Predicate<T> work, int maxTicks) {
+        runAsync(ctx, items, item -> CompletableFuture.completedFuture(work.test(item)), maxTicks);
     }
 
     /**
      * 同 {@link #run}，但每项返回一个 future（例如异步加载区块）：等它完成再处理下一项，等待期间不阻塞服务器 tick。
      * future 的结果为 true 表示可以提前结束。
      */
-    public static <T> void runAsync(SceneContext ctx, List<T> items, Function<T, CompletableFuture<Boolean>> work,
-                                    int maxTicks, Runnable done) {
+    public static <T> void runAsync(Stage ctx, List<T> items, Function<T, CompletableFuture<Boolean>> work,
+                                    int maxTicks) {
         Progress<T> progress = new Progress<>(items.iterator(), work);
         long started = System.currentTimeMillis();
-        ctx.await(progress::advance).within(maxTicks).then(() -> {
-            ctx.record("batchMs", System.currentTimeMillis() - started);
-            done.run();
-        });
+        ctx.await(maxTicks, "逐项处理 " + items.size() + " 项", progress::advance);
+        ctx.record("batchMs", System.currentTimeMillis() - started);
     }
 
     /** 逐项推进的状态：同一时刻最多一个未完成的 future。 */

@@ -1,6 +1,5 @@
 package com.github.yimeng261.maidspell.stagewright.support;
 
-import net.magicterra.stagewright.scene.SceneContext;
 import net.minecraft.world.phys.Vec3;
 
 import java.util.ArrayList;
@@ -48,7 +47,7 @@ public final class Mismatches {
         }
     }
 
-    public void verify(SceneContext ctx, String label) {
+    public void verify(Stage ctx, String label) {
         List<String> report = new ArrayList<>(details);
         if (total > details.size()) {
             report.add("……共 " + total + " 处");

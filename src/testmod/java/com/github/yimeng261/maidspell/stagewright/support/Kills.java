@@ -1,6 +1,5 @@
 package com.github.yimeng261.maidspell.stagewright.support;
 
-import net.magicterra.stagewright.scene.SceneContext;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
@@ -42,7 +41,7 @@ public final class Kills {
     }
 
     /** 实体类型未注册或不是生物时让场景失败并返回 null。 */
-    public static Result drops(SceneContext ctx, String entityId, int kills) {
+    public static Result drops(Stage ctx, String entityId, int kills) {
         ServerLevel level = ctx.level();
         MinecraftServer server = ctx.server();
         EntityType<?> type = BuiltInRegistries.ENTITY_TYPE.getOptional(ResourceLocation.parse(entityId)).orElse(null);

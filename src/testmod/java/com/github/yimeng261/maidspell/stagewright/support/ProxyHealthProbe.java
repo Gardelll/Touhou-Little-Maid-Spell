@@ -2,7 +2,6 @@ package com.github.yimeng261.maidspell.stagewright.support;
 
 import com.github.yimeng261.maidspell.MaidSpellMod;
 import com.github.yimeng261.maidspell.stagewright.client.ProxyHealthClient;
-import net.magicterra.stagewright.scene.SceneContext;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
@@ -54,13 +53,16 @@ public final class ProxyHealthProbe {
         }));
     }
 
-    public static void awaitHealth(SceneContext ctx, ServerPlayer player, int entityId,
-                                   float expected, int ticks, Runnable next) {
-        int request = ++nextRequest;
-        PENDING.put(request, new Pending(player.getUUID(), null));
+    /** 让客户端回报 entityId 这个代理实体的生命值，直到等于 expected（测试线程）。 */
+    public static void awaitHealth(Stage ctx, ServerPlayer player, int entityId, float expected, int ticks) {
+        int request = ctx.get(() -> {
+            int id = ++nextRequest;
+            PENDING.put(id, new Pending(player.getUUID(), null));
+            PacketDistributor.sendToPlayer(player, new Request(id, entityId));
+            return id;
+        });
         ctx.cleanup(() -> PENDING.remove(request));
-        PacketDistributor.sendToPlayer(player, new Request(request, entityId));
-        ctx.await(() -> {
+        ctx.await(ticks, "客户端代理生命值变为 " + expected, () -> {
             Pending pending = PENDING.get(request);
             if (pending.health() == null) return false;
             ctx.record("clientProxyHealth", pending.health());
@@ -68,10 +70,7 @@ public final class ProxyHealthProbe {
             PENDING.put(request, new Pending(player.getUUID(), null));
             PacketDistributor.sendToPlayer(player, new Request(request, entityId));
             return false;
-        }).within(ticks).then(() -> {
-            ctx.check(PENDING.get(request).health()).as("客户端代理生命值").isCloseTo(expected, 0.001f);
-            PENDING.remove(request);
-            next.run();
         });
+        ctx.run(() -> ctx.check(PENDING.get(request).health()).as("客户端代理生命值").isCloseTo(expected, 0.001f));
     }
 }

@@ -7,7 +7,6 @@ import com.github.yimeng261.maidspell.mixin.accessor.LivingEntityHealthAccessor;
 import com.github.yimeng261.maidspell.utils.MaidHealthWriteGuard;
 import com.mojang.brigadier.StringReader;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
-import net.magicterra.stagewright.scene.SceneContext;
 import net.minecraft.commands.arguments.item.ItemParser;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -31,14 +30,14 @@ public final class Actors {
     }
 
     /** 在相对原点的方块中心生成实体；noAi 的生物不会走动或互相攻击。 */
-    public static <T extends Entity> T spawn(SceneContext ctx, String type, int dx, int dy, int dz, boolean noAi) {
+    public static <T extends Entity> T spawn(Stage ctx, String type, int dx, int dy, int dz, boolean noAi) {
         return spawn(ctx, type, dx, dy, dz, noAi, (T entity) -> {
         });
     }
 
-    /** 同 {@link #spawn(SceneContext, String, int, int, int, boolean)}，beforeAdd 在实体进入世界前运行（例如写好主人）。 */
+    /** 同 {@link #spawn(Stage, String, int, int, int, boolean)}，beforeAdd 在实体进入世界前运行（例如写好主人）。 */
     @SuppressWarnings("unchecked")
-    public static <T extends Entity> T spawn(SceneContext ctx, String type, int dx, int dy, int dz, boolean noAi,
+    public static <T extends Entity> T spawn(Stage ctx, String type, int dx, int dy, int dz, boolean noAi,
                                              java.util.function.Consumer<T> beforeAdd) {
         ServerLevel level = ctx.level();
         Entity entity = BuiltInRegistries.ENTITY_TYPE.get(ResourceLocation.parse(type)).create(level);
@@ -68,7 +67,7 @@ public final class Actors {
      * 坐着的女仆：保留 AI（饰品逻辑依赖女仆 tick）。未驯服的女仆不一定一直坐着，偶尔会走动，
      * 对位置敏感的场景用 {@link #stillMaid}。
      */
-    public static EntityMaid sittingMaid(SceneContext ctx, int dx, int dy, int dz) {
+    public static EntityMaid sittingMaid(Stage ctx, int dx, int dy, int dz) {
         EntityMaid maid = spawn(ctx, MAID, dx, dy, dz, false);
         maid.setOrderedToSit(true);
         maid.setInSittingPose(true);
@@ -77,7 +76,7 @@ public final class Actors {
     }
 
     /** 无 AI 的女仆：位置固定，用于光环范围等只依赖位置的场景。 */
-    public static EntityMaid stillMaid(SceneContext ctx, int dx, int dy, int dz) {
+    public static EntityMaid stillMaid(Stage ctx, int dx, int dy, int dz) {
         return spawn(ctx, MAID, dx, dy, dz, true);
     }
 
@@ -86,7 +85,7 @@ public final class Actors {
     }
 
     /** 按 /give 语法解析带组件的物品，例如 {@code irons_spellbooks:scroll[irons_spellbooks:spell_container={...}]}。 */
-    public static ItemStack parse(SceneContext ctx, String text) {
+    public static ItemStack parse(Stage ctx, String text) {
         try {
             ItemParser.ItemResult result = new ItemParser(ctx.level().registryAccess()).parse(new StringReader(text));
             ItemStack stack = new ItemStack(result.item(), 1);
@@ -124,7 +123,7 @@ public final class Actors {
     }
 
     /** 把场地原点下方一层、水平半径 radius 内换成熔岩，场景结束时恢复原方块。 */
-    public static void lavaPool(SceneContext ctx, int radius) {
+    public static void lavaPool(Stage ctx, int radius) {
         ServerLevel level = ctx.level();
         Map<BlockPos, BlockState> original = new HashMap<>();
         for (int x = -radius; x <= radius; x++) {

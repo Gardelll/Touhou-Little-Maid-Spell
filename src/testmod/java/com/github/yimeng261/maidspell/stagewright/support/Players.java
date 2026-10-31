@@ -1,8 +1,6 @@
 package com.github.yimeng261.maidspell.stagewright.support;
 
 import com.github.tartaricacid.touhoulittlemaid.entity.passive.EntityMaid;
-import net.magicterra.stagewright.scene.Scene;
-import net.magicterra.stagewright.scene.SceneContext;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
@@ -10,7 +8,8 @@ import net.minecraft.world.InteractionResult;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.GameType;
 
-import java.util.function.BiConsumer;
+import net.minecraft.core.BlockPos;
+import net.minecraft.server.level.ServerLevel;
 
 /** 集成服拓扑里操作宿主玩家的小工具：用真实的服务端交互入口，场景结束时恢复玩家状态。 */
 public final class Players {
@@ -21,22 +20,29 @@ public final class Players {
     }
 
     /**
-     * 宿主玩家场景（超平坦场地）：把玩家带到场地、{@link #keepState 保存状态}，等传送落定后运行 body。
-     * 预算自动加上等待落定的时间。
+     * 真实客户端的玩家（测试线程）：带到场地原点、{@link #keepState 保存状态}，等传送落定后返回其服务端实体。
+     * 测试结束时把玩家送回原处。
      */
-    public static Scene hostScene(String name, int budget, BiConsumer<SceneContext, ServerPlayer> body) {
-        return Checks.superflat(name, budget + SETTLE_TICKS, ctx -> {
-            ServerPlayer player = ctx.playerHere();
-            keepState(ctx, player);
-            settled(ctx, player, () -> body.accept(ctx, player));
+    public static ServerPlayer host(Stage ctx, net.magicterra.stagewright.test.Player player) {
+        ServerPlayer serverPlayer = Stage.serverPlayer(player);
+        ctx.run(() -> {
+            ServerLevel from = serverPlayer.serverLevel();
+            double x = serverPlayer.getX(), y = serverPlayer.getY(), z = serverPlayer.getZ();
+            float yaw = serverPlayer.getYRot(), pitch = serverPlayer.getXRot();
+            ctx.cleanup(() -> serverPlayer.teleportTo(from, x, y, z, java.util.Set.of(), yaw, pitch));
+            BlockPos at = ctx.origin();
+            serverPlayer.teleportTo(ctx.level(), at.getX() + 0.5, at.getY(), at.getZ() + 0.5, java.util.Set.of(), 0, 0);
+            keepState(ctx, serverPlayer);
         });
+        settled(ctx, serverPlayer);
+        return serverPlayer;
     }
 
     /**
      * 切到生存模式（受伤、消耗物品按正常规则），场景结束时（含失败/超时）恢复游戏模式、背包、生命、饥饿、
      * 效果、着火、潜行和打开的界面。
      */
-    public static void keepState(SceneContext ctx, ServerPlayer player) {
+    public static void keepState(Stage ctx, ServerPlayer player) {
         GameType mode = player.gameMode.getGameModeForPlayer();
         player.setGameMode(GameType.SURVIVAL);
         ctx.cleanup(() -> player.setGameMode(mode));
@@ -60,11 +66,11 @@ public final class Players {
     }
 
     /**
-     * 等客户端确认最近一次传送后再运行 next。跨维度传送后服务端把玩家视为"正在换维度"（免疫一切伤害），
+     * 等客户端确认最近一次传送（测试线程）。跨维度传送后服务端把玩家视为"正在换维度"（免疫一切伤害），
      * 直到客户端确认的是最新一次传送；场景间连续传送时确认总落后一步，要测受伤的场景需先等它落定。
      */
-    private static void settled(SceneContext ctx, ServerPlayer player, Runnable next) {
-        ctx.await(() -> !player.isChangingDimension()).within(SETTLE_TICKS).then(next);
+    public static void settled(Stage ctx, ServerPlayer player) {
+        ctx.await(SETTLE_TICKS, "客户端确认传送", () -> !player.isChangingDimension());
     }
 
     /** 与"玩家能否受伤"有关的状态，记进场景结果便于排查。 */
@@ -115,17 +121,13 @@ public final class Players {
         return slab;
     }
 
-    /** 拿着装有女仆的魂符对 pos 方块顶面右键放出女仆（车万女仆的真实使用入口），主手恢复原物品。 */
-    public static void releaseSlab(SceneContext ctx, ServerPlayer player, ItemStack slab,
-                                   net.minecraft.core.BlockPos pos, Runnable next) {
-        ctx.await(() -> !player.getCooldowns().isOnCooldown(slab.getItem())).within(40).then(() -> {
-            InteractionResult result = releaseSlab(player, slab, pos);
-            if (!result.consumesAction()) {
-                ctx.fail("魂符放出交互失败：" + result);
-                return;
-            }
-            next.run();
-        });
+    /** 等魂符冷却结束，拿着装有女仆的魂符对 pos 方块顶面右键放出女仆（车万女仆的真实使用入口），主手恢复原物品（测试线程）。 */
+    public static void releaseSlab(Stage ctx, ServerPlayer player, ItemStack slab, net.minecraft.core.BlockPos pos) {
+        ctx.await(40, "魂符冷却结束", () -> !player.getCooldowns().isOnCooldown(slab.getItem()));
+        InteractionResult result = ctx.get(() -> releaseSlab(player, slab, pos));
+        if (!result.consumesAction()) {
+            ctx.fail("魂符放出交互失败：" + result);
+        }
     }
 
     private static InteractionResult releaseSlab(ServerPlayer player, ItemStack slab, net.minecraft.core.BlockPos pos) {
@@ -139,7 +141,7 @@ public final class Players {
     }
 
     /** 无 AI 的女仆经真实交互驯服到玩家名下（失败记一条），第一个饰品槽放入 bauble。 */
-    public static EntityMaid ownedMaid(SceneContext ctx, ServerPlayer player, int dx, int dy, int dz, String bauble) {
+    public static EntityMaid ownedMaid(Stage ctx, ServerPlayer player, int dx, int dy, int dz, String bauble) {
         EntityMaid maid = Actors.stillMaid(ctx, dx, dy, dz);
         ctx.check(tame(player, maid)).as("驯服女仆").isTrue();
         Actors.equipBauble(maid, bauble);

@@ -1,0 +1,142 @@
+package com.github.yimeng261.maidspell.stagewright.scenes;
+
+import com.github.yimeng261.maidspell.stagewright.support.Actors;
+import com.github.yimeng261.maidspell.stagewright.support.Owners;
+import com.github.yimeng261.maidspell.stagewright.support.Stage;
+import com.github.yimeng261.maidspell.winefox.WinefoxChallengeProgress;
+import com.github.yimeng261.maidspell.winefox.WinefoxVowProgress;
+import com.mojang.authlib.GameProfile;
+import net.magicterra.stagewright.test.Game;
+import net.magicterra.stagewright.test.Plot;
+import net.magicterra.stagewright.test.Scene;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
+import net.neoforged.neoforge.common.CommonHooks;
+import net.neoforged.neoforge.common.util.FakePlayer;
+import net.neoforged.neoforge.common.util.FakePlayerFactory;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestReporter;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
+
+import static com.github.yimeng261.maidspell.stagewright.support.Checks.NS;
+
+/**
+ * 星之魔女挑战进度记在主世界存档：旧版记在玩家身上的已击败/进行中标记的迁入与清除、挑战者死亡清掉进行中、
+ * 已击败的玩家潜行右键星芒短剑能打开挑战配置。
+ */
+@Scene("tlms")
+class ChallengeStateTest {
+    private static final String LEGACY_DEFEATED = "MaidSpellWinefoxDefeated";
+    private static final String LEGACY_ACTIVE = "MaidSpellWinefoxChallengeActive";
+
+    @Test
+    void legacyDefeatedMigrates(Game game, Plot plot, TestReporter reporter) {
+        Stage ctx = Stage.sky(game, plot, reporter);
+        ctx.run(() -> legacyDefeated(ctx));
+    }
+
+    @Test
+    void legacyActiveCleared(Game game, Plot plot, TestReporter reporter) {
+        Stage ctx = Stage.sky(game, plot, reporter);
+        ctx.run(() -> legacyActive(ctx));
+    }
+
+    @Test
+    void deathClearsActive(Game game, Plot plot, TestReporter reporter) {
+        Stage ctx = Stage.sky(game, plot, reporter);
+        ctx.run(() -> deathClears(ctx));
+    }
+
+    /** 誓约进度按玩家 UUID 累计：两场常规胜利后专属胜利才生效，旧版实体计数只在玩家无进度时迁入。 */
+    @Test
+    void vowProgressPerPlayer(Game game, Plot plot, TestReporter reporter) {
+        Stage ctx = Stage.sky(game, plot, reporter);
+        ctx.run(() -> vowProgress(ctx));
+    }
+
+    /** 没击败过时打不开；击败后能打开；挑战进行中打不开。 */
+    @Test
+    void daggerConfigNeedsDefeat(Game game, Plot plot, TestReporter reporter) {
+        Stage ctx = Stage.sky(game, plot, reporter);
+        ctx.run(() -> daggerConfig(ctx));
+    }
+
+    private static FakePlayer freshPlayer(Stage ctx) {
+        String name = "TlmsChallenger" + Integer.toHexString(ctx.tick() ^ (int) System.nanoTime());
+        return FakePlayerFactory.get(ctx.level(), new GameProfile(UUID.randomUUID(), name));
+    }
+
+    private static void legacyDefeated(Stage ctx) {
+        FakePlayer player = freshPlayer(ctx);
+        CompoundTag persisted = new CompoundTag();
+        persisted.putBoolean(LEGACY_DEFEATED, true);
+        player.getPersistentData().put(Player.PERSISTED_NBT_TAG, persisted);
+        ctx.check(WinefoxChallengeProgress.hasDefeated(player)).as("旧版已击败标记迁入").isTrue();
+        ctx.check(player.getPersistentData().getCompound(Player.PERSISTED_NBT_TAG).contains(LEGACY_DEFEATED)).as("玩家身上仍留着旧标记").isFalse();
+        ctx.check(WinefoxChallengeProgress.hasDefeated(player)).as("迁入后再查仍是已击败").isTrue();
+    }
+
+    private static void legacyActive(Stage ctx) {
+        FakePlayer player = freshPlayer(ctx);
+        player.getPersistentData().putBoolean(LEGACY_ACTIVE, true);
+        ctx.check(WinefoxChallengeProgress.hasActiveChallenge(player)).as("旧版卡住的挑战进行中").isFalse();
+        ctx.check(player.getPersistentData().contains(LEGACY_ACTIVE)).as("玩家身上仍留着旧的进行中标记").isFalse();
+    }
+
+    private static void deathClears(Stage ctx) {
+        FakePlayer player = freshPlayer(ctx);
+        WinefoxChallengeProgress.markChallengeActive(ctx.server(), player.getUUID());
+        ctx.check(WinefoxChallengeProgress.hasActiveChallenge(player)).as("标记后挑战进行中").isTrue();
+        CommonHooks.onLivingDeath(player, player.damageSources().generic());
+        ctx.check(WinefoxChallengeProgress.hasActiveChallenge(player)).as("死亡后挑战进行中").isFalse();
+    }
+
+    private static void vowProgress(Stage ctx) {
+        UUID first = UUID.randomUUID();
+        UUID second = UUID.randomUUID();
+        WinefoxVowProgress.recordVictory(ctx.server(), first, true);
+        ctx.check(WinefoxVowProgress.isReady(ctx.server(), first)).as("只赢一场时专属胜利不生效").isFalse();
+        WinefoxVowProgress.recordVictory(ctx.server(), first, false);
+        WinefoxVowProgress.recordVictory(ctx.server(), first, true);
+        ctx.check(WinefoxChallengeProgress.getWins(ctx.server(), first)).as("累计胜利").isEqualTo(3);
+        ctx.check(WinefoxVowProgress.isReady(ctx.server(), first)).as("两场之后的专属胜利").isTrue();
+        ctx.check(WinefoxChallengeProgress.getWins(ctx.server(), second)).as("别的玩家不受影响").isEqualTo(0);
+        WinefoxVowProgress.migrateLegacy(ctx.server(), second, 2, true);
+        ctx.check(WinefoxVowProgress.isReady(ctx.server(), second)).as("旧版计数迁入").isTrue();
+        WinefoxVowProgress.migrateLegacy(ctx.server(), first, 0, false);
+        WinefoxVowProgress.migrateLegacy(ctx.server(), second, 9, false);
+        ctx.check(WinefoxChallengeProgress.getWins(ctx.server(), second)).as("已有进度时不被旧计数覆盖").isEqualTo(2);
+    }
+
+    private static void daggerConfig(Stage ctx) {
+        ServerPlayer player = Owners.visitor(ctx, "Dagger" + UUID.randomUUID().toString().substring(0, 8), 0, 0, 0);
+        player.setShiftKeyDown(true);
+        List<String> results = new ArrayList<>();
+        results.add("未击败 " + tryOpen(player));
+        WinefoxChallengeProgress.markDefeated(ctx.server(), player.getUUID());
+        results.add("已击败 " + tryOpen(player));
+        WinefoxChallengeProgress.markChallengeActive(ctx.server(), player.getUUID());
+        results.add("进行中 " + tryOpen(player));
+        WinefoxChallengeProgress.clearChallengeActive(ctx.server(), player.getUUID());
+        player.setShiftKeyDown(false);
+        ctx.check(results).as("潜行右键星芒短剑是否打开配置").isEqualTo(List.of("未击败 false", "已击败 true", "进行中 false"));
+    }
+
+    private static boolean tryOpen(ServerPlayer player) {
+        player.closeContainer();
+        ItemStack dagger = Actors.stack(NS + "starglint_dagger");
+        player.setItemInHand(InteractionHand.MAIN_HAND, dagger);
+        dagger.getItem().use(player.level(), player, InteractionHand.MAIN_HAND);
+        boolean opened = player.containerMenu != player.inventoryMenu
+                && player.containerMenu.getClass().getSimpleName().contains("WinefoxChallengeConfig");
+        player.closeContainer();
+        player.setItemInHand(InteractionHand.MAIN_HAND, ItemStack.EMPTY);
+        return opened;
+    }
+}

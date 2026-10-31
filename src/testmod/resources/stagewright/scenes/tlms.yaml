@@ -1,0 +1,4 @@
+# 专用服，装齐联动模组。CooParticlesAPI 2.5.5.3 在专用服通用初始化时扫描监听器会加载客户端类而崩溃，不装它与依赖它的 UsefulMagic
+topology: dedicatedServer
+mods:
+  exclude: [usefulmagic, cooparticlesapi]

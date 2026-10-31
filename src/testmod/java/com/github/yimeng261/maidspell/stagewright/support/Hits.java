@@ -1,7 +1,6 @@
 package com.github.yimeng261.maidspell.stagewright.support;
 
 import com.github.tartaricacid.touhoulittlemaid.entity.passive.EntityMaid;
-import net.magicterra.stagewright.scene.SceneContext;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.damagesource.DamageSource;
@@ -82,7 +81,7 @@ public final class Hits {
     }
 
     /** 记录并断言 source 打 targets 的结果全为 expected。 */
-    public static void expectAll(SceneContext ctx, String label, Map<String, LivingEntity> targets, DamageSource source, boolean expected) {
+    public static void expectAll(Stage ctx, String label, Map<String, LivingEntity> targets, DamageSource source, boolean expected) {
         ctx.check(matrix(targets, source)).as(label).isEqualTo(expect(targets, expected));
     }
 }

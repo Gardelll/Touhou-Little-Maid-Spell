@@ -1,0 +1,6 @@
+# 只装车万女仆：可选联动全部缺席时的加载、资源条件与结构
+topology: dedicatedServer
+mods:
+  exclude: [irons_spellbooks, irons_lib, ars_nouveau, psi, goety, usefulmagic, cooparticlesapi, kotlinforforge,
+            slashblade, patchouli, geckolib, curios, jade, appleskin, farmersdelight, playeranimator, c2me,
+            youkaisfeasts, youkaishomecoming, jei, terrablender, infiniverse, nuggets]

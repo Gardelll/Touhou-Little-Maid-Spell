@@ -5,7 +5,6 @@ import com.github.tartaricacid.touhoulittlemaid.inventory.container.backpack.Bau
 import com.github.yimeng261.maidspell.item.bauble.silverCercis.SilverCercisBauble;
 import com.github.yimeng261.maidspell.item.bauble.soulBook.SoulBookBauble;
 import com.github.yimeng261.maidspell.item.bauble.woundRimeBlade.WoundRimeBladeBauble;
-import net.magicterra.stagewright.scene.SceneContext;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerLevel;
@@ -67,8 +66,9 @@ public final class Maids {
     }
 
     /** 经原版 EntityStorage 写入独立的测试区块存档，再按区块卸载移除并重建实体。 */
-    public static void reload(SceneContext ctx, Entity entity, int delay, java.util.function.Consumer<Entity> then) {
-        ServerLevel level = (ServerLevel) entity.level();
+    public static Entity reload(Stage ctx, Entity entity, int delay) {
+        ServerLevel level = ctx.get(() -> (ServerLevel) entity.level());
+        java.util.concurrent.CompletableFuture<java.util.Optional<net.minecraft.nbt.CompoundTag>> saved;
         try {
             var path = java.nio.file.Files.createTempDirectory("tlms-entity-reload-");
             var region = new net.minecraft.world.level.chunk.storage.SimpleRegionStorage(
@@ -86,31 +86,34 @@ public final class Maids {
                     throw new IllegalStateException("无法清理实体测试存档", e);
                 }
             });
-            storage.storeEntities(new net.minecraft.world.level.entity.ChunkEntities<>(entity.chunkPosition(), java.util.List.of(entity)));
-            var saved = region.read(entity.chunkPosition());
-            entity.remove(Entity.RemovalReason.UNLOADED_TO_CHUNK);
-            Checks.after(ctx, delay, () -> ctx.await(saved::isDone).within(40).then(() -> {
-                var entries = saved.join().orElseThrow().getList("Entities", net.minecraft.nbt.Tag.TAG_COMPOUND);
-                if (entries.size() != 1) {
-                    ctx.fail("区块存档实体数应为 1，实际为 " + entries.size());
-                    return;
-                }
-                Entity loaded = EntityType.loadEntityRecursive(entries.getCompound(0), level, e -> e);
-                if (loaded == null) {
-                    ctx.fail("无法按区块存档数据重建实体");
-                    return;
-                }
-                level.addFreshEntity(loaded);
-                ctx.cleanup(() -> Actors.cleanupEntity(loaded));
-                then.accept(loaded);
-            }));
+            saved = ctx.get(() -> {
+                storage.storeEntities(new net.minecraft.world.level.entity.ChunkEntities<>(entity.chunkPosition(), java.util.List.of(entity)));
+                var read = region.read(entity.chunkPosition());
+                entity.remove(Entity.RemovalReason.UNLOADED_TO_CHUNK);
+                return read;
+            });
         } catch (java.io.IOException e) {
             throw new IllegalStateException("无法创建实体测试存档", e);
         }
+        ctx.ticks(delay);
+        ctx.await(40, "区块存档写完", saved::isDone);
+        return ctx.get(() -> {
+            var entries = saved.join().orElseThrow().getList("Entities", net.minecraft.nbt.Tag.TAG_COMPOUND);
+            if (entries.size() != 1) {
+                throw ctx.fail("区块存档实体数应为 1，实际为 " + entries.size());
+            }
+            Entity loaded = EntityType.loadEntityRecursive(entries.getCompound(0), level, e -> e);
+            if (loaded == null) {
+                throw ctx.fail("无法按区块存档数据重建实体");
+            }
+            level.addFreshEntity(loaded);
+            ctx.cleanup(() -> Actors.cleanupEntity(loaded));
+            return loaded;
+        });
     }
 
     /** 按原版实体转移流程复制到另一维度，保留 UUID、背包和饰品组件。 */
-    public static Entity copyToDimension(SceneContext ctx, Entity entity, ServerLevel destination,
+    public static Entity copyToDimension(Stage ctx, Entity entity, ServerLevel destination,
                                          net.minecraft.world.phys.Vec3 position) {
         Entity copied = entity.getType().create(destination);
         if (copied == null) throw new IllegalStateException("无法在目标维度创建实体");

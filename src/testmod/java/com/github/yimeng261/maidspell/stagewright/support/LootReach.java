@@ -153,4 +153,10 @@ public final class LootReach {
     private static String strip(String id) {
         return id.startsWith("minecraft:") ? id.substring("minecraft:".length()) : id;
     }
+
+    /** 战利品表是否已加载（服务端线程）。 */
+    public static boolean lootExists(net.minecraft.server.MinecraftServer server, String id) {
+        return server.reloadableRegistries().getKeys(net.minecraft.core.registries.Registries.LOOT_TABLE)
+                .contains(net.minecraft.resources.ResourceLocation.parse(id));
+    }
 }

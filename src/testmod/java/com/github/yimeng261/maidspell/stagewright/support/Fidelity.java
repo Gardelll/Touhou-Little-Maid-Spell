@@ -1,6 +1,5 @@
 package com.github.yimeng261.maidspell.stagewright.support;
 
-import net.magicterra.stagewright.scene.SceneContext;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
@@ -49,7 +48,7 @@ public final class Fidelity {
      * 贴地投影的拼图片按放置时的实时 WORLD_SURFACE 高度图逐列落地，场地原点附近偶有一列高出一格，
      * 这类片允许方块上下偏一格。
      */
-    public static void blocks(SceneContext ctx, ServerLevel level, StructureStage.Placed placed) {
+    public static void blocks(Stage ctx, ServerLevel level, StructureStage.Placed placed) {
         Grouped mismatches = new Grouped();
         int checked = 0;
         for (StructureStage.Piece piece : WorldExtract.ownPieces(placed)) {
@@ -91,7 +90,7 @@ public final class Fidelity {
      * 模板里带 NBT 的方块：世界中要有方块实体，且模板 NBT 是其保存结果的子集。
      * @param known 已知缺陷（模板, 键）不在这里报告，由对应的已知缺陷场景覆盖
      */
-    public static void blockEntities(SceneContext ctx, ServerLevel level, StructureStage.Placed placed,
+    public static void blockEntities(Stage ctx, ServerLevel level, StructureStage.Placed placed,
                                      BiPredicate<String, String> known) {
         Grouped mismatches = new Grouped();
         int checked = 0;
@@ -125,7 +124,7 @@ public final class Fidelity {
     }
 
     /** 模板里的每个实体在预期位置 1.5 格内有同类型实体。 */
-    public static void entities(SceneContext ctx, ServerLevel level, StructureStage.Placed placed) {
+    public static void entities(Stage ctx, ServerLevel level, StructureStage.Placed placed) {
         Grouped missing = new Grouped();
         for (StructureStage.Piece piece : WorldExtract.ownPieces(placed)) {
             for (StructureTemplate.StructureEntityInfo info : piece.entities()) {

@@ -1,0 +1,4 @@
+# 不装农夫乐事：妖怪们的飨宴与妖怪们的归家移植版强依赖它，一并不装
+topology: dedicatedServer
+mods:
+  exclude: [farmersdelight, youkaisfeasts, youkaishomecoming, usefulmagic, cooparticlesapi]

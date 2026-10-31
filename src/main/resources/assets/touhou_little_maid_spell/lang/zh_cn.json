@@ -787,6 +787,7 @@
   "touhou_little_maid_spell.configuration.allowHostileMobSpawnsInRetreat": "允许归隐之地生成敌对生物",
   "touhou_little_maid_spell.configuration.compat": "模组联动",
   "touhou_little_maid_spell.configuration.autoInstallTlmModelPack": "自动安装女仆模型包",
+  "touhou_little_maid_spell.configuration.usefulMagicMaidTerrainProtection": "女仆使用实用魔法时保护地形",
   "touhou_little_maid_spell.configuration.worldgen": "世界生成",
   "touhou_little_maid_spell.configuration.enableStarfallGarden": "生成星落之庭",
   "touhou_little_maid_spell.configuration.winefox": "酒狐",

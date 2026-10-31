@@ -118,8 +118,6 @@ tasks.named('coremodJar', Jar) {
 stagewright {
     tests {
         neoforge {
-            // 默认端口 25621 常被同机其它项目的 StageWright 测试占用
-            serverPort = 25641
             // 测试按串行设计（共享配置项、全局注册表与游戏规则）；经系统属性关闭并行
             systemProperties.put('junit.jupiter.execution.parallel.enabled', 'false')
         }

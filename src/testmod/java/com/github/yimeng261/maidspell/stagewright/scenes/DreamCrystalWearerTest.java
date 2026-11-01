@@ -10,6 +10,7 @@ import net.magicterra.stagewright.test.Scene;
 import net.minecraft.advancements.AdvancementHolder;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -34,6 +35,7 @@ import static com.github.yimeng261.maidspell.stagewright.support.Checks.NS;
 class DreamCrystalWearerTest {
     private static final int REFRESH_WAIT = 30;
     private static final int TOOL_DAMAGE = 50;
+    private static final ResourceLocation SPEED_MODIFIER = ResourceLocation.parse(NS + "dream_crystal_speed");
 
     @DisplayName("戴上后生命上限 +50%、攻速翻倍、背包工具修耐久、Curios 各栏位 +1、主人获得万法皆通；取下后撤掉")
     @Test
@@ -41,7 +43,7 @@ class DreamCrystalWearerTest {
         Stage ctx = Stage.flat(game, plot, reporter);
         ServerPlayer owner = ctx.get(() -> Owners.visitor(ctx, "TlmsCrystalOwner", 2, 0, 0));
         EntityMaid maid = ctx.get(() -> Owners.maid(ctx, owner, 0, 0, 0));
-        double[] base = ctx.get(() -> new double[]{maid.getMaxHealth(), maid.getAttributeValue(Attributes.ATTACK_SPEED)});
+        double[] base = ctx.get(() -> new double[]{maid.getMaxHealth()});
         Map<String, Integer> slotsBefore = ctx.get(() -> curioSlots(maid));
         ItemStack tool = ctx.get(() -> {
             ItemStack sword = new ItemStack(Items.IRON_SWORD);
@@ -53,7 +55,10 @@ class DreamCrystalWearerTest {
         ctx.ticks(REFRESH_WAIT * 2);
         ctx.run(() -> {
             ctx.check(maid.getMaxHealth()).as("生命上限").isCloseTo(base[0] * 1.5, 1e-3);
-            ctx.check(maid.getAttributeValue(Attributes.ATTACK_SPEED)).as("攻速").isCloseTo(base[1] * 2.0, 1e-3);
+            // 同场景里别的戴水晶女仆的范围强化也加攻速，只核对水晶自己的修饰符
+            AttributeModifier speed = maid.getAttribute(Attributes.ATTACK_SPEED).getModifier(SPEED_MODIFIER);
+            ctx.check(speed == null ? "无" : speed.amount() + " " + speed.operation())
+                    .as("攻速修饰符").isEqualTo("1.0 " + AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL);
             ctx.check(tool.getDamageValue()).as("背包里铁剑的损耗").isLessThan(TOOL_DAMAGE);
             Map<String, Integer> slots = curioSlots(maid);
             Map<String, Integer> expected = new TreeMap<>();
@@ -75,7 +80,7 @@ class DreamCrystalWearerTest {
         ctx.run(() -> {
             ctx.check(maid.getMaxHealth()).as("取下后的生命上限").isCloseTo(base[0], 1e-3);
             ctx.check(maid.getHealth()).as("取下后的生命").isAtMost(maid.getMaxHealth());
-            ctx.check(maid.getAttributeValue(Attributes.ATTACK_SPEED)).as("取下后的攻速").isCloseTo(base[1], 1e-3);
+            ctx.check(maid.getAttribute(Attributes.ATTACK_SPEED).getModifier(SPEED_MODIFIER)).as("取下后的攻速修饰符").isNull();
             ctx.check(curioSlots(maid)).as("取下后 Curios 各栏位格数").isEqualTo(slotsBefore);
         });
     }

@@ -1,5 +1,11 @@
 package com.github.yimeng261.maidspell.stagewright.scenes;
 
+import net.minecraft.nbt.NbtUtils;
+import net.minecraft.world.Container;
+import net.minecraft.world.item.component.CustomData;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.entity.TheEndGatewayBlockEntity;
+import java.util.TreeSet;
 import com.github.yimeng261.maidspell.stagewright.support.Stage;
 import net.magicterra.stagewright.test.Game;
 import net.magicterra.stagewright.test.Plot;
@@ -113,6 +119,14 @@ class StellarStructureTest {
                                          TestReporter reporter) {
         Stage ctx = Stage.wideFlat(game, plot, reporter);
         ctx.run(() -> sweepingEdgeBook(ctx));
+    }
+
+    @DisplayName("观星塔：桶里的四幅画物品保留各自的图案，末地折跃门的出口是 (91, 75, 29)")
+    @Test
+    void towerPaintingItemsAndGateway(Game game, @Plot.Size(x = 144, y = 256, z = 144) @Plot.Centered Plot plot,
+                                      TestReporter reporter) {
+        Stage ctx = Stage.wideFlat(game, plot, reporter);
+        ctx.run(() -> towerPaintingsAndGateway(ctx));
     }
 
     @DisplayName("观星术士的中英文名称正确")
@@ -275,6 +289,33 @@ class StellarStructureTest {
         long astro = WorldExtract.entities(ctx.level(), placed).stream()
                 .filter(e -> BuiltInRegistries.ENTITY_TYPE.getKey(e.getType()).toString().equals(NS + "astro_mancer")).count();
         ctx.check(astro).as("塔里的观星术士数").isEqualTo(1L);
+    }
+
+    private static void towerPaintingsAndGateway(Stage ctx) {
+        StructureStage.Placed placed = StructureStage.place(ctx, NS + "starwatch_tower");
+        List<String> variants = new ArrayList<>();
+        List<String> exits = new ArrayList<>();
+        for (StructureStage.Piece piece : WorldExtract.ownPieces(placed)) {
+            for (var block : piece.blocks()) {
+                BlockEntity entity = ctx.level().getBlockEntity(block.pos());
+                if (entity instanceof Container container) {
+                    for (int slot = 0; slot < container.getContainerSize(); slot++) {
+                        ItemStack stack = container.getItem(slot);
+                        if (stack.is(Items.PAINTING)) {
+                            CustomData data = stack.getOrDefault(DataComponents.ENTITY_DATA, CustomData.EMPTY);
+                            variants.add(data.copyTag().getString("variant"));
+                        }
+                    }
+                } else if (entity instanceof TheEndGatewayBlockEntity gateway) {
+                    CompoundTag tag = gateway.saveWithoutMetadata(ctx.level().registryAccess());
+                    exits.add(NbtUtils.readBlockPos(tag, "exit_portal").map(BlockPos::toShortString).orElse("无"));
+                }
+            }
+        }
+        ctx.check(new TreeSet<>(variants)).as("桶里画物品的图案").isEqualTo(new TreeSet<>(List.of(
+                NS + "astronomical_object", NS + "falling_star", NS + "magic_wine_fox", NS + "starry_flower_sea")));
+        ctx.check(variants.size()).as("画物品数").isEqualTo(4);
+        ctx.check(exits).as("末地折跃门的出口").isEqualTo(List.of("91, 75, 29", "91, 75, 29", "91, 75, 29", "91, 75, 29"));
     }
 
     private static void sweepingEdgeBook(Stage ctx) {

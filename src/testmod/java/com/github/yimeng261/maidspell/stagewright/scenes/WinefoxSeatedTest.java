@@ -1,5 +1,6 @@
 package com.github.yimeng261.maidspell.stagewright.scenes;
 
+import com.github.tartaricacid.touhoulittlemaid.entity.passive.EntityMaid;
 import com.github.yimeng261.maidspell.Config;
 import com.github.yimeng261.maidspell.compat.irons_spellbooks.entity.winefox.MagicalWinefoxBossEntity;
 import com.github.yimeng261.maidspell.stagewright.support.Actors;
@@ -24,7 +25,7 @@ import static com.github.yimeng261.maidspell.stagewright.support.Checks.NS;
 
 /**
  * 坐在秋千上的星之魔女（专用服）：手持旅行日记右键，凑够四本换一颗星陨石；
- * 手持星芒短剑右键开战，生存模式血量不高于存活线时不接受，创造模式直接开始。
+ * 手持星芒短剑右键开战，生存模式血量不高于存活线时不接受，创造模式直接开始；未开战时女仆不把她当目标。
  */
 @Scene("tlms")
 @DisplayName("星之魔女：坐姿交互")
@@ -66,6 +67,23 @@ class WinefoxSeatedTest {
             player.interactOn(witch, InteractionHand.MAIN_HAND);
             ctx.check(witch.isChallengeOngoingFor(player)).as("创造模式同样血量时开战").isTrue();
         });
+    }
+
+    @DisplayName("坐着未开战时女仆不把星之魔女当攻击目标，主人开战后可以")
+    @Test
+    void maidTargetsOnlyActiveBattle(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
+        Stage ctx = Stage.flat(game, plot, reporter);
+        MagicalWinefoxBossEntity witch = ctx.get(() -> witch(ctx));
+        EntityMaid maid = ctx.get(() -> {
+            ServerPlayer player = Owners.visitor(ctx, "TlmsMaidChallenger", 2, 0, 0);
+            EntityMaid owned = Owners.maid(ctx, player, -2, 0, 0);
+            ctx.check(owned.canAttack(witch)).as("坐着时女仆能否攻击星之魔女").isFalse();
+            player.setItemInHand(InteractionHand.MAIN_HAND, Actors.stack(NS + "starglint_dagger"));
+            player.interactOn(witch, InteractionHand.MAIN_HAND);
+            return owned;
+        });
+        ctx.await(200, "星之魔女进入战斗", witch::isBattleActive);
+        ctx.run(() -> ctx.check(maid.canAttack(witch)).as("开战后女仆能否攻击星之魔女").isTrue());
     }
 
     private static MagicalWinefoxBossEntity witch(Stage ctx) {

@@ -54,6 +54,8 @@ import net.minecraft.world.item.enchantment.Enchantments;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
+import net.neoforged.neoforge.common.NeoForge;
+import net.neoforged.neoforge.event.entity.player.AttackEntityEvent;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestReporter;
@@ -327,6 +329,37 @@ class StellarContentTest {
             pearl.getItem().use(ctx.level(), player, InteractionHand.MAIN_HAND);
             ctx.check(player.getMainHandItem().isEmpty()).as("耐久耗尽后珍珠碎掉").isTrue();
             player.setItemInHand(InteractionHand.MAIN_HAND, ItemStack.EMPTY);
+        });
+    }
+
+    /** 右键的冲击波：6 格内的敌人眩晕 6 秒，自己、自己的女仆、创造模式玩家与 6 格外的不受影响；被眩晕的玩家攻击被取消。 */
+    @DisplayName("星锚珍珠冲击波：6 格内敌人眩晕 6 秒，自己、友方、创造模式玩家与圈外不受影响，被眩晕的玩家攻击被取消")
+    @Test
+    void shockwaveScope(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
+        Stage ctx = Stage.flat(game, plot, reporter);
+        ctx.run(() -> {
+            ServerPlayer player = Owners.visitor(ctx, "TlmsPearlShock", 0, 0, 0);
+            Mob near = Actors.spawn(ctx, "minecraft:zombie", 5, 0, 0, true);
+            Mob far = Actors.spawn(ctx, "minecraft:zombie", 8, 0, 0, true);
+            EntityMaid maid = Owners.maid(ctx, player, 0, 0, 3);
+            ServerPlayer creative = Owners.visitor(ctx, "TlmsPearlCreative", -3, 0, 0);
+            creative.setGameMode(GameType.CREATIVE);
+            ServerPlayer survivor = Owners.visitor(ctx, "TlmsPearlSurvivor", 0, 0, -3);
+            ItemStack pearl = Actors.stack(NS + "staranchor_pearl");
+            player.setItemInHand(InteractionHand.MAIN_HAND, pearl);
+            pearl.getItem().use(ctx.level(), player, InteractionHand.MAIN_HAND);
+            player.setItemInHand(InteractionHand.MAIN_HAND, ItemStack.EMPTY);
+            ctx.check(near.hasEffect(MaidSpellEffects.STARANCHOR_STUN)).as("5 格处的僵尸被眩晕").isTrue();
+            if (near.hasEffect(MaidSpellEffects.STARANCHOR_STUN)) {
+                ctx.check(near.getEffect(MaidSpellEffects.STARANCHOR_STUN).getDuration()).as("眩晕时长").isEqualTo(120);
+            }
+            ctx.check(far.hasEffect(MaidSpellEffects.STARANCHOR_STUN)).as("8 格处的僵尸被眩晕").isFalse();
+            ctx.check(player.hasEffect(MaidSpellEffects.STARANCHOR_STUN)).as("使用者自己被眩晕").isFalse();
+            ctx.check(maid.hasEffect(MaidSpellEffects.STARANCHOR_STUN)).as("使用者的女仆被眩晕").isFalse();
+            ctx.check(creative.hasEffect(MaidSpellEffects.STARANCHOR_STUN)).as("创造模式玩家被眩晕").isFalse();
+            ctx.check(survivor.hasEffect(MaidSpellEffects.STARANCHOR_STUN)).as("生存模式的另一名玩家被眩晕").isTrue();
+            boolean canceled = NeoForge.EVENT_BUS.post(new AttackEntityEvent(survivor, near)).isCanceled();
+            ctx.check(canceled).as("被眩晕的玩家攻击被取消").isTrue();
         });
     }
 

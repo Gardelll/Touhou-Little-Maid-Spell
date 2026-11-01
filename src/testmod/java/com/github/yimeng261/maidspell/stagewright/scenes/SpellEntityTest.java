@@ -6,6 +6,14 @@ import com.github.yimeng261.maidspell.stagewright.support.Actors;
 import com.github.yimeng261.maidspell.stagewright.support.Owners;
 import com.github.yimeng261.maidspell.stagewright.support.Stage;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
+import com.github.yimeng261.maidspell.compat.irons_spellbooks.entity.spell.ModifiedMagicMissileEntity;
+import com.github.yimeng261.maidspell.compat.irons_spellbooks.registry.IronsSpellbooksCompatSpells;
+import com.github.yimeng261.maidspell.compat.irons_spellbooks.spell.TripleStarArrowSpell;
+import io.redspace.ironsspellbooks.api.magic.MagicData;
+import io.redspace.ironsspellbooks.api.spells.AbstractSpell;
+import io.redspace.ironsspellbooks.api.spells.CastSource;
+import io.redspace.ironsspellbooks.entity.spells.magic_arrow.MagicArrowProjectile;
+import net.minecraft.world.entity.Mob;
 import net.magicterra.stagewright.test.Game;
 import net.magicterra.stagewright.test.Plot;
 import net.magicterra.stagewright.test.Scene;
@@ -24,12 +32,16 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestReporter;
 
 import java.util.LinkedHashMap;
+import java.util.UUID;
+import java.util.Set;
+import java.util.List;
+import java.util.HashSet;
 import java.util.Map;
 
 import static com.github.yimeng261.maidspell.stagewright.support.Checks.NS;
 
 /**
- * 本模组的铁魔法法术实体：女仆黑洞只吞敌方的箭；改造飞弹能被实体选择器选中。
+ * 本模组的铁魔法法术实体：女仆黑洞只吞敌方的箭；改造飞弹能被实体选择器选中；魔法霰弹的散射锥与三矢连星的连发间隔。
  */
 @DisplayName("铁魔法法术实体：伴星黑洞与魔法飞弹")
 @Scene("tlms")
@@ -53,6 +65,69 @@ class SpellEntityTest {
     void selectableByType(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
         Stage ctx = Stage.flat(game, plot, reporter);
         ctx.run(() -> missileSelectable(ctx));
+    }
+
+    @DisplayName("魔法霰弹：3 级一次射出 6 枚飞弹，全在前方半角 7.5° 的锥内且方向各不相同")
+    @Test
+    void shotgunCone(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
+        Stage ctx = Stage.flat(game, plot, reporter);
+        ctx.run(() -> {
+            Mob caster = facingEast(ctx);
+            AbstractSpell spell = IronsSpellbooksCompatSpells.MAGIC_SHOTGUN.get();
+            spell.onCast(ctx.level(), 3, caster, CastSource.MOB, MagicData.getPlayerMagicData(caster));
+            List<ModifiedMagicMissileEntity> missiles = ctx.level().getEntitiesOfClass(ModifiedMagicMissileEntity.class,
+                    caster.getBoundingBox().inflate(4), missile -> missile.getOwner() == caster);
+            missiles.forEach(missile -> ctx.cleanup(missile::discard));
+            ctx.check(missiles).as("射出的飞弹").hasSize(6);
+            Vec3 forward = caster.getLookAngle().normalize();
+            Set<String> directions = new HashSet<>();
+            double widest = 0;
+            for (ModifiedMagicMissileEntity missile : missiles) {
+                Vec3 direction = missile.getDeltaMovement().normalize();
+                widest = Math.max(widest, Math.toDegrees(Math.acos(Math.min(1.0, direction.dot(forward)))));
+                directions.add(String.format("%.4f,%.4f,%.4f", direction.x, direction.y, direction.z));
+            }
+            ctx.record("最大偏角", widest);
+            ctx.check(widest).as("飞弹与正前方的最大夹角（度）").isAtMost(7.5 + 1e-3);
+            ctx.check(directions).as("飞弹方向").hasSize(missiles.size());
+        });
+    }
+
+    @DisplayName("三矢连星：连续射出三支魔法箭，每支相隔 4 tick")
+    @Test
+    void tripleArrowInterval(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
+        Stage ctx = Stage.flat(game, plot, reporter);
+        Mob caster = ctx.get(() -> facingEast(ctx));
+        Map<UUID, Integer> firstSeen = new LinkedHashMap<>();
+        int start = ctx.get(() -> {
+            AbstractSpell spell = IronsSpellbooksCompatSpells.TRIPLE_STAR_ARROW.get();
+            spell.onCast(ctx.level(), 1, caster, CastSource.MOB, MagicData.getPlayerMagicData(caster));
+            return ctx.tick();
+        });
+        Runnable sample = () -> ctx.level().getEntitiesOfClass(MagicArrowProjectile.class, caster.getBoundingBox().inflate(64),
+                arrow -> arrow.getOwner() == caster).forEach(arrow -> {
+                    if (firstSeen.putIfAbsent(arrow.getUUID(), ctx.tick() - start) == null) {
+                        ctx.cleanup(arrow::discard);
+                    }
+                });
+        // 只在每个 tick 结束后采样：首箭在施法当时射出，后两支在到期 tick 的末尾射出，统一按 tick 后看到的时刻比较间隔
+        ctx.watch(TripleStarArrowSpell.SHOT_INTERVAL_TICKS * 3, sample);
+        List<Integer> seen = List.copyOf(firstSeen.values());
+        ctx.record("每支箭首次看到时距施法的 tick", seen);
+        ctx.check(seen).as("射出的箭").hasSize(TripleStarArrowSpell.SHOT_COUNT);
+        if (seen.size() == TripleStarArrowSpell.SHOT_COUNT) {
+            ctx.check(List.of(seen.get(1) - seen.get(0), seen.get(2) - seen.get(1))).as("相邻两支箭的间隔")
+                    .isEqualTo(List.of(TripleStarArrowSpell.SHOT_INTERVAL_TICKS, TripleStarArrowSpell.SHOT_INTERVAL_TICKS));
+        }
+    }
+
+    /** 无 AI、朝正东站着的僵尸施法者。 */
+    private static Mob facingEast(Stage ctx) {
+        Mob caster = Actors.spawn(ctx, "minecraft:zombie", 0, 0, 0, true);
+        caster.setYRot(-90.0F);
+        caster.setYHeadRot(-90.0F);
+        caster.setXRot(0.0F);
+        return caster;
     }
 
     /**

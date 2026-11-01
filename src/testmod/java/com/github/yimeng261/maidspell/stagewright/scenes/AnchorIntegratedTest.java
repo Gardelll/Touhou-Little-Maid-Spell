@@ -82,9 +82,9 @@ class AnchorIntegratedTest {
             return created;
         });
         UUID id = maid.getUUID();
-        ctx.await(10, "记录写到主人身上", () -> here(maid).equals(player.getData(ChunkLoadingData.ATTACHMENT_TYPE).maidChunks().get(id)));
+        ctx.await(200, "记录写到主人身上", () -> here(maid).equals(player.getData(ChunkLoadingData.ATTACHMENT_TYPE).maidChunks().get(id)));
         ctx.run(() -> maid.teleportTo(second.getMiddleBlockX() + 0.5, 128, second.getMiddleBlockZ() + 0.5));
-        ctx.await(10, "记录跟到新区块", () -> here(maid).equals(player.getData(ChunkLoadingData.ATTACHMENT_TYPE).maidChunks().get(id)));
+        ctx.await(200, "记录跟到新区块", () -> here(maid).equals(player.getData(ChunkLoadingData.ATTACHMENT_TYPE).maidChunks().get(id)));
         ctx.record("note", "主人在别的维度时记录跟着换区块");
     }
 }

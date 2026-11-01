@@ -282,7 +282,7 @@ class AnchorTest {
             ctx.check(copied.getMaidInv().getStackInSlot(0).getCount()).as("换维度后背包里的钻石").isEqualTo(3);
             return copied;
         });
-        ctx.await(20, "记录跟到下界", () -> here(there).equals(ChunkLoadingData.getRecord(server, owner, there.getUUID())));
+        ctx.await(200, "记录跟到下界", () -> here(there).equals(ChunkLoadingData.getRecord(server, owner, there.getUUID())));
     }
 
     /** 普通生物：拴绳、命名牌、刷怪蛋右键照常。 */

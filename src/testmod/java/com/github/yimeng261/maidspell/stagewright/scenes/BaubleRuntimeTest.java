@@ -54,7 +54,6 @@ class BaubleRuntimeTest {
             Actors.equipBauble(sitting, SOUL_BOOK);
             return sitting;
         });
-        int gap = Config.soulBookDamageIntervalThreshold + 2;
         ctx.ticks(2);
         ctx.run(() -> {
             hurt(maid, 2);
@@ -65,8 +64,15 @@ class BaubleRuntimeTest {
             float first = hurt(maid, 2);
             ctx.record("firstHitAfterReequip", first);
         });
-        ctx.ticks(gap);
-        ctx.run(() -> ctx.check(hurt(maid, 2)).as("重新装备后隔 " + gap + " tick 的受击扣血").isGreaterThan(0F));
+        awaitSoulBookInterval(ctx, maid);
+        ctx.run(() -> ctx.check(hurt(maid, 2)).as("重新装备后隔过伤害间隔的受击扣血").isGreaterThan(0F));
+    }
+
+    /** 魂之书按女仆自身的 tickCount 算伤害间隔，女仆的 tick 可能落后于服务端 tick，故按 tickCount 等。 */
+    private static void awaitSoulBookInterval(Stage ctx, EntityMaid maid) {
+        int from = ctx.get(() -> maid.tickCount);
+        ctx.await(Config.soulBookDamageIntervalThreshold + 200, "女仆自身的 tick 过了魂之书伤害间隔",
+                () -> maid.tickCount - from > Config.soulBookDamageIntervalThreshold + 1);
     }
 
     /** 把生命回满后受一次通用伤害，返回实际扣掉的生命。 */
@@ -252,7 +258,7 @@ class BaubleRuntimeTest {
             buildRuntimeState(maid, zombie);
             ctx.record("before", state(id));
         });
-        ctx.ticks(Config.soulBookDamageIntervalThreshold + 2);
+        awaitSoulBookInterval(ctx, maid);
         ctx.run(() -> {
             Maids.kill(maid);
             ctx.check(maid.isAlive()).as("梦云水晶救下女仆").isTrue();
@@ -278,7 +284,7 @@ class BaubleRuntimeTest {
             buildRuntimeState(maid, zombie);
             ctx.check(state(id)).as("死亡前的运行态").isEqualTo(List.of(true, true, true));
         });
-        ctx.ticks(Config.soulBookDamageIntervalThreshold + 2);
+        awaitSoulBookInterval(ctx, maid);
         ctx.run(() -> {
             Maids.kill(maid);
             ctx.check(maid.isAlive()).as("女仆已死亡").isFalse();

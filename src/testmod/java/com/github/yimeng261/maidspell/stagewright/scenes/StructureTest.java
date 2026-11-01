@@ -561,16 +561,17 @@ class StructureTest {
 
     /** 放置后检查方块、方块实体、容器、女仆和实体，再过 SETTLE_TICKS 个 tick 检查生物是否存活、有没有卡进方块。 */
     private static void content(Stage ctx, Function<Stage, StructureStage.Placed> place, boolean maid, Set<String> knownDead) {
-        StructureStage.Placed placed = ctx.get(() -> place.apply(ctx));
-        ctx.run(() -> {
+        // 放进运行中的世界会给重力方块排计划刻（世界生成时不会），放置与比对须在同一 tick 内做完，免得悬空的沙子、混凝土粉末先落下
+        List<Entity> entities = ctx.get(() -> {
+            StructureStage.Placed placed = place.apply(ctx);
             blocks(ctx, placed);
             blockEntities(ctx, placed);
             containers(ctx, placed);
             if (maid) {
                 maids(ctx, placed);
             }
+            return entities(ctx, placed);
         });
-        List<Entity> entities = ctx.get(() -> entities(ctx, placed));
         ctx.ticks(SETTLE_TICKS);
         ctx.run(() -> settled(ctx, entities, knownDead));
     }

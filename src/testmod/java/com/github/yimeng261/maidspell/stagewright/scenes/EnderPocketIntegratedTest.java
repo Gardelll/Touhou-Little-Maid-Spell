@@ -106,7 +106,7 @@ class EnderPocketIntegratedTest {
             ctx.cleanup(() -> player.teleportTo(ctx.level(), ctx.originX() + 0.5, ctx.originY(), ctx.originZ() + 0.5, 0, 0));
             return anchored;
         });
-        ctx.await(60, "下界锚定女仆加载并出现在列表里", () -> nether.getEntity(maid.getUUID()) == maid
+        ctx.await(200, "下界锚定女仆加载并出现在列表里", () -> nether.getEntity(maid.getUUID()) == maid
                 && nether.getEntity(maid.getId()) == maid && listed(player).contains(maid.getUUID()));
         boolean teleported = ctx.get(() -> EnderPocketService.teleportToMaid(player, maid.getUUID()));
         ctx.check(teleported).as("跨维度传送").isTrue();

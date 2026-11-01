@@ -68,6 +68,8 @@ public final class Stage {
         net.minecraft.core.Vec3i min = plot.min();
         net.minecraft.core.Vec3i max = plot.max();
         plot.fill(min.getX(), 0, min.getZ(), max.getX(), 0, max.getZ(), Blocks.GRASS_BLOCK);
+        // 拼图件按 ground_level_delta 下沉一格，底层沙子会顶替草方块；垫一层泥土，免得沙子悬空下落
+        plot.fill(min.getX(), -1, min.getZ(), max.getX(), -1, max.getZ(), Blocks.DIRT);
         return stage;
     }
 

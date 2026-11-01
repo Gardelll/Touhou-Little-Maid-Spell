@@ -20,6 +20,8 @@ import com.github.yimeng261.maidspell.stagewright.support.Reflect;
 import com.github.yimeng261.maidspell.stagewright.support.Stage;
 import com.github.yimeng261.maidspell.task.SpellCombatFarTask;
 import io.netty.buffer.Unpooled;
+import net.neoforged.neoforge.common.NeoForge;
+import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.magicterra.stagewright.test.Game;
 import net.magicterra.stagewright.test.Plot;
 import net.magicterra.stagewright.test.Scene;
@@ -95,6 +97,20 @@ class EnderPocketTest {
     /** 下界里与场地同 x、z 的落点（y=70）。 */
     static BlockPos netherSpot(Stage ctx) {
         return new BlockPos(ctx.originX(), 70, ctx.originZ());
+    }
+
+    /**
+     * 先强加载下界落点所在区块，等它能 tick 实体再往里放女仆。各测试共用这个落点：上一个测试收尾解除强加载后区块会卸载，
+     * 这时放进去的女仆会随区块存盘移出，世界里再也找不到原来那个实体。
+     */
+    static void netherReady(Stage ctx) {
+        ServerLevel nether = ctx.get(() -> ctx.server().getLevel(Level.NETHER));
+        BlockPos spot = netherSpot(ctx);
+        ctx.run(() -> {
+            nether.setChunkForced(spot.getX() >> 4, spot.getZ() >> 4, true);
+            ctx.cleanup(() -> nether.setChunkForced(spot.getX() >> 4, spot.getZ() >> 4, false));
+        });
+        ctx.await(Stage.ENTITY_TICKING_WAIT, "下界落点区块可以 tick 实体", () -> nether.isPositionEntityTicking(spot));
     }
 
     static List<UUID> listed(ServerPlayer player) {
@@ -188,6 +204,7 @@ class EnderPocketTest {
     private static void sessionEnds(Stage ctx, String how) {
         ServerPlayer owner = ctx.get(() -> Owners.visitor(ctx, "TlmsPocketOwner", 0, 0, -3));
         ServerLevel nether = ctx.get(() -> ctx.server().getLevel(Level.NETHER));
+        netherReady(ctx);
         EntityMaid maid = ctx.get(() -> pocketMaid(ctx, nether, netherSpot(ctx), owner));
         UUID id = maid.getUUID();
         ctx.await(Stage.ENTITY_TICKING_WAIT, "下界女仆加载", () -> nether.getEntity(maid.getUUID()) == maid);
@@ -227,6 +244,32 @@ class EnderPocketTest {
                 throw ctx.fail("无法改写会话截止时间: " + e);
             }
             ctx.check(EnderPocketService.resolveRemoteMaid(owner, maid.getId())).as("过期后远程会话仍解析到女仆").isNull();
+        });
+    }
+
+    @DisplayName("主人换维度后，远程会话失效")
+    @Test
+    void ownerDimensionChangeEndsSession(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
+        ownerEventEndsSession(Stage.flat(game, plot, reporter), "换维度",
+                owner -> new PlayerEvent.PlayerChangedDimensionEvent(owner, Level.OVERWORLD, Level.NETHER));
+    }
+
+    @DisplayName("主人下线后，远程会话失效")
+    @Test
+    void ownerLogoutEndsSession(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
+        ownerEventEndsSession(Stage.flat(game, plot, reporter), "下线", PlayerEvent.PlayerLoggedOutEvent::new);
+    }
+
+    /** 建立远程会话后发出主人的事件，会话不再解析到女仆。 */
+    private static void ownerEventEndsSession(Stage ctx, String how,
+                                              java.util.function.Function<ServerPlayer, PlayerEvent> event) {
+        ctx.run(() -> {
+            ServerPlayer owner = Owners.visitor(ctx, "TlmsPocketOwner", 0, 0, -3);
+            EntityMaid maid = pocketMaid(ctx, owner, 0, 0, 3);
+            ctx.check(openRemote(owner, maid)).as("建立远程会话").isTrue();
+            ctx.check(EnderPocketService.resolveRemoteMaid(owner, maid.getId())).as(how + "前远程会话解析到的女仆").isSameAs(maid);
+            NeoForge.EVENT_BUS.post(event.apply(owner));
+            ctx.check(EnderPocketService.resolveRemoteMaid(owner, maid.getId())).as(how + "后远程会话仍解析到女仆").isNull();
         });
     }
 
@@ -343,6 +386,7 @@ class EnderPocketTest {
         Stage ctx = Stage.flat(game, plot, reporter);
         ServerPlayer owner = ctx.get(() -> Owners.visitor(ctx, "TlmsPocketRemote", 0, 0, -3));
         ServerLevel nether = ctx.get(() -> ctx.server().getLevel(Level.NETHER));
+        netherReady(ctx);
         EntityMaid maid = ctx.get(() -> pocketMaid(ctx, nether, netherSpot(ctx), owner));
         ctx.await(Stage.ENTITY_TICKING_WAIT, "下界女仆加载", () -> nether.getEntity(maid.getUUID()) == maid);
         ctx.await(200, "下界女仆出现在列表里", () -> listed(owner).contains(maid.getUUID()));
@@ -377,6 +421,7 @@ class EnderPocketTest {
         ServerPlayer owner = ctx.get(() -> Owners.visitor(ctx, "TlmsPocketDev", 0, 0, -3));
         ServerPlayer forger = ctx.get(() -> Owners.visitor(ctx, "TlmsPocketDev2", 0, 0, -5));
         ServerLevel nether = ctx.get(() -> ctx.server().getLevel(Level.NETHER));
+        netherReady(ctx);
         EntityMaid maid = ctx.get(() -> pocketMaid(ctx, nether, netherSpot(ctx), owner));
         ctx.await(Stage.ENTITY_TICKING_WAIT, "下界女仆加载", () -> nether.getEntity(maid.getUUID()) == maid);
         ctx.await(200, "下界女仆出现在列表里", () -> listed(owner).contains(maid.getUUID()));

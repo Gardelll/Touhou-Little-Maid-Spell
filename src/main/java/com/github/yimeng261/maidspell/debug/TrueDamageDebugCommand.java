@@ -55,13 +55,12 @@ public class TrueDamageDebugCommand {
                                     return 0;
                                 }
 
-                                float oldHealth = target.getHealth();
+                                // 真伤排队到下一 tick 结算，这里读不到结算后的血量
                                 TrueDamageUtil.dealTrueDamage(target, damage, context.getSource().getPlayer());
-                                float newHealth = target.getHealth();
 
                                 context.getSource().sendSuccess(() -> Component.literal(
-                                    String.format("对 %s 造成 %.1f 真实伤害，健康值从 %.1f 变为 %.1f",
-                                        target.getName().getString(), damage, oldHealth, newHealth)), true);
+                                    String.format("已对 %s 排队 %.1f 点真实伤害，下一 tick 结算",
+                                        target.getName().getString(), damage)), true);
 
                                 return 1;
                             } catch (Exception e) {

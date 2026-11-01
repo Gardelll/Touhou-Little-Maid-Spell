@@ -215,6 +215,49 @@ class SharedRetreatTest {
     }
 
     /**
+     * 只剩 1 个配额时，搜索结果在主线程处理完之前再次使用（冷却已过）：只提示仍在搜索，不另起搜索；
+     * 结果出来后配额正好扣 1，不出现没有配额的提示。冷却比搜索长，这里手动清掉冷却来模拟冷却先结束。
+     */
+    @DisplayName("搜索结果出来前再次右键只提示仍在搜索，配额正好扣 1，不提示没有配额")
+    @Test
+    @Order(8)
+    @Requires(Requires.Capability.CLIENT)
+    void useAgainWhileAwaitingResult(Game game, @Plot.Size(32) @Plot.Centered Plot plot, Player player, TestReporter reporter) {
+        Stage ctx = Stage.flat(game, plot, reporter);
+        ServerPlayer host = Players.host(ctx, player);
+        holdBells(ctx, host, BELLS);
+        enterRetreat(ctx, host);
+        ctx.run(() -> {
+            RetreatDimensionData.DimensionInfo info = info(host);
+            if (info == null) {
+                throw ctx.fail("玩家没有登记共享归隐之地");
+            }
+            BlockPos saved = info.foundStructurePos;
+            int quota = info.structureQuota;
+            ctx.cleanup(() -> {
+                info.foundStructurePos = saved;
+                info.structureQuota = quota;
+                RetreatDimensionData.get(ctx.server()).setDirty();
+            });
+            info.foundStructurePos = null;
+            info.structureQuota = 1;
+            RetreatManager.clearPlayerCache(host.getUUID());
+        });
+        Search result = search(ctx, host, () -> {
+            host.getCooldowns().removeCooldown(MaidSpellItems.WIND_SEEKING_BELL.get());
+            Players.use(host);
+        });
+        found(ctx, result.mark());
+        ctx.ticks(10);
+        List<String> overlays = ChatTap.keys(result.mark(), true);
+        ctx.record("overlays", overlays);
+        // 第一次右键发起搜索时也提示一次
+        ctx.check(overlays.stream().filter(WAITING::equals).count()).as("仍在搜索的提示次数").isEqualTo(2L);
+        ctx.check(overlays.contains(NO_QUOTA)).as("提示没有配额").isFalse();
+        ctx.run(() -> ctx.check(quota(host)).as("结果出来后剩余配额").isEqualTo(0));
+    }
+
+    /**
      * 两个模拟玩家（NeoForge FakePlayer，直接放在共享归隐之地同一位置）先后用铃搜索：各自找到一个隐世之境，
      * 位置互不相同、也不同于宿主玩家的；再次搜索不会得到新的。模拟玩家收不到消息，从服务器记录读结果。
      */

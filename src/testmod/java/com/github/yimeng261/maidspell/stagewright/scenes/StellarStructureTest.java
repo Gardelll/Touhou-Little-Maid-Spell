@@ -241,9 +241,11 @@ class StellarStructureTest {
     private static void endshore(Stage ctx) {
         StructureStage.Placed placed = StructureStage.place(ctx, NS + "stellar_endshore");
         ctx.check(WorldExtract.ownPieces(placed).size()).as("星途终岸的拼图片数").isEqualTo(8);
-        long witches = WorldExtract.entities(ctx.level(), placed).stream()
-                .filter(e -> BuiltInRegistries.ENTITY_TYPE.getKey(e.getType()).toString().equals(NS + "stellar_witch")).count();
-        ctx.check(witches).as("结构里的星之魔女数").isEqualTo(1L);
+        var witches = WorldExtract.entities(ctx.level(), placed).stream()
+                .filter(e -> BuiltInRegistries.ENTITY_TYPE.getKey(e.getType()).toString().equals(NS + "stellar_witch")).toList();
+        // 星之魔女是 Boss，plot 还原时的普通移除会被拒绝，按授权的 Boss 清理移除，免得留给后续测试
+        witches.forEach(witch -> ctx.cleanup(() -> Actors.cleanupEntity(witch)));
+        ctx.check(witches.size()).as("结构里的星之魔女数").isEqualTo(1);
     }
 
     /** 不同种子选出的固定锚点都是四个方向锚点之一，同一种子结果稳定；竞技场 Y 换算成拼图起点 Y 时减去 27。 */

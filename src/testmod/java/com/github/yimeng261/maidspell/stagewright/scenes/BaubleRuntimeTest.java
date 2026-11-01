@@ -192,6 +192,8 @@ class BaubleRuntimeTest {
         });
         // 女仆每 tick 清理不在场或已死亡的目标
         ctx.ticks(5);
+        // 死亡的僵尸播完死亡动画（约 20 tick）才离开世界，之前同 UUID 的新实体加不进去
+        ctx.await(60, "原僵尸离开世界", zombie::isRemoved);
         ctx.run(() -> {
             ctx.check(Maids.woundRimeRecorded(maid.getUUID())).as(how + " 后仍有禁疗记录").isFalse();
             Mob again = Actors.spawn(ctx, "minecraft:zombie", 0, 0, -2, true, (Mob mob) -> mob.setUUID(id));

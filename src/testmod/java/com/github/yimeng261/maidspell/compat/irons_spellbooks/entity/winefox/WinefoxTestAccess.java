@@ -17,6 +17,12 @@ public final class WinefoxTestAccess {
                 () -> boss.setHealth(boss.maidspell$bossMaxHealth()));
     }
 
+    /** 以管理身份把权威生命写成 health，不计入本场伤害统计。 */
+    public static void setHealth(MagicalWinefoxBossEntity boss, float health) {
+        WinefoxBossHealthController.withCause(boss, WinefoxBossHealthController.Cause.ADMIN,
+                () -> boss.setHealth(health));
+    }
+
     /** 以伤害身份把权威生命往下写 amount，返回实际掉的血；被受击间隔挡下时为 0。 */
     public static float hit(MagicalWinefoxBossEntity boss, float amount) {
         float before = boss.maidspell$authoritativeHealth();

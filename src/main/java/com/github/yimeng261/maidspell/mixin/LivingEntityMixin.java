@@ -118,6 +118,10 @@ public abstract class LivingEntityMixin {
         if (!(entity instanceof EntityMaid maid)) {
             return;
         }
+        // 生命上限下降后把超出部分截到上限（卸下加上限的饰品、原版属性刷新）不是伤害，照常写入
+        if (health >= maid.getMaxHealth()) {
+            return;
+        }
 
         MaidDamageProcessor.MaidHealthChange healthChange = MaidDamageProcessor.processMaidHealthDecrease(maid, health);
         if (healthChange.writeHealth()) {

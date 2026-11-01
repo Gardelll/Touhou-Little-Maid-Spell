@@ -44,7 +44,8 @@ public abstract class SynchedEntityDataHealthMixin {
         }
 
         float currentHealth = maid.getHealth();
-        if (requestedHealth >= currentHealth) {
+        // 涨血，或生命上限下降后截到上限，都不是伤害
+        if (requestedHealth >= currentHealth || requestedHealth >= maid.getMaxHealth()) {
             return;
         }
 

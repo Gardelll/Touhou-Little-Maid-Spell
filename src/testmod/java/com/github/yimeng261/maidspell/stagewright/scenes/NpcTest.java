@@ -7,6 +7,7 @@ import com.github.yimeng261.maidspell.stagewright.support.Actors;
 import com.github.yimeng261.maidspell.stagewright.support.Owners;
 import com.mojang.brigadier.tree.CommandNode;
 import com.mojang.datafixers.util.Either;
+import io.redspace.ironsspellbooks.entity.mobs.wizards.IMerchantWizard;
 import com.github.yimeng261.maidspell.stagewright.support.Stage;
 import net.magicterra.stagewright.test.Game;
 import net.magicterra.stagewright.test.Locks;
@@ -158,6 +159,34 @@ class NpcTest {
     void offers(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
         Stage ctx = Stage.flat(game, plot, reporter).fastForward();
         ctx.run(() -> astroOffers(ctx));
+    }
+
+    @DisplayName("观星术士补货后记下补货时刻，半天内交易用光再右键不补，过了半天才补，星陨石始终不刷回")
+    @Test
+    void astroRestockOncePerHalfDay(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
+        Stage ctx = Stage.flat(game, plot, reporter);
+        ctx.run(() -> {
+            Mob npc = npc(ctx, ASTRO);
+            IMerchantWizard wizard = (IMerchantWizard) npc;
+            ServerPlayer player = Owners.visitor(ctx, "TlmsRestocker", 2, 0, 0);
+            long now = ctx.level().getGameTime();
+            sellOut(wizard);
+            wizard.setLastRestockGameTime(now - 2401);
+            ctx.check(reopen(player, npc)).as("第一次右键打开交易").isTrue();
+            ctx.check(soldOut(wizard, false)).as("第一次右键后仍卖光的普通交易数").isEqualTo(0);
+            ctx.check(soldOut(wizard, true)).as("第一次右键后仍卖光的星陨石").isEqualTo(1);
+            CompoundTag saved = new CompoundTag();
+            npc.addAdditionalSaveData(saved);
+            ctx.check(saved.getLong("LastRestock")).as("存档里的 LastRestock").isEqualTo(now);
+            sellOut(wizard);
+            ctx.check(reopen(player, npc)).as("半天内再右键打开交易").isTrue();
+            ctx.check(soldOut(wizard, false) > 0).as("半天内再右键后普通交易仍卖光").isTrue();
+            wizard.setLastRestockGameTime(now - 12001);
+            ctx.check(reopen(player, npc)).as("过了半天右键打开交易").isTrue();
+            ctx.check(soldOut(wizard, false)).as("过了半天右键后仍卖光的普通交易数").isEqualTo(0);
+            ctx.check(soldOut(wizard, true)).as("过了半天右键后仍卖光的星陨石").isEqualTo(1);
+            player.closeContainer();
+        });
     }
 
     @DisplayName("观星术士保持中立，被玩家打了才以玩家为目标，两只之间不互相为敌")
@@ -348,6 +377,25 @@ class NpcTest {
         Mob mob = Actors.spawn(ctx, type, 0, 0, 0, true);
         mob.setPersistenceRequired();
         return mob;
+    }
+
+    private static void sellOut(IMerchantWizard wizard) {
+        wizard.getOffers().forEach(MerchantOffer::setToOutOfStock);
+    }
+
+    /** 卖光的交易条数：meteorite 为 true 时只数星陨石，否则只数其余交易。 */
+    private static long soldOut(IMerchantWizard wizard, boolean meteorite) {
+        return wizard.getOffers().stream()
+                .filter(offer -> id(offer.getResult()).equals(NS + "star_meteorite") == meteorite)
+                .filter(MerchantOffer::isOutOfStock)
+                .count();
+    }
+
+    /** 关掉当前界面后重新右键打开交易，返回是否打开。 */
+    private static boolean reopen(ServerPlayer player, Mob npc) {
+        player.closeContainer();
+        player.interactOn(npc, InteractionHand.MAIN_HAND);
+        return trading(player);
     }
 
     private static boolean trading(Player player) {

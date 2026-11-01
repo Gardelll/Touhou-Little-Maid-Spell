@@ -17,6 +17,7 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.levelgen.structure.BoundingBox;
 import net.minecraft.world.phys.AABB;
+import net.neoforged.fml.ModList;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -31,10 +32,20 @@ import java.util.TreeSet;
  * 从已放置的结构里读出与 {@link StructureSnapshots} 同一规则的内容（规则见 /tmp 生成脚本与快照类注释）。
  */
 public final class WorldExtract {
+    /** 模板里只作可选装饰的模组：没装时它的方块按设计变成空气，不算缺失。 */
+    private static final Set<String> OPTIONAL_DECORATION_MODS = Set.of("waystones");
+
     /** 生成 finalize 时会随机给装备的实体，装备不进签名。 */
     private static final Set<String> RANDOM_GEAR = Set.of("minecraft:fox");
 
     private WorldExtract() {
+    }
+
+    /** 方块或方块实体 id 属于没装的可选装饰模组时为 true。 */
+    public static boolean absentOptional(String id) {
+        ResourceLocation location = ResourceLocation.tryParse(id);
+        return location != null && OPTIONAL_DECORATION_MODS.contains(location.getNamespace())
+                && !ModList.get().isLoaded(location.getNamespace());
     }
 
     /** 本模组模板对应的拼图片（原版补充片不参与快照比对）。 */
@@ -50,7 +61,7 @@ public final class WorldExtract {
         List<Map<String, String>> maids = new ArrayList<>();
         for (StructureStage.Piece piece : ownPieces(placed)) {
             StructureSnapshots.Template template = StructureSnapshots.TEMPLATES.get(piece.template());
-            special.addAll(template.specialBlocks());
+            template.specialBlocks().stream().filter(block -> !absentOptional(block)).forEach(special::add);
             containers.addAll(template.containers());
             entities.addAll(template.entities());
             maids.addAll(template.maids());

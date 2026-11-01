@@ -195,6 +195,43 @@ class StructureTest {
         structure(ctx, "enchantress_footsteps_graveyard", false, Set.of());
     }
 
+    @DisplayName("魔女足迹-绿洲：放置后内容与模板一致")
+    @Test
+    void enchantressFootstepsOasis(Game game, @Plot.Size(x = 80, y = 128, z = 80) @Plot.Centered Plot plot, TestReporter reporter) {
+        Stage ctx = Stage.wideFlat(game, plot, reporter);
+        structure(ctx, "enchantress_footsteps_oasis", false, Set.of());
+    }
+
+    @DisplayName("观星塔：放置后方块、容器与实体都与模板一致，观星术士不死不卡墙")
+    @Test
+    void starwatchTower(Game game, @Plot.Size(x = 144, y = 256, z = 144) @Plot.Centered Plot plot, TestReporter reporter) {
+        Stage ctx = Stage.wideFlat(game, plot, reporter);
+        structure(ctx, "starwatch_tower", false, Set.of());
+    }
+
+    @DisplayName("星途终岸：放置后方块、容器与实体都与模板一致，星之魔女不死不卡墙")
+    @Test
+    void stellarEndshore(Game game, @Plot.Size(x = 176, y = 256, z = 176) @Plot.Centered Plot plot, TestReporter reporter) {
+        Stage ctx = Stage.wideFlat(game, plot, reporter);
+        content(ctx, c -> {
+            StructureStage.Placed placed = StructureStage.place(c, Checks.NS + "stellar_endshore");
+            // 星之魔女是 Boss，plot 还原时的普通移除会被拒绝，按授权的 Boss 清理移除，免得留给后续测试
+            WorldExtract.entities(c.level(), placed).stream()
+                    .filter(e -> BuiltInRegistries.ENTITY_TYPE.getKey(e.getType()).toString().equals(Checks.NS + "stellar_witch"))
+                    .forEach(witch -> c.cleanup(() -> Actors.cleanupEntity(witch)));
+            return placed;
+        }, false, Set.of());
+    }
+
+    /** 星落之庭的结构类型自己选址（每个世界一座、悬空），这里只从起始池组装，比对内容。 */
+    @DisplayName("星落之庭：从起始池组装后方块、容器与实体都与模板一致")
+    @Test
+    void starfallGarden(Game game, @Plot.Size(x = 176, y = 256, z = 176) @Plot.Centered Plot plot, TestReporter reporter) {
+        Stage ctx = Stage.wideFlat(game, plot, reporter);
+        content(ctx, c -> StructureStage.placePool(c, Checks.NS + "starfall_garden", Checks.NS + "starfall_garden_start_pool", 10),
+                false, Set.of());
+    }
+
     @DisplayName("落樱厨舍：按模板直接放置后内容与模板一致，结构女仆数据正确")
     @Test
     void cherryCabin(Game game, @Plot.Size(x = 80, y = 128, z = 80) @Plot.Centered Plot plot, TestReporter reporter) {
@@ -522,7 +559,7 @@ class StructureTest {
         ctx.run(() -> chairsNotInBlocks(ctx));
     }
 
-    @DisplayName("模板里的方块都来自已注册的方块")
+    @DisplayName("模板里的方块都来自已注册的方块，可选装饰模组没装时除外")
     @Test
     void templatesUseOnlyRegisteredBlocks(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);
@@ -932,7 +969,7 @@ class StructureTest {
         return null;
     }
 
-    /** 模板里的方块都来自已注册的方块（没有声明依赖的模组方块会变成空气）。 */
+    /** 模板里的方块都来自已注册的方块（没有声明依赖的模组方块会变成空气）；列为可选装饰的模组没装时除外。 */
     private static void onlyRegisteredBlocks(Stage ctx) {
         List<String> missing = new ArrayList<>();
         for (String template : StructureSnapshots.TEMPLATES.keySet()) {
@@ -949,7 +986,7 @@ class StructureTest {
                 for (ListTag palette : palettes) {
                     for (Tag entry : palette) {
                         String block = ((CompoundTag) entry).getString("Name");
-                        if (!BuiltInRegistries.BLOCK.containsKey(ResourceLocation.parse(block))) {
+                        if (!BuiltInRegistries.BLOCK.containsKey(ResourceLocation.parse(block)) && !WorldExtract.absentOptional(block)) {
                             missing.add(template + ": " + block);
                         }
                     }

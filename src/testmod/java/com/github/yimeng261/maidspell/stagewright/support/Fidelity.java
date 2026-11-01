@@ -87,7 +87,7 @@ public final class Fidelity {
     }
 
     /**
-     * 模板里带 NBT 的方块：世界中要有方块实体，且模板 NBT 是其保存结果的子集。
+     * 模板里带 NBT 的方块：世界中要有方块实体，且模板 NBT 是其保存结果的子集；没装的可选装饰模组的方块实体不查。
      * @param known 已知缺陷（模板, 键）不在这里报告，由对应的已知缺陷场景覆盖
      */
     public static void blockEntities(Stage ctx, ServerLevel level, StructureStage.Placed placed,
@@ -96,7 +96,7 @@ public final class Fidelity {
         int checked = 0;
         for (StructureStage.Piece piece : WorldExtract.ownPieces(placed)) {
             for (StructureTemplate.StructureBlockInfo info : piece.blocks()) {
-                if (info.nbt() == null) {
+                if (info.nbt() == null || WorldExtract.absentOptional(info.nbt().getString("id"))) {
                     continue;
                 }
                 checked++;

@@ -1,6 +1,7 @@
 package com.github.yimeng261.maidspell.stagewright.client;
 
 import com.electronwill.nightconfig.core.UnmodifiableConfig;
+import com.github.tartaricacid.touhoulittlemaid.client.gui.entity.maid.AbstractMaidContainerGui;
 import com.github.tartaricacid.touhoulittlemaid.entity.passive.EntityMaid;
 import com.github.yimeng261.maidspell.Config;
 import com.github.yimeng261.maidspell.client.EnderPocketClientConfig;
@@ -9,6 +10,7 @@ import com.github.yimeng261.maidspell.client.gui.EnderPocketScreen;
 import com.github.yimeng261.maidspell.client.overlay.EnderPocketHudOverlay;
 import com.github.yimeng261.maidspell.item.bauble.enderPocket.EnderPocketService;
 import com.github.yimeng261.maidspell.stagewright.support.Actors;
+import com.github.yimeng261.maidspell.stagewright.support.Owners;
 import com.github.yimeng261.maidspell.stagewright.support.Players;
 import com.github.yimeng261.maidspell.stagewright.support.Reflect;
 import com.github.yimeng261.maidspell.stagewright.support.Stage;
@@ -17,7 +19,9 @@ import net.magicterra.stagewright.test.Player;
 import net.magicterra.stagewright.test.Plot;
 import net.magicterra.stagewright.test.Requires;
 import net.magicterra.stagewright.test.Scene;
+import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
@@ -384,6 +388,156 @@ class EnderPocketClientTest {
         ctx.run(() -> Actors.setMaidHealth(maid, max / 2));
         awaitHudHealth(ctx, maid, max / 2, 40);
         ctx.record("note", "状态栏生命已刷新");
+    }
+
+    /**
+     * 玩家留在主世界，女仆在下界：远程打开背包时客户端只拿到代理女仆，界面能开；关掉界面后客户端世界里没有这只女仆，
+     * 不会多出一个站着不动的幽灵女仆。
+     */
+    @DisplayName("远程打开另一维度女仆的背包能开界面，关掉后客户端世界里不残留幽灵女仆")
+    @Test
+    @Requires(Requires.Capability.CLIENT)
+    void remoteOpenLeavesNoGhost(Game game, @Plot.In("minecraft:the_nether") @Plot.Size(32) @Plot.Centered Plot plot,
+                                 Player host, TestReporter reporter) {
+        Stage ctx = Stage.flat(game, plot, reporter);
+        ServerPlayer player = Stage.serverPlayer(host);
+        ctx.run(() -> Players.keepState(ctx, player));
+        ClientSide.awaitIdle(ctx);
+        if (ctx.get(() -> player.level() == ctx.level())) {
+            throw ctx.fail("真实玩家不该在下界：本测试要求女仆与玩家不在同一维度");
+        }
+        EntityMaid maid = ctx.get(() -> {
+            EntityMaid owned = Owners.maid(ctx, player, 0, 0, 0);
+            Actors.equipBauble(owned, NS + "ender_pocket");
+            return owned;
+        });
+        UUID id = maid.getUUID();
+        ctx.check(ctx.get(() -> EnderPocketService.openMaidInventory(player, id))).as("服务端开始远程打开").isTrue();
+        ctx.await(100, "客户端打开女仆背包界面", () -> Minecraft.getInstance()
+                .submit(() -> Minecraft.getInstance().screen instanceof AbstractMaidContainerGui<?>).join());
+        ctx.check(ctx.get(() -> EnderPocketService.isRemoteSessionActive(player, maid))).as("远程会话建立").isTrue();
+        ClientSide.run(ctx, () -> Minecraft.getInstance().player.closeContainer());
+        ctx.await(40, "服务端关掉女仆背包", () -> player.containerMenu == player.inventoryMenu);
+        ClientSide.awaitIdle(ctx);
+        String ghosts = ClientSide.call(ctx, () -> {
+            List<String> found = new ArrayList<>();
+            Minecraft.getInstance().level.entitiesForRendering().forEach(entity -> {
+                if (entity.getUUID().equals(id)) {
+                    found.add(entity.getClass().getSimpleName() + "@" + entity.blockPosition().toShortString());
+                }
+            });
+            return String.join(", ", found);
+        });
+        ctx.check(ghosts).as("关掉界面后客户端世界里的这只女仆").isEmpty();
+    }
+
+    /** 在女仆背包界面的末影腰包侧栏点另一只女仆的名字，界面切到那只女仆的背包。 */
+    @DisplayName("女仆背包界面的末影腰包侧栏点另一只女仆的名字，切到她的背包")
+    @Test
+    @Requires(Requires.Capability.CLIENT)
+    void sidebarSwitchesMaid(Game game, @Plot.Size(32) @Plot.Centered Plot plot, Player host, TestReporter reporter) {
+        Stage ctx = Stage.flat(game, plot, reporter);
+        ServerPlayer player = Players.host(ctx, host);
+        ClientSide.awaitIdle(ctx);
+        List<EntityMaid> maids = ctx.get(() -> List.of(sidebarMaid(ctx, player, "TlmsSideA", 2), sidebarMaid(ctx, player, "TlmsSideB", -2)));
+        ctx.check(ctx.get(() -> EnderPocketService.openMaidInventory(player, maids.get(0).getUUID()))).as("打开 A 的背包").isTrue();
+        ctx.await(100, "客户端打开 A 的背包且侧栏列出 B", () -> Minecraft.getInstance().submit(() ->
+                openMaid() == maids.get(0).getId() && sidebarButton("TlmsSideB") != null).join());
+        String clicked = ClientSide.call(ctx, () -> {
+            AbstractWidget button = sidebarButton("TlmsSideB");
+            if (button == null) {
+                return "侧栏里没有 B";
+            }
+            button.onClick(button.getX() + 1, button.getY() + 1);
+            return "ok";
+        });
+        ctx.check(clicked).as("点侧栏里 B 的名字").isEqualTo("ok");
+        ctx.await(100, "界面切到 B 的背包", () -> Minecraft.getInstance().submit(() -> openMaid() == maids.get(1).getId()).join());
+        ctx.check(ctx.get(() -> player.containerMenu instanceof com.github.tartaricacid.touhoulittlemaid.inventory.container.AbstractMaidContainer menu
+                && menu.getMaid() == maids.get(1))).as("服务端打开的是 B 的背包").isTrue();
+    }
+
+    /**
+     * 女仆很多时状态栏只画放得下的行，最后一行的底边在左下角血量、盔甲栏之上；按 F1 隐藏界面、打开了别的界面、
+     * 关掉状态栏时一行都不画。直接调状态栏的 render，用只记录底框的画布数行。
+     */
+    @DisplayName("状态栏只画放得下的行且不压到血量、盔甲栏，隐藏界面、打开界面或关掉状态栏时不画")
+    @Test
+    @Requires(Requires.Capability.CLIENT)
+    void hudFitsAndHides(Game game, @Plot.Size(32) @Plot.Centered Plot plot, Player host, TestReporter reporter) {
+        Stage ctx = Stage.flat(game, plot, reporter);
+        Players.host(ctx, host);
+        ClientSide.awaitIdle(ctx);
+        open(ctx, infos(1));
+        List<String> result = ClientSide.call(ctx, () -> {
+            Minecraft mc = Minecraft.getInstance();
+            mc.setScreen(null);
+            EnderPocketClientConfig.setHudEnabled(true);
+            EnderPocketClientConfig.setPosition(6, 6);
+            boolean hideGui = mc.options.hideGui;
+            try {
+                List<String> out = new ArrayList<>();
+                EnderPocketHudOverlay.update(infos(40));
+                List<int[]> rows = hudRows();
+                int limit = mc.getWindow().getGuiScaledHeight() - Math.max(mc.gui.leftHeight, mc.gui.rightHeight) - 6;
+                int bottom = rows.stream().mapToInt(r -> r[1]).max().orElse(-1);
+                out.add("rows=" + rows.size());
+                out.add("bottomOk=" + (!rows.isEmpty() && bottom <= limit));
+                mc.options.hideGui = true;
+                out.add("hideGui=" + hudRows().size());
+                mc.options.hideGui = hideGui;
+                mc.setScreen(new EnderPocketScreen(infos(1)));
+                out.add("screen=" + hudRows().size());
+                mc.setScreen(null);
+                EnderPocketClientConfig.setHudEnabled(false);
+                out.add("disabled=" + hudRows().size());
+                ctx.record("limit", limit + " bottom=" + bottom + " guiHeight=" + mc.getWindow().getGuiScaledHeight());
+                return out;
+            } finally {
+                mc.options.hideGui = hideGui;
+            }
+        });
+        ctx.record("result", result);
+        int rows = result.isEmpty() ? 0 : Integer.parseInt(result.getFirst().substring("rows=".length()));
+        ctx.check(rows).as("40 只女仆时画出的行数").isBetween(1, 39);
+        ctx.check(result.subList(1, result.size())).as("底边位置与三种不画的情形")
+                .isEqualTo(List.of("bottomOk=true", "hideGui=0", "screen=0", "disabled=0"));
+    }
+
+    /** 调一次状态栏的 render，返回画出的每一行底框的 [上边, 下边]（客户端线程）。 */
+    private static List<int[]> hudRows() {
+        Minecraft mc = Minecraft.getInstance();
+        List<int[]> rows = new ArrayList<>();
+        GuiGraphics graphics = new GuiGraphics(mc, mc.renderBuffers().bufferSource()) {
+            @Override
+            public void fill(int minX, int minY, int maxX, int maxY, int color) {
+                if (color == 0xB8101018 && maxX - minX == EnderPocketHudOverlay.ROW_WIDTH) {
+                    rows.add(new int[]{minY, maxY});
+                }
+                super.fill(minX, minY, maxX, maxY, color);
+            }
+        };
+        new EnderPocketHudOverlay().render(graphics, DeltaTracker.ZERO);
+        mc.renderBuffers().bufferSource().endBatch();
+        return rows;
+    }
+
+    /** 主人名下、戴末影腰包、带名字的女仆。 */
+    private static EntityMaid sidebarMaid(Stage ctx, ServerPlayer player, String name, int dx) {
+        EntityMaid maid = Owners.maid(ctx, player, dx, 0, 2);
+        maid.setCustomName(Component.literal(name));
+        Actors.equipBauble(maid, NS + "ender_pocket");
+        return maid;
+    }
+
+    /** 当前打开的女仆界面对应的实体 id；不是女仆界面时为 -1（客户端线程）。 */
+    private static int openMaid() {
+        return Minecraft.getInstance().screen instanceof AbstractMaidContainerGui<?> gui ? gui.getMenu().getMaid().getId() : -1;
+    }
+
+    private static AbstractWidget sidebarButton(String name) {
+        Screen screen = screen();
+        return screen == null ? null : ClientSide.widget(screen, w -> w.getMessage().getString().equals(name));
     }
 
     private static void awaitHudHealth(Stage ctx, EntityMaid maid, float health, int within) {

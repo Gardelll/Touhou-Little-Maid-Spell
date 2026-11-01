@@ -6,6 +6,13 @@ import com.github.yimeng261.maidspell.stagewright.support.Actors;
 import com.github.yimeng261.maidspell.stagewright.support.Owners;
 import com.github.yimeng261.maidspell.stagewright.support.Players;
 import com.github.yimeng261.maidspell.stagewright.support.Stage;
+import com.mojang.authlib.GameProfile;
+import net.minecraft.core.BlockPos;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.level.Level;
+import net.neoforged.neoforge.common.util.FakePlayer;
+import net.neoforged.neoforge.common.util.FakePlayerFactory;
+import java.util.UUID;
 import net.magicterra.stagewright.test.Game;
 import net.magicterra.stagewright.test.Plot;
 import net.magicterra.stagewright.test.Scene;
@@ -141,6 +148,35 @@ class MissingModMinimalTest {
     @Test
     void dreamCrystalWithoutCurios(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
         DreamCrystalFixtures.reviveFirstDeath(Stage.flat(game, plot, reporter));
+    }
+
+    @DisplayName("不装铁魔法时不加载「虚空之秘」成就")
+    @Test
+    void voidSecretAdvancementAbsent(Game game, Plot plot, TestReporter reporter) {
+        Stage ctx = Stage.sky(game, plot, reporter);
+        ctx.run(() -> ctx.check(ctx.server().getAdvancements()
+                .get(ResourceLocation.parse(NS + "star_journey/void_secret"))).as("虚空之秘成就").isNull());
+    }
+
+    /**
+     * 不装 Psi 时，爆炸与受伤事件里的女仆 Psi 假玩家判定不能碰 PsiProvider：
+     * 由 FakePlayer 引爆的爆炸照常结算，附近的玩家和女仆都受伤，不抛 NoClassDefFoundError。
+     */
+    @DisplayName("不装 Psi 时，假玩家引爆的爆炸照常伤到附近的玩家和女仆")
+    @Test
+    void explosionWithoutPsi(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
+        Stage ctx = Stage.flat(game, plot, reporter);
+        ctx.run(() -> {
+            ServerPlayer victim = Owners.visitor(ctx, "TlmsBlastVictim", 2, 0, 0);
+            EntityMaid maid = Actors.spawn(ctx, Actors.MAID, -2, 0, 0, true);
+            FakePlayer bomber = FakePlayerFactory.get(ctx.level(), new GameProfile(UUID.randomUUID(), "TlmsBomber"));
+            float playerBefore = victim.getHealth();
+            float maidBefore = maid.getHealth();
+            BlockPos center = ctx.rel(0, 0, 0);
+            ctx.level().explode(bomber, center.getX() + 0.5, center.getY(), center.getZ() + 0.5, 3.0F, Level.ExplosionInteraction.NONE);
+            ctx.check(victim.getHealth()).as("玩家生命").isLessThan(playerBefore);
+            ctx.check(maid.getHealth()).as("女仆生命").isLessThan(maidBefore);
+        });
     }
 
     private static void ironsContentAbsent(Stage ctx) {

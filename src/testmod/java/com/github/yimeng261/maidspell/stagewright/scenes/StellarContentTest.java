@@ -20,6 +20,7 @@ import io.redspace.ironsspellbooks.api.spells.AbstractSpell;
 import io.redspace.ironsspellbooks.api.spells.ISpellContainer;
 import io.redspace.ironsspellbooks.api.spells.SpellSlot;
 import net.magicterra.stagewright.test.Game;
+import net.magicterra.stagewright.test.KnownIssue;
 import net.magicterra.stagewright.test.Locks;
 import net.magicterra.stagewright.test.Plot;
 import net.magicterra.stagewright.test.Scene;
@@ -80,8 +81,12 @@ import static com.github.yimeng261.maidspell.stagewright.support.Checks.NS;
 @ResourceLock(Locks.TICK_RATE)
 class StellarContentTest {
     private static final List<String> EXCLUSIVE_SPELLS = List.of("starfall_modified", "magic_shotgun", "void_phase",
-            "sword_prison", "teleport_modified", "star_shadow_strike", "triple_star_arrow");
+            "sword_prison", "teleport_modified", "star_shadow_strike", "triple_star_arrow",
+            "palm_black_hole", "seven_star_guidance", "three_enclosures");
     private static final List<String> OBTAINABLE_SPELLS = List.of("companion_black_hole", "spellbreaking_echo");
+    /** 只有星之魔女自己放、卷轴玩家拿不到的法术，没有说明文本。 */
+    private static final String NO_GUIDE = "palm_black_hole";
+    private static final String NO_ICON = "three_enclosures";
     private static final String SPEAR = NS + "star_shadow_spear";
 
     private static AbstractSpell spell(String path) {
@@ -113,32 +118,53 @@ class StellarContentTest {
         });
     }
 
-    /** 名称（spell.&lt;ns&gt;.&lt;id&gt;）与说明（.guide）两种语言都有，图标贴图存在。 */
-    @DisplayName("星之魔女系列法术的名称与说明在中英文下都有，图标贴图存在")
+    /**
+     * 名称（spell.&lt;ns&gt;.&lt;id&gt;）与说明（.guide）中英日三种语言都有，图标贴图存在。
+     * 掌心黑洞的卷轴玩家拿不到，不查说明；三垣连星缺图标由 {@link #threeEnclosuresIcon} 单独记为已知问题。
+     */
+    @DisplayName("星之魔女系列法术的名称与说明在中英日文下都有，图标贴图存在")
     @Test
     void namesDescriptionsIcons(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter).fastForward();
         ctx.run(() -> {
             Map<String, String> en = Lang.read("en_us");
             Map<String, String> zh = Lang.read("zh_cn");
+            Map<String, String> ja = Lang.read("ja_jp");
             List<String> missing = new ArrayList<>();
             for (String id : concat(EXCLUSIVE_SPELLS, OBTAINABLE_SPELLS)) {
                 AbstractSpell spell = spell(id);
-                for (String key : List.of(spell.getComponentId(), spell.getComponentId() + ".guide")) {
+                List<String> keys = id.equals(NO_GUIDE) ? List.of(spell.getComponentId())
+                        : List.of(spell.getComponentId(), spell.getComponentId() + ".guide");
+                for (String key : keys) {
                     if (!en.containsKey(key)) {
                         missing.add("en_us " + key);
                     }
                     if (!zh.containsKey(key)) {
                         missing.add("zh_cn " + key);
                     }
+                    if (!ja.containsKey(key)) {
+                        missing.add("ja_jp " + key);
+                    }
                 }
-                ResourceLocation icon = spell.getSpellIconResource();
-                if (StellarContentTest.class.getResource("/assets/" + icon.getNamespace() + "/" + icon.getPath()) == null) {
-                    missing.add("图标 " + icon);
+                if (!id.equals(NO_ICON) && !hasIcon(spell)) {
+                    missing.add("图标 " + spell.getSpellIconResource());
                 }
             }
             ctx.check(missing).as("缺少的法术文案与图标").isEmpty();
         });
+    }
+
+    @DisplayName("三垣连星的法术图标存在")
+    @Test
+    @KnownIssue("上游没有提供 textures/gui/spell_icons/three_enclosures.png，卷轴与配置界面显示缺失贴图")
+    void threeEnclosuresIcon(Game game, Plot plot, TestReporter reporter) {
+        Stage ctx = Stage.sky(game, plot, reporter);
+        ctx.run(() -> ctx.check(hasIcon(spell(NO_ICON))).as("三垣连星图标").isTrue());
+    }
+
+    private static boolean hasIcon(AbstractSpell spell) {
+        ResourceLocation icon = spell.getSpellIconResource();
+        return StellarContentTest.class.getResource("/assets/" + icon.getNamespace() + "/" + icon.getPath()) != null;
     }
 
     private static List<String> concat(List<String> a, List<String> b) {

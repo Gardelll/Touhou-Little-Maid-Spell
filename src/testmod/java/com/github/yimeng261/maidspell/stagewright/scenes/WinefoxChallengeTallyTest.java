@@ -14,6 +14,10 @@ import net.magicterra.stagewright.test.Game;
 import net.magicterra.stagewright.test.Plot;
 import net.magicterra.stagewright.test.Scene;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.level.Level;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.core.BlockPos;
+import net.magicterra.stagewright.test.Locks;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.ai.goal.Goal;
@@ -103,6 +107,63 @@ class WinefoxChallengeTallyTest {
         ctx.run(() -> {
             ctx.check(duel.witch().isRestricted()).as("受限").isTrue();
             ctx.check(WinefoxChallengeProgress.getWins(ctx.server(), duel.challenger().getUUID())).as("挑战者胜场").isEqualTo(winsBefore);
+        });
+    }
+
+    /** 挑战者打过一箭后去了下界，最后一击是环境伤害：仍算他获胜，已击败与胜场记上，收尾后进行中标记清掉。 */
+    @DisplayName("挑战者换到别的维度后由环境伤害打赢：已击败与胜场记在他名下，收尾后挑战进行中标记清除")
+    @Test
+    void winWhileChallengerAway(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
+        Stage ctx = Stage.flat(game, plot, reporter);
+        EnderPocketTest.netherReady(ctx);
+        Duel duel = duel(ctx, "TlmsTallyAway");
+        int winsBefore = wins(ctx, duel);
+        strike(ctx, duel, "挑战者的箭", w -> {
+            Arrow arrow = new Arrow(EntityType.ARROW, w.level());
+            arrow.setOwner(duel.challenger());
+            w.hurt(w.damageSources().arrow(arrow, duel.challenger()), HIT);
+        });
+        toNether(ctx, duel.challenger());
+        finish(ctx, duel, "环境魔法", w -> w.hurt(w.damageSources().magic(), HIT));
+        ctx.run(() -> {
+            ctx.check(duel.witch().isDefeated()).as("星之魔女战败").isTrue();
+            ctx.check(duel.witch().isRestricted()).as("受限").isFalse();
+            ctx.check(WinefoxChallengeProgress.getWins(ctx.server(), duel.challenger().getUUID())).as("挑战者胜场").isEqualTo(winsBefore + 1);
+            ctx.check(WinefoxChallengeProgress.hasDefeated(duel.challenger())).as("挑战者已击败").isTrue();
+        });
+        ctx.await(600, "星之魔女归位坐下", () -> duel.witch().isSeated());
+        ctx.run(() -> ctx.check(WinefoxChallengeProgress.hasActiveChallenge(duel.challenger())).as("收尾后挑战进行中").isFalse());
+    }
+
+    /** 挑战者开战后去了下界不回来：没有目标 30 秒后判他落败，收尾后进行中标记清掉，潜行右键短剑不再卡在「挑战进行中」。 */
+    @DisplayName("挑战者换维度不回来：30 秒没有目标判负，收尾后挑战进行中标记清除")
+    @Test
+    @ResourceLock(Locks.TICK_RATE)
+    void challengerLeavesDimension(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
+        Stage ctx = Stage.flat(game, plot, reporter);
+        EnderPocketTest.netherReady(ctx);
+        Duel duel = duel(ctx, "TlmsTallyLeaver");
+        ctx.check(ctx.get(() -> WinefoxChallengeProgress.hasActiveChallenge(duel.challenger()))).as("开战后挑战进行中").isTrue();
+        toNether(ctx, duel.challenger());
+        ctx.fastForward();
+        ctx.await(1200, "星之魔女收场归位", () -> {
+            StellarContentTest.suppressSideBranches(duel.goal());
+            return duel.witch().isSeated();
+        });
+        ctx.run(() -> {
+            ctx.check(duel.witch().isDefeated()).as("星之魔女战败").isFalse();
+            ctx.check(WinefoxChallengeProgress.hasActiveChallenge(duel.challenger())).as("收尾后挑战进行中").isFalse();
+        });
+    }
+
+    /** 把挑战者送到下界落点；测试结束时先送回主世界，好让玩家按原维度清理。 */
+    private static void toNether(Stage ctx, ServerPlayer player) {
+        ctx.run(() -> {
+            ServerLevel nether = ctx.server().getLevel(Level.NETHER);
+            BlockPos spot = EnderPocketTest.netherSpot(ctx);
+            ctx.cleanup(() -> player.teleportTo(ctx.level(), ctx.originX() + 3.5, ctx.originY(), ctx.originZ() + 0.5, 0, 0));
+            player.teleportTo(nether, spot.getX() + 0.5, spot.getY(), spot.getZ() + 0.5, 0, 0);
+            ctx.check(player.level()).as("挑战者所在维度").isSameAs(nether);
         });
     }
 

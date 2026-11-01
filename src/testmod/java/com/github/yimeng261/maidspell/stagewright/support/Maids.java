@@ -89,7 +89,9 @@ public final class Maids {
             saved = ctx.get(() -> {
                 storage.storeEntities(new net.minecraft.world.level.entity.ChunkEntities<>(entity.chunkPosition(), java.util.List.of(entity)));
                 var read = region.read(entity.chunkPosition());
-                entity.remove(Entity.RemovalReason.UNLOADED_TO_CHUNK);
+                // 测试引擎的帧不在锚定核心的可信调用者白名单里，按可信的硬移除执行，否则锚定女仆留在世界里、读回的副本因 UUID 重复加不进去
+                com.github.yimeng261.maidspell.utils.MaidHardRemovalProtection.runAllowingHardRemoval(
+                        () -> entity.remove(Entity.RemovalReason.UNLOADED_TO_CHUNK));
                 return read;
             });
         } catch (java.io.IOException e) {
@@ -106,7 +108,9 @@ public final class Maids {
             if (loaded == null) {
                 throw ctx.fail("无法按区块存档数据重建实体");
             }
-            level.addFreshEntity(loaded);
+            if (!level.addFreshEntity(loaded)) {
+                throw ctx.fail("读回的实体加不进世界：同 UUID 的原实体还在");
+            }
             ctx.cleanup(() -> Actors.cleanupEntity(loaded));
             return loaded;
         });

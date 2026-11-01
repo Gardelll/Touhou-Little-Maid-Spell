@@ -7,6 +7,10 @@ import com.github.yimeng261.maidspell.compat.irons_spellbooks.entity.winefox.Win
 import com.github.yimeng261.maidspell.compat.irons_spellbooks.entity.winefox.WinefoxBossHealthController;
 import com.github.yimeng261.maidspell.compat.irons_spellbooks.entity.winefox.WinefoxBossSpellAction;
 import com.github.yimeng261.maidspell.effect.MaidSpellEffects;
+import com.github.yimeng261.maidspell.compat.irons_spellbooks.registry.IronsSpellbooksCompatEffects;
+import com.github.yimeng261.maidspell.compat.irons_spellbooks.registry.IronsSpellbooksCompatSpells;
+import com.github.yimeng261.maidspell.compat.irons_spellbooks.spell.VoidPhaseSpell;
+import net.minecraft.world.effect.MobEffectInstance;
 import com.github.yimeng261.maidspell.item.MaidSpellCreativeTab;
 import com.github.yimeng261.maidspell.stagewright.support.Actors;
 import com.github.yimeng261.maidspell.stagewright.support.Lang;
@@ -360,6 +364,28 @@ class StellarContentTest {
             ctx.check(survivor.hasEffect(MaidSpellEffects.STARANCHOR_STUN)).as("生存模式的另一名玩家被眩晕").isTrue();
             boolean canceled = NeoForge.EVENT_BUS.post(new AttackEntityEvent(survivor, near)).isCanceled();
             ctx.check(canceled).as("被眩晕的玩家攻击被取消").isTrue();
+        });
+    }
+
+    /** 带虚空相变的攻击者同一 tick 先打 1 再打 2：第二击按差值 1 结算不被吞，两击各追加一次虚空伤害。 */
+    @DisplayName("虚空相变同一 tick 连续两击：第二击不被吞，每次实际造成的伤害各追加一次")
+    @Test
+    void voidPhaseSameTickHits(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
+        Stage ctx = Stage.flat(game, plot, reporter);
+        ctx.run(() -> {
+            Mob attacker = Actors.spawn(ctx, "minecraft:zombie", 2, 0, 0, true);
+            Mob target = Actors.spawn(ctx, "minecraft:pig", 0, 0, 0, true);
+            target.setHealth(target.getMaxHealth());
+            attacker.addEffect(new MobEffectInstance(IronsSpellbooksCompatEffects.VOID_PHASE, 200, 2));
+            float bonus = ((VoidPhaseSpell) IronsSpellbooksCompatSpells.VOID_PHASE.get()).getBonusDamage(3, attacker);
+            ctx.record("bonus", bonus);
+            ctx.check(bonus).as("每次追加的虚空伤害").isGreaterThan(0.0F);
+            float before = target.getHealth();
+            target.hurt(target.damageSources().mobAttack(attacker), 1.0F);
+            float afterFirst = target.getHealth();
+            target.hurt(target.damageSources().mobAttack(attacker), 2.0F);
+            ctx.check(before - afterFirst).as("第一击共掉血").isCloseTo(1.0F + bonus, 1e-3f);
+            ctx.check(before - target.getHealth()).as("两击共掉血").isCloseTo(2.0F + 2 * bonus, 1e-3f);
         });
     }
 

@@ -9,6 +9,15 @@ import com.github.yimeng261.maidspell.dimension.TheRetreatDimension;
 import com.github.yimeng261.maidspell.stagewright.support.Actors;
 import com.github.yimeng261.maidspell.stagewright.support.Reflect;
 import com.github.yimeng261.maidspell.stagewright.support.Stage;
+import com.github.yimeng261.maidspell.stagewright.support.Lang;
+import com.mojang.brigadier.tree.CommandNode;
+import net.minecraft.commands.CommandSource;
+import net.minecraft.commands.CommandSourceStack;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.contents.TranslatableContents;
+import net.minecraft.world.phys.Vec2;
+import net.minecraft.world.phys.Vec3;
+import java.util.Map;
 import net.magicterra.stagewright.test.Game;
 import net.magicterra.stagewright.test.Plot;
 import net.magicterra.stagewright.test.Scene;
@@ -645,5 +654,74 @@ class HiddenRetreatMaidTest {
         server.drain();
         ctx.check(failed.isCompletedExceptionally()).as("启动失败的搜索以异常结束").isTrue();
         ctx.check(started.containsAll(List.of("next", "other"))).as("后面的搜索和别的维度的搜索都开始了").isTrue();
+    }
+
+    /** 管理命令：只有 OP 能用；status 报认领记录，reset 清掉记录并报原值；三种语言都有文案。 */
+    @DisplayName("管理命令 status 报认领记录、reset 清掉后再查为 false，非 OP 不能用，文案三种语言齐全")
+    @Test
+    void claimCommand(Game game, Plot plot, TestReporter reporter) {
+        Stage ctx = Stage.sky(game, plot, reporter);
+        ctx.run(() -> {
+            String root = "maidspell_retreat_maid";
+            CommandNode<CommandSourceStack> node = ctx.server().getCommands().getDispatcher().getRoot().getChild(root);
+            if (node == null) {
+                throw ctx.fail("没有 " + root + " 命令");
+            }
+            CommandSourceStack base = ctx.server().createCommandSourceStack();
+            ctx.check(node.canUse(base.withPermission(2))).as("OP 能用").isTrue();
+            ctx.check(node.canUse(base.withPermission(0))).as("非 OP 能用").isFalse();
+            UUID player = UUID.randomUUID();
+            HiddenRetreatMaidData data = HiddenRetreatMaidRegistry.get(ctx.server());
+            data.claim(player);
+            List<Component> replies = new ArrayList<>();
+            CommandSourceStack op = new CommandSourceStack(new CommandSource() {
+                @Override
+                public void sendSystemMessage(Component message) {
+                    replies.add(message);
+                }
+
+                @Override
+                public boolean acceptsSuccess() {
+                    return true;
+                }
+
+                @Override
+                public boolean acceptsFailure() {
+                    return true;
+                }
+
+                @Override
+                public boolean shouldInformAdmins() {
+                    return false;
+                }
+            }, Vec3.ZERO, Vec2.ZERO, ctx.server().overworld(), 2, "TlmsClaimAdmin",
+                    Component.literal("TlmsClaimAdmin"), ctx.server(), null);
+            for (String action : List.of("status", "reset", "status")) {
+                ctx.server().getCommands().performPrefixedCommand(op, root + " " + action + " " + player);
+            }
+            ctx.check(replies.stream().map(HiddenRetreatMaidTest::describe).toList()).as("三条命令的回复")
+                    .isEqualTo(List.of("status " + player + " true", "reset " + player + " true", "status " + player + " false"));
+            ctx.check(data.hasClaim(player)).as("reset 后的认领记录").isFalse();
+            for (String code : List.of("zh_cn", "en_us", "ja_jp")) {
+                Map<String, String> lang = Lang.read(code);
+                for (String action : List.of("status", "reset")) {
+                    ctx.check(lang.containsKey("commands.touhou_little_maid_spell.retreat_maid." + action))
+                            .as(code + " 有 " + action + " 文案").isTrue();
+                }
+            }
+        });
+    }
+
+    /** 回复的翻译键末段与参数，形如 "status &lt;uuid&gt; true"。 */
+    private static String describe(Component message) {
+        if (!(message.getContents() instanceof TranslatableContents contents)) {
+            return message.getString();
+        }
+        String key = contents.getKey();
+        StringBuilder out = new StringBuilder(key.substring(key.lastIndexOf('.') + 1));
+        for (Object arg : contents.getArgs()) {
+            out.append(' ').append(arg instanceof Component component ? component.getString() : String.valueOf(arg));
+        }
+        return out.toString();
     }
 }

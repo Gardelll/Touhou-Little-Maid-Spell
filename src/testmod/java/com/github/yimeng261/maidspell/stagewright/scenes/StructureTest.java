@@ -1,5 +1,7 @@
 package com.github.yimeng261.maidspell.stagewright.scenes;
 
+import com.github.yimeng261.maidspell.stagewright.support.Maids;
+import com.github.tartaricacid.touhoulittlemaid.entity.passive.EntityMaid;
 import com.github.yimeng261.maidspell.stagewright.support.Stage;
 import net.magicterra.stagewright.test.Game;
 import net.magicterra.stagewright.test.Plot;
@@ -547,6 +549,36 @@ class StructureTest {
     }
 
     /** 按指定模板直接放置单模板结构（含不装联动模组时的回退模板），不经过结构自身的选址判定。 */
+    @DisplayName("落樱厨舍的女仆按区块卸载重载后仍坐着，模型、手持物与骑乘状态不变")
+    @Test
+    void cherryCabinMaidSurvivesReload(Game game, @Plot.Size(x = 80, y = 128, z = 80) @Plot.Centered Plot plot, TestReporter reporter) {
+        Stage ctx = Stage.wideFlat(game, plot, reporter);
+        EntityMaid maid = ctx.get(() -> {
+            SinglePoolElement element = StructurePoolElement.single(Checks.NS + "cherry_cabin")
+                    .apply(StructureTemplatePool.Projection.RIGID);
+            StructureStage.Placed placed = StructureStage.placeElement(ctx, Checks.NS + "cherry_cabin", element, Rotation.NONE);
+            List<EntityMaid> maids = WorldExtract.entities(ctx.level(), placed).stream()
+                    .filter(EntityMaid.class::isInstance).map(EntityMaid.class::cast).toList();
+            if (maids.size() != 1) {
+                throw ctx.fail("落樱厨舍里的女仆有 " + maids.size() + " 只");
+            }
+            return maids.getFirst();
+        });
+        ctx.ticks(5);
+        String before = ctx.get(() -> seatedMaid(maid));
+        ctx.record("重载前", before);
+        Entity reloaded = Maids.reload(ctx, maid, 5);
+        ctx.ticks(5);
+        ctx.run(() -> ctx.check(reloaded instanceof EntityMaid back ? seatedMaid(back) : String.valueOf(reloaded))
+                .as("重载后的女仆").isEqualTo(before));
+    }
+
+    private static String seatedMaid(EntityMaid maid) {
+        return "坐着=" + maid.isMaidInSittingPose() + " 模型=" + maid.getModelId()
+                + " 手持=" + BuiltInRegistries.ITEM.getKey(maid.getMainHandItem().getItem())
+                + " 骑乘=" + (maid.getVehicle() == null ? "无" : BuiltInRegistries.ENTITY_TYPE.getKey(maid.getVehicle().getType()));
+    }
+
     private static void singleTemplate(Stage ctx, SingleTemplate single) {
         content(ctx, c -> {
             SinglePoolElement element = StructurePoolElement.single(Checks.NS + single.template())

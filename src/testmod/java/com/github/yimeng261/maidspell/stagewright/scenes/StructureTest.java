@@ -9,6 +9,10 @@ import net.magicterra.stagewright.test.Scene;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestReporter;
+import java.util.stream.Stream;
+import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.ParameterizedTest;
 import com.github.yimeng261.maidspell.MaidSpellMod;
 import com.github.yimeng261.maidspell.compat.touhou_little_maid.MaidOriginData;
 import com.github.yimeng261.maidspell.stagewright.data.StructureSnapshots;
@@ -617,11 +621,39 @@ class StructureTest {
     }
 
     private static void singleTemplate(Stage ctx, SingleTemplate single) {
+        singleTemplate(ctx, single, Rotation.NONE);
+    }
+
+    private static void singleTemplate(Stage ctx, SingleTemplate single, Rotation rotation) {
         content(ctx, c -> {
             SinglePoolElement element = StructurePoolElement.single(Checks.NS + single.template())
                     .apply(StructureTemplatePool.Projection.RIGID);
-            return StructureStage.placeElement(c, Checks.NS + single.structure(), element, Rotation.NONE);
+            return StructureStage.placeElement(c, Checks.NS + single.structure(), element, rotation);
         }, single.maid(), Set.of());
+    }
+
+    /** 单模板结构生成时随机旋转，不旋转的情形由上面各自的测试覆盖。 */
+    private static final List<SingleTemplate> SINGLE_TEMPLATES = List.of(
+            new SingleTemplate("cherry_cabin", "cherry_cabin", true),
+            new SingleTemplate("cherry_cabin_without_iss", "cherry_cabin", true),
+            new SingleTemplate("enchantress_footsteps_basalt_forge", "enchantress_footsteps_basalt_forge", false),
+            new SingleTemplate("enchantress_footsteps_crimson_cabin", "enchantress_footsteps_crimson_cabin", false),
+            new SingleTemplate("enchantress_footsteps_soulvalley_nook", "enchantress_footsteps_soulvalley_nook", false),
+            new SingleTemplate("enchantress_footsteps_soulvalley_nook_without_goety", "enchantress_footsteps_soulvalley_nook", false),
+            new SingleTemplate("enchantress_footsteps_warped_perch", "enchantress_footsteps_warped_perch", false));
+
+    static Stream<Arguments> rotatedSingleTemplates() {
+        return SINGLE_TEMPLATES.stream().flatMap(single -> Stream.of(Rotation.CLOCKWISE_90, Rotation.CLOCKWISE_180, Rotation.COUNTERCLOCKWISE_90)
+                .map(rotation -> Arguments.of(single.template(), rotation, single)));
+    }
+
+    @DisplayName("单模板结构旋转放置后内容与模板一致")
+    @ParameterizedTest(name = "{0} 旋转 {1}")
+    @MethodSource("rotatedSingleTemplates")
+    void rotatedSingleTemplate(String template, Rotation rotation, SingleTemplate single,
+                               Game game, @Plot.Size(x = 80, y = 128, z = 80) @Plot.Centered Plot plot, TestReporter reporter) {
+        Stage ctx = Stage.wideFlat(game, plot, reporter);
+        singleTemplate(ctx, single, rotation);
     }
 
     private static StructureStage.Placed placeHouse(Stage ctx, String biome) {

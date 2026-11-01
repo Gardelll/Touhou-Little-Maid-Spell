@@ -8,6 +8,7 @@ import com.github.yimeng261.maidspell.compat.irons_spellbooks.event.StaranchorSt
 import com.github.yimeng261.maidspell.compat.irons_spellbooks.registry.IronsSpellbooksCompatSpells;
 import com.github.yimeng261.maidspell.stagewright.support.Actors;
 import com.github.yimeng261.maidspell.stagewright.support.Checks;
+import com.github.yimeng261.maidspell.stagewright.support.Owners;
 import com.github.yimeng261.maidspell.stagewright.support.Reflect;
 import com.github.yimeng261.maidspell.stagewright.support.Stage;
 import io.redspace.ironsspellbooks.api.events.CounterSpellEvent;
@@ -30,9 +31,12 @@ import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.item.ItemEntity;
+import net.minecraft.world.inventory.MerchantMenu;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.trading.MerchantOffer;
@@ -103,6 +107,39 @@ class StellarDiscGuardTest {
                 ctx.check(index + 1 < offers.size() && offers.get(index + 1).getResult().is(Items.ENCHANTED_BOOK))
                         .as(label + "后一行是附魔书").isTrue();
             }
+        });
+    }
+
+    /** 买过星海唱片和别的东西后关掉再开交易栏，各行的使用次数都还在；两张唱片都不可堆叠。 */
+    @DisplayName("买过唱片后重开星之魔女的交易栏，各行使用次数不丢；两张唱片最多堆叠 1 个")
+    @Test
+    void reopenKeepsUses(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
+        Stage ctx = Stage.flat(game, plot, reporter);
+        ctx.run(() -> {
+            ctx.check(Actors.stack(STELLAR_DISC).getMaxStackSize()).as("星海唱片堆叠上限").isEqualTo(1);
+            ctx.check(Actors.stack(BATTLE_DISC).getMaxStackSize()).as("Vivaldi 唱片堆叠上限").isEqualTo(1);
+            MagicalWinefoxBossEntity witch = Actors.spawn(ctx, NS + "stellar_witch", 0, 0, 0, true);
+            witch.setPersistenceRequired();
+            ServerPlayer player = Owners.visitor(ctx, "TlmsDiscBuyer", 2, 0, 0);
+            player.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(Items.EMERALD));
+            player.interactOn(witch, InteractionHand.MAIN_HAND);
+            ctx.check(player.containerMenu instanceof MerchantMenu).as("第一次打开交易").isTrue();
+            MerchantOffers offers = witch.getOffers();
+            List<Integer> used = new ArrayList<>();
+            for (int i = 0; i < offers.size(); i++) {
+                MerchantOffer offer = offers.get(i);
+                int times = id(offer.getResult()).equals(STELLAR_DISC) ? 2 : (i % 2 == 0 && offer.getMaxUses() > 1 ? 1 : 0);
+                for (int n = 0; n < times; n++) {
+                    offer.increaseUses();
+                }
+                used.add(offer.getUses());
+            }
+            player.closeContainer();
+            player.interactOn(witch, InteractionHand.MAIN_HAND);
+            ctx.check(player.containerMenu instanceof MerchantMenu).as("重开交易").isTrue();
+            List<Integer> after = witch.getOffers().stream().map(MerchantOffer::getUses).toList();
+            ctx.check(after).as("重开后各行的使用次数").isEqualTo(used);
+            player.closeContainer();
         });
     }
 

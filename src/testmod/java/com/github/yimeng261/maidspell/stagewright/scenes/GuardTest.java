@@ -1,6 +1,7 @@
 package com.github.yimeng261.maidspell.stagewright.scenes;
 
 import com.github.tartaricacid.touhoulittlemaid.entity.passive.EntityMaid;
+import com.github.yimeng261.maidspell.compat.irons_spellbooks.entity.winefox.MagicalWinefoxBossEntity;
 import com.github.yimeng261.maidspell.Config;
 import com.github.yimeng261.maidspell.item.bauble.dreamCatCrystal.DreamCatCrystalBauble;
 import com.github.yimeng261.maidspell.item.bauble.fragrantIngenuity.FragrantIngenuityBauble;
@@ -29,6 +30,7 @@ import net.neoforged.neoforge.common.ModConfigSpec;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
@@ -188,6 +190,20 @@ class GuardTest {
         ctx.run(() -> thunderstormOwnerSideVehicle(ctx));
     }
 
+    @DisplayName("铁魔法雷暴：主人施放时不劈主人自己和主人的铁魔法、Goety、新生魔艺召唤物")
+    @Test
+    void thunderstormOwnerSparesSelfAndSummons(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
+        Stage ctx = Stage.flat(game, plot, reporter).fastForward();
+        ctx.run(() -> thunderstormOwnerSummons(ctx));
+    }
+
+    @DisplayName("铁魔法雷暴：敌人施放时放过鱿鱼、蝙蝠和未开战的星之魔女")
+    @Test
+    void thunderstormSparesAmbientAndIdleWitch(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
+        Stage ctx = Stage.flat(game, plot, reporter).fastForward();
+        ctx.run(() -> thunderstormAmbient(ctx));
+    }
+
     @DisplayName("梦云水晶与馥郁巧思的默认随机增益黑名单含 goety:explosive，候选效果里没有它")
     @Test
     void explosiveInEffectBlacklists(Game game, Plot plot, TestReporter reporter) {
@@ -320,6 +336,48 @@ class GuardTest {
         ctx.check(struck(strikes, wolf)).as("主人的宠物被劈").isFalse();
         ctx.check(struck(strikes, rider)).as("骑在主人宠物上的敌对乘客被劈").isFalse();
         ctx.check(struck(strikes, bystander)).as("无关的敌对生物被劈").isTrue();
+    }
+
+    private static MobEffect thunderstormEffect(Stage ctx) {
+        return BuiltInRegistries.MOB_EFFECT.getHolder(ResourceLocation.parse("irons_spellbooks:thunderstorm"))
+                .orElseThrow(() -> ctx.fail("irons_spellbooks:thunderstorm 未注册")).value();
+    }
+
+    /**
+     * 主人施放：主人自己和主人的各模组召唤物不被劈，无关的敌对生物作为落雷对照。
+     * 另一名玩家不属于主人一方，过滤规则不保护他，只记下是否被劈。没注册的召唤物跳过并记下。
+     */
+    private static void thunderstormOwnerSummons(Stage ctx) {
+        MobEffect effect = thunderstormEffect(ctx);
+        ServerPlayer owner = Owners.visitor(ctx, "TlmsStormOwner", 0, 0, 0);
+        ServerPlayer stranger = Owners.visitor(ctx, "TlmsStormStranger", 0, 0, 8);
+        Map<String, LivingEntity> spared = new LinkedHashMap<>();
+        spared.put("施法的主人自己", owner);
+        spared.put("主人的铁魔法召唤物", (LivingEntity) Owners.owned(ctx, "irons_spellbooks:summoned_zombie", owner, 5, 0, 0));
+        spared.put("主人的 Goety 仆从", (LivingEntity) Owners.owned(ctx, "goety:zombie_servant", owner, -5, 0, 0));
+        spared.put("主人的新生魔艺召唤物", (LivingEntity) Owners.owned(ctx, "ars_nouveau:summon_wolf", owner, 0, 0, 5));
+        spared.values().removeIf(java.util.Objects::isNull);
+        LivingEntity bystander = Actors.spawn(ctx, "minecraft:husk", 8, 0, 0, true);
+        List<Entity> strikes = strikeOnce(ctx, owner, effect);
+        spared.forEach((name, entity) -> ctx.check(struck(strikes, entity)).as(name + "被劈").isFalse());
+        ctx.record("另一名玩家被劈", struck(strikes, stranger));
+        ctx.check(struck(strikes, bystander)).as("无关的敌对生物被劈").isTrue();
+    }
+
+    /** 敌人施放：鱿鱼、蝙蝠这类水生与环境生物，以及坐着没开战的星之魔女都不被劈；骷髅作为落雷对照。 */
+    private static void thunderstormAmbient(Stage ctx) {
+        MobEffect effect = thunderstormEffect(ctx);
+        LivingEntity caster = Actors.spawn(ctx, "minecraft:zombie", 0, 0, -2, true);
+        LivingEntity squid = Actors.spawn(ctx, "minecraft:squid", 5, 0, 0, true);
+        LivingEntity bat = Actors.spawn(ctx, "minecraft:bat", -5, 0, 0, true);
+        MagicalWinefoxBossEntity witch = Actors.spawn(ctx, NS + "stellar_witch", 0, 0, 6, true);
+        LivingEntity skeleton = Actors.spawn(ctx, "minecraft:skeleton", 8, 0, 0, true);
+        ctx.check(witch.isBattleActive()).as("星之魔女开战").isFalse();
+        List<Entity> strikes = strikeOnce(ctx, caster, effect);
+        ctx.check(struck(strikes, squid)).as("鱿鱼被劈").isFalse();
+        ctx.check(struck(strikes, bat)).as("蝙蝠被劈").isFalse();
+        ctx.check(struck(strikes, witch)).as("未开战的星之魔女被劈").isFalse();
+        ctx.check(struck(strikes, skeleton)).as("骷髅被劈").isTrue();
     }
 
     /** 新生成的配置里，梦云水晶与馥郁巧思的随机增益黑名单都含 goety:explosive，候选效果里也就没有它。 */

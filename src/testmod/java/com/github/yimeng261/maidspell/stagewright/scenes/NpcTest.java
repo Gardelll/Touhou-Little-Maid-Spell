@@ -45,6 +45,7 @@ import net.minecraft.world.entity.npc.VillagerType;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.MerchantMenu;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.item.SpawnEggItem;
 import net.minecraft.world.item.component.CustomData;
 import net.minecraft.world.item.crafting.RecipeHolder;
@@ -121,6 +122,26 @@ class NpcTest {
     void elfTemplarMenuInvalidWhenNpcGone(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
         Stage ctx = Stage.flat(game, plot, reporter).fastForward();
         ctx.run(() -> npcGone(ctx, TEMPLAR));
+    }
+
+    @DisplayName("星之魔女正与一名玩家交易时，第二名玩家拿绿宝石也打不开交易")
+    @Test
+    void witchSecondPlayerCannotOpen(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
+        Stage ctx = Stage.flat(game, plot, reporter).fastForward();
+        ctx.run(() -> secondPlayer(ctx, WITCH));
+    }
+
+    @DisplayName("星之魔女的交易玩家走远后释放，另一名玩家可以打开交易")
+    @Test
+    void witchReleasedWhenTraderLeaves(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
+        traderLeaves(Stage.flat(game, plot, reporter).fastForward(), WITCH);
+    }
+
+    @DisplayName("星之魔女被授权移除后，玩家的交易界面失效")
+    @Test
+    void witchMenuInvalidWhenNpcGone(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
+        Stage ctx = Stage.flat(game, plot, reporter).fastForward();
+        ctx.run(() -> npcGone(ctx, WITCH));
     }
 
     @DisplayName("普通村民的交易不受互斥影响，A 关掉后 B 可继续交易")
@@ -333,10 +354,19 @@ class NpcTest {
         return player.containerMenu instanceof MerchantMenu;
     }
 
+    /** 来交易的测试玩家；星之魔女要手持绿宝石右击才开交易。 */
+    private static ServerPlayer trader(Stage ctx, String type, String name, int dx) {
+        ServerPlayer player = Owners.visitor(ctx, name, dx, 0, 0);
+        if (type.equals(WITCH)) {
+            player.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(Items.EMERALD));
+        }
+        return player;
+    }
+
     private static void secondPlayer(Stage ctx, String type) {
         Mob npc = npc(ctx, type);
-        ServerPlayer a = Owners.visitor(ctx, "TlmsTraderA", 2, 0, 0);
-        ServerPlayer b = Owners.visitor(ctx, "TlmsTraderB", -2, 0, 0);
+        ServerPlayer a = trader(ctx, type, "TlmsTraderA", 2);
+        ServerPlayer b = trader(ctx, type, "TlmsTraderB", -2);
         a.interactOn(npc, InteractionHand.MAIN_HAND);
         ctx.check(trading(a)).as("A 打开交易").isTrue();
         b.interactOn(npc, InteractionHand.MAIN_HAND);
@@ -348,8 +378,8 @@ class NpcTest {
     private static void traderLeaves(Stage ctx, String type) {
         Trade trade = ctx.get(() -> {
             Mob npc = npc(ctx, type);
-            ServerPlayer a = Owners.visitor(ctx, "TlmsTraderA", 2, 0, 0);
-            ServerPlayer b = Owners.visitor(ctx, "TlmsTraderB", -2, 0, 0);
+            ServerPlayer a = trader(ctx, type, "TlmsTraderA", 2);
+            ServerPlayer b = trader(ctx, type, "TlmsTraderB", -2);
             a.interactOn(npc, InteractionHand.MAIN_HAND);
             ctx.check(trading(a)).as("A 打开交易").isTrue();
             AbstractContainerMenu opened = a.containerMenu;
@@ -366,10 +396,15 @@ class NpcTest {
 
     private static void npcGone(Stage ctx, String type) {
         Mob npc = npc(ctx, type);
-        ServerPlayer a = Owners.visitor(ctx, "TlmsTraderA", 2, 0, 0);
+        ServerPlayer a = trader(ctx, type, "TlmsTraderA", 2);
         a.interactOn(npc, InteractionHand.MAIN_HAND);
         ctx.check(trading(a)).as("A 打开交易").isTrue();
-        npc.discard();
+        if (type.equals(WITCH)) {
+            // 星之魔女拒绝普通移除，走授权清除
+            Actors.cleanupEntity(npc);
+        } else {
+            npc.discard();
+        }
         ctx.check(a.containerMenu.stillValid(a)).as("NPC 消失后 A 的交易界面仍有效").isFalse();
     }
 

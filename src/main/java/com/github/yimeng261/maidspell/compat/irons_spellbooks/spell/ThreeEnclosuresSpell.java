@@ -166,4 +166,15 @@ public class ThreeEnclosuresSpell extends AbstractSpell implements BossExclusive
     public float getWallDamage(int spellLevel, LivingEntity caster) {
         return Math.max(1.0F, getSpellPower(spellLevel, caster) * 0.25F);
     }
+
+    /** 超类的具体方法优先于接口默认方法，必须显式覆写。 */
+    @Override
+    public boolean allowCrafting() {
+        return false;
+    }
+
+    @Override
+    public boolean allowLooting() {
+        return false;
+    }
 }

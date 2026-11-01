@@ -6,6 +6,10 @@ import com.github.yimeng261.maidspell.stagewright.support.Actors;
 import com.github.yimeng261.maidspell.stagewright.support.Owners;
 import com.github.yimeng261.maidspell.stagewright.support.Stage;
 import com.github.yimeng261.maidspell.winefox.WinefoxChallengeProgress;
+import com.github.yimeng261.maidspell.stagewright.support.Reflect;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.world.entity.ExperienceOrb;
+import net.minecraft.world.entity.item.ItemEntity;
 import net.magicterra.stagewright.test.Game;
 import net.magicterra.stagewright.test.Plot;
 import net.magicterra.stagewright.test.Scene;
@@ -40,6 +44,7 @@ class WinefoxChallengeTallyTest {
     private static final String WITCH = NS + "stellar_witch";
     /** 低于单次上限和高伤阈值，不触发高伤保护。 */
     private static final float HIT = 10.0F;
+    private static final String NEBULA_CORE = NS + "nebula_core";
 
     private record Duel(MagicalWinefoxBossEntity witch, ServerPlayer challenger, Goal goal, int[] lastHit) {
     }
@@ -58,6 +63,8 @@ class WinefoxChallengeTallyTest {
             ctx.check(duel.witch().isDefeated()).as("星之魔女战败").isTrue();
             ctx.check(duel.witch().isRestricted()).as("受限").isTrue();
             ctx.check(WinefoxChallengeProgress.getWins(ctx.server(), duel.challenger().getUUID())).as("挑战者胜场").isEqualTo(winsBefore);
+            ctx.check(experience(duel)).as("战败掉的经验").isEqualTo(1200);
+            ctx.check(dropped(duel, NEBULA_CORE)).as("受限时掉的星云核心").isEqualTo(0);
         });
     }
 
@@ -78,6 +85,8 @@ class WinefoxChallengeTallyTest {
             ctx.check(duel.witch().isDefeated()).as("星之魔女战败").isTrue();
             ctx.check(duel.witch().isRestricted()).as("受限").isFalse();
             ctx.check(WinefoxChallengeProgress.getWins(ctx.server(), duel.challenger().getUUID())).as("挑战者胜场").isEqualTo(winsBefore + 1);
+            ctx.check(experience(duel)).as("战败掉的经验").isEqualTo(1200);
+            ctx.check(dropped(duel, NEBULA_CORE)).as("正常获胜掉的星云核心").isEqualTo(1);
         });
     }
 
@@ -122,6 +131,18 @@ class WinefoxChallengeTallyTest {
             return found;
         });
         return new Duel(witch, challenger, goal, new int[]{Integer.MIN_VALUE});
+    }
+
+    /** 战败位置附近经验球的经验合计（合并的经验球按个数计）。 */
+    private static int experience(Duel duel) {
+        return duel.witch().level().getEntitiesOfClass(ExperienceOrb.class, duel.witch().getBoundingBox().inflate(12)).stream()
+                .mapToInt(orb -> orb.getValue() * (int) Reflect.field(orb, ExperienceOrb.class, "count")).sum();
+    }
+
+    private static int dropped(Duel duel, String item) {
+        return duel.witch().level().getEntitiesOfClass(ItemEntity.class, duel.witch().getBoundingBox().inflate(12)).stream()
+                .filter(entity -> BuiltInRegistries.ITEM.getKey(entity.getItem().getItem()).toString().equals(item))
+                .mapToInt(entity -> entity.getItem().getCount()).sum();
     }
 
     private static int wins(Stage ctx, Duel duel) {

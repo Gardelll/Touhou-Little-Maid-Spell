@@ -28,6 +28,8 @@ public final class Stage {
     public static final int FLAT_HALF = 16;
     /** {@link #fastForward} 的目标 tick 速率：远高于服务端跟得上的速度，实际就是不停顿地连续 tick。 */
     private static final float FAST_TICKS_PER_SECOND = 1000F;
+    /** 等区块升到实体 tick 的上限（tick）。 */
+    public static final int ENTITY_TICKING_WAIT = 600;
 
     private final Game game;
     private final Plot plot;
@@ -43,6 +45,29 @@ public final class Stage {
         this.server = game.onServer(s -> s);
         this.origin = origin;
         game.afterTest(s -> runCleanups());
+        awaitEntityTicking(plot.at(plot.min().getX(), 0, plot.min().getZ()), plot.at(plot.max().getX(), 0, plot.max().getZ()));
+    }
+
+    /**
+     * 等 plot 覆盖的区块都能 tick 实体。区块加载后升到实体 tick 由后台线程推进，CPU 吃紧时会落后几百 tick；
+     * 没升上去时女仆不 tick（饰品不生效）、新加的实体也查不到。
+     */
+    private void awaitEntityTicking(BlockPos from, BlockPos to) {
+        int minX = Math.min(from.getX(), to.getX()) >> 4;
+        int maxX = Math.max(from.getX(), to.getX()) >> 4;
+        int minZ = Math.min(from.getZ(), to.getZ()) >> 4;
+        int maxZ = Math.max(from.getZ(), to.getZ()) >> 4;
+        await(ENTITY_TICKING_WAIT, "场地区块可以 tick 实体", () -> {
+            ServerLevel level = level();
+            for (int x = minX; x <= maxX; x++) {
+                for (int z = minZ; z <= maxZ; z++) {
+                    if (!level.isPositionEntityTicking(new BlockPos(x << 4, from.getY(), z << 4))) {
+                        return false;
+                    }
+                }
+            }
+            return true;
+        });
     }
 
     /** 悬空的空场地：原点就是 plot 的 (0, 0, 0)，周围全是空气。 */

@@ -190,7 +190,7 @@ class EnderPocketTest {
         ServerLevel nether = ctx.get(() -> ctx.server().getLevel(Level.NETHER));
         EntityMaid maid = ctx.get(() -> pocketMaid(ctx, nether, netherSpot(ctx), owner));
         UUID id = maid.getUUID();
-        ctx.await(200, "下界女仆加载", () -> nether.getEntity(maid.getUUID()) == maid);
+        ctx.await(Stage.ENTITY_TICKING_WAIT, "下界女仆加载", () -> nether.getEntity(maid.getUUID()) == maid);
         ctx.await(200, "下界女仆出现在列表里", () -> listed(owner).contains(id));
         ctx.run(() -> {
             ctx.check(openRemote(owner, maid)).as("建立远程会话").isTrue();
@@ -344,7 +344,7 @@ class EnderPocketTest {
         ServerPlayer owner = ctx.get(() -> Owners.visitor(ctx, "TlmsPocketRemote", 0, 0, -3));
         ServerLevel nether = ctx.get(() -> ctx.server().getLevel(Level.NETHER));
         EntityMaid maid = ctx.get(() -> pocketMaid(ctx, nether, netherSpot(ctx), owner));
-        ctx.await(200, "下界女仆加载", () -> nether.getEntity(maid.getUUID()) == maid);
+        ctx.await(Stage.ENTITY_TICKING_WAIT, "下界女仆加载", () -> nether.getEntity(maid.getUUID()) == maid);
         ctx.await(200, "下界女仆出现在列表里", () -> listed(owner).contains(maid.getUUID()));
         ctx.run(() -> {
             ctx.check(ctx.level().getEntity(maid.getId())).as("主世界按实体 ID 找到下界女仆").isNull();
@@ -378,7 +378,7 @@ class EnderPocketTest {
         ServerPlayer forger = ctx.get(() -> Owners.visitor(ctx, "TlmsPocketDev2", 0, 0, -5));
         ServerLevel nether = ctx.get(() -> ctx.server().getLevel(Level.NETHER));
         EntityMaid maid = ctx.get(() -> pocketMaid(ctx, nether, netherSpot(ctx), owner));
-        ctx.await(200, "下界女仆加载", () -> nether.getEntity(maid.getUUID()) == maid);
+        ctx.await(Stage.ENTITY_TICKING_WAIT, "下界女仆加载", () -> nether.getEntity(maid.getUUID()) == maid);
         ctx.await(200, "下界女仆出现在列表里", () -> listed(owner).contains(maid.getUUID()));
         ctx.run(() -> {
             ctx.check(openRemote(owner, maid)).as("建立跨维度远程会话").isTrue();

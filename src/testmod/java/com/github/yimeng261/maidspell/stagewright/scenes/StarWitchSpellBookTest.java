@@ -8,6 +8,7 @@ import com.github.yimeng261.maidspell.stagewright.support.Actors;
 import com.github.yimeng261.maidspell.stagewright.support.Maids;
 import com.github.yimeng261.maidspell.stagewright.support.Stage;
 import io.redspace.ironsspellbooks.api.spells.ISpellContainer;
+import io.redspace.ironsspellbooks.api.spells.SpellData;
 import net.magicterra.stagewright.test.Game;
 import net.magicterra.stagewright.test.Plot;
 import net.magicterra.stagewright.test.Scene;
@@ -53,6 +54,44 @@ class StarWitchSpellBookTest {
     void largerContainerNotLowered(Game game, Plot plot, TestReporter reporter) {
         Stage ctx = Stage.sky(game, plot, reporter);
         ctx.run(() -> largerContainer(ctx));
+    }
+
+    /** 数据包覆盖出厂模板的场景：25 格、index 20–24 也有法术，经铁魔法的组件解码后不越界，法术都在。 */
+    @DisplayName("25 格法术书升级后经铁魔法解码不崩溃，25 格、index 20–24 的法术都在")
+    @Test
+    void largerContainerDecodes(Game game, Plot plot, TestReporter reporter) {
+        Stage ctx = Stage.sky(game, plot, reporter);
+        ctx.run(() -> {
+            CompoundTag components = new CompoundTag();
+            CompoundTag container = new CompoundTag();
+            container.putInt("maxSpells", 25);
+            container.putBoolean("mustEquip", false);
+            container.putBoolean("spellWheel", true);
+            ListTag spells = new ListTag();
+            for (int index = 0; index < 25; index++) {
+                CompoundTag spell = new CompoundTag();
+                spell.putString("id", "irons_spellbooks:firebolt");
+                spell.putInt("index", index);
+                spell.putInt("level", 1 + index % 5);
+                spell.putBoolean("locked", false);
+                spells.add(spell);
+            }
+            container.put("data", spells);
+            components.put(CONTAINER, container);
+            CompoundTag maidData = maidWith(item(BOOK_ID, components));
+
+            MaidOriginData.upgradeStarWitchSpellBookData(maidData);
+
+            ItemStack book = ItemStack.parse(ctx.server().registryAccess(), firstItem(maidData)).orElse(ItemStack.EMPTY);
+            ctx.check(book.isEmpty()).as("法术书解码失败").isFalse();
+            ISpellContainer decoded = ISpellContainer.get(book);
+            ctx.check(decoded.getMaxSpellCount()).as("解码后的容量").isEqualTo(25);
+            for (int index = 20; index < 25; index++) {
+                SpellData data = decoded.getSpellAtIndex(index);
+                ctx.check(data == SpellData.EMPTY ? "空" : data.getSpell().getSpellId() + "@" + data.getLevel())
+                        .as("index " + index + " 的法术").isEqualTo("irons_spellbooks:firebolt@" + (1 + index % 5));
+            }
+        });
     }
 
     @DisplayName("星影长剑等非法术书物品自带的容器容量不被修改")

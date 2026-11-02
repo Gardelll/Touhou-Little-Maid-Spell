@@ -7,7 +7,9 @@ import com.github.tartaricacid.touhoulittlemaid.entity.ai.brain.task.MaidRangedW
 import com.github.tartaricacid.touhoulittlemaid.entity.passive.EntityMaid;
 import com.github.tartaricacid.touhoulittlemaid.init.InitSounds;
 import com.github.tartaricacid.touhoulittlemaid.util.SoundUtil;
+import com.github.yimeng261.maidspell.Config;
 import com.github.yimeng261.maidspell.api.IAuthoritativeHealth;
+import com.github.yimeng261.maidspell.api.SpellCombatTargets;
 import com.github.yimeng261.maidspell.compat.MaidSpellAllyResolver;
 import com.github.yimeng261.maidspell.compat.irons_spellbooks.IronsSpellbooksDataBridge;
 import com.github.yimeng261.maidspell.item.MaidSpellItems;
@@ -39,7 +41,12 @@ import org.slf4j.Logger;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.function.BiPredicate;
 import java.util.function.Predicate;
 
 /**
@@ -52,6 +59,10 @@ public class SpellCombatMeleeTask implements IRangedAttackTask {
     public static final ResourceLocation UID = ResourceLocation.fromNamespaceAndPath("maidspell", "spell_combat_melee");
     private static final MutableComponent NAME = Component.translatable("task.maidspell.spell_combat");
     private static float SPELL_RANGE;
+    /** 视线控制行为的优先级 */
+    public static final int LOOK_PRIORITY = 1;
+    /** 战斗行为的优先级，附属模组加入的战斗行为宜用同一优先级 */
+    public static final int COMBAT_PRIORITY = 2;
 
     public static void setSpellRange(Float range){
         SPELL_RANGE = range;
@@ -90,24 +101,21 @@ public class SpellCombatMeleeTask implements IRangedAttackTask {
 
 
 
+    /*
+     * 行为表注入点：以下 create*Behavior 与 finishBrainTasks 的方法名和签名保持稳定，附属模组可用 mixin 挂在返回处替换或包装。
+     * 远程任务继承本类，只覆写了 createSpellCastingBehavior 与 createStrafingBehavior，挂这两个方法时两个类都要挂。
+     */
+
     @Override
     public @NotNull List<Pair<Integer, BehaviorControl<? super EntityMaid>>> createBrainTasks(@NotNull EntityMaid maid) {
-        BehaviorControl<EntityMaid> supplementedTask = StartAttacking.create(this::hasSpellBook, this::findValidAttackTarget);
-        BehaviorControl<EntityMaid> findTargetTask = StopAttackingIfTargetInvalid.create(target -> farAway(target, maid) || !SpellCombatMeleeTask.isValidSpellCombatTarget(maid, target));
-        BehaviorControl<EntityMaid> moveToTargetTask = MaidRangedWalkToTarget.create(0.6f);
-        BehaviorControl<EntityMaid> spellCastingTask = createSpellCastingBehavior(false);
-        BehaviorControl<EntityMaid> strafingTask = new SpellStrafingTask();
-        // 添加高优先级的视线控制任务，阻止女仆看向玩家
-        BehaviorControl<EntityMaid> lookControlTask = new CombatLookControlTask();
-
-        return Lists.newArrayList(
-                Pair.of(1, lookControlTask),      // 最高优先级，控制视线
-                Pair.of(2, supplementedTask),     // 提高战斗行为优先级
-                Pair.of(2, findTargetTask),
-                Pair.of(2, moveToTargetTask),
-                Pair.of(2, spellCastingTask),
-                Pair.of(2, strafingTask)
-        );
+        return finishBrainTasks(maid, false, Lists.newArrayList(
+                Pair.of(LOOK_PRIORITY, createLookBehavior(maid, false)),
+                Pair.of(COMBAT_PRIORITY, createStartAttackingBehavior(maid, false)),
+                Pair.of(COMBAT_PRIORITY, createStopAttackingBehavior(maid, false)),
+                Pair.of(COMBAT_PRIORITY, createWalkToTargetBehavior(maid)),
+                Pair.of(COMBAT_PRIORITY, createSpellCastingBehavior(false)),
+                Pair.of(COMBAT_PRIORITY, createStrafingBehavior(maid))
+        ));
     }
 
     /**
@@ -115,25 +123,58 @@ public class SpellCombatMeleeTask implements IRangedAttackTask {
      */
     @Override
     public List<Pair<Integer, BehaviorControl<? super EntityMaid>>> createRideBrainTasks(EntityMaid maid) {
-        BehaviorControl<EntityMaid> supplementedTask = StartAttacking.create(this::canCastInRidePose, this::findValidAttackTarget);
-        BehaviorControl<EntityMaid> findTargetTask = StopAttackingIfTargetInvalid.create(target ->
-                !isRidePoseSpellcastingEnabled(maid)
-                        || farAway(target, maid)
-                        || !SpellCombatMeleeTask.isValidSpellCombatTarget(maid, target));
-        BehaviorControl<EntityMaid> spellCastingTask = createSpellCastingBehavior(true);
-        // 添加高优先级的视线控制任务，阻止女仆看向玩家
-        BehaviorControl<EntityMaid> lookControlTask = new CombatLookControlTask(true);
-
-        return Lists.newArrayList(
-                Pair.of(1, lookControlTask),      // 最高优先级，控制视线
-                Pair.of(2, supplementedTask),     // 提高战斗行为优先级
-                Pair.of(2, findTargetTask),
-                Pair.of(2, spellCastingTask)
-        );
+        return finishBrainTasks(maid, true, Lists.newArrayList(
+                Pair.of(LOOK_PRIORITY, createLookBehavior(maid, true)),
+                Pair.of(COMBAT_PRIORITY, createStartAttackingBehavior(maid, true)),
+                Pair.of(COMBAT_PRIORITY, createStopAttackingBehavior(maid, true)),
+                Pair.of(COMBAT_PRIORITY, createSpellCastingBehavior(true))
+        ));
     }
 
+    /** 视线控制：战斗中只看攻击目标，不看向玩家（注入点） */
+    protected BehaviorControl<EntityMaid> createLookBehavior(EntityMaid maid, boolean ridePose) {
+        return new CombatLookControlTask(ridePose);
+    }
+
+    /** 索敌并锁定攻击目标（注入点） */
+    protected BehaviorControl<EntityMaid> createStartAttackingBehavior(EntityMaid maid, boolean ridePose) {
+        return StartAttacking.create(ridePose ? this::canCastInRidePose : this::hasSpellBook, this::findValidAttackTarget);
+    }
+
+    /** 目标失效或走远时放弃（注入点） */
+    protected BehaviorControl<EntityMaid> createStopAttackingBehavior(EntityMaid maid, boolean ridePose) {
+        return StopAttackingIfTargetInvalid.create(target -> (ridePose && !isRidePoseSpellcastingEnabled(maid))
+                || farAway(target, maid)
+                || !SpellCombatMeleeTask.isValidSpellCombatTarget(maid, target));
+    }
+
+    /** 走向目标，只在普通姿态（注入点） */
+    protected BehaviorControl<EntityMaid> createWalkToTargetBehavior(EntityMaid maid) {
+        return MaidRangedWalkToTarget.create(0.6f);
+    }
+
+    /** 施法（注入点；远程任务覆写） */
     protected BehaviorControl<EntityMaid> createSpellCastingBehavior(boolean ridePose) {
         return new SpellCombatBehavior(ridePose);
+    }
+
+    /** 绕目标走位并保持距离，只在普通姿态（注入点；远程任务覆写） */
+    protected BehaviorControl<EntityMaid> createStrafingBehavior(EntityMaid maid) {
+        return new SpellStrafingTask();
+    }
+
+    /**
+     * 组装完的行为表经此返回，普通与坐下/骑乘都经过这里；要增删行为的附属模组挂在这里（注入点）
+     */
+    protected List<Pair<Integer, BehaviorControl<? super EntityMaid>>> finishBrainTasks(
+            EntityMaid maid, boolean ridePose, List<Pair<Integer, BehaviorControl<? super EntityMaid>>> tasks) {
+        return tasks;
+    }
+
+    /** 近战任务的站位距离带 {@code {min, max}}，与本任务走位一致，已按最大施法距离截断 */
+    public static double[] meleeEngageBand() {
+        double max = Config.maxSpellRange;
+        return new double[]{Math.min(Math.max(0, Config.meleeRange - 1), max), Math.min(Config.meleeRange + 0.5, max)};
     }
 
     /** 坐下或骑乘中的女仆只有佩戴法术射表才索敌施法。 */
@@ -158,7 +199,7 @@ public class SpellCombatMeleeTask implements IRangedAttackTask {
                         && isValidSpellCombatTarget(maid, target)));
     }
 
-    protected static boolean isValidSpellCombatTarget(EntityMaid maid, LivingEntity target) {
+    public static boolean isValidSpellCombatTarget(EntityMaid maid, LivingEntity target) {
         if (maid == null || target == null || target instanceof Player) {
             return false;
         }
@@ -171,7 +212,31 @@ public class SpellCombatMeleeTask implements IRangedAttackTask {
         if (target instanceof IMaid sitting && sitting.isMaidInSittingPose()) {
             return false;
         }
-        return !MaidSpellAllyResolver.areFriendly(maid, target);
+        return !MaidSpellAllyResolver.areFriendly(maid, target) && passesTargetFilters(maid, target);
+    }
+
+    private static final List<BiPredicate<EntityMaid, LivingEntity>> TARGET_FILTERS = new CopyOnWriteArrayList<>();
+    private static final Set<BiPredicate<EntityMaid, LivingEntity>> FAILED_TARGET_FILTERS = ConcurrentHashMap.newKeySet();
+
+    /** 外部模组请经 {@link SpellCombatTargets#addTargetFilter} 注册 */
+    public static void addTargetFilter(BiPredicate<EntityMaid, LivingEntity> filter) {
+        TARGET_FILTERS.add(Objects.requireNonNull(filter, "filter"));
+    }
+
+    /** 已注册的过滤器全部放行；过滤器抛异常时记一次警告并视为放行 */
+    private static boolean passesTargetFilters(EntityMaid maid, LivingEntity target) {
+        for (BiPredicate<EntityMaid, LivingEntity> filter : TARGET_FILTERS) {
+            try {
+                if (!filter.test(maid, target)) {
+                    return false;
+                }
+            } catch (RuntimeException e) {
+                if (FAILED_TARGET_FILTERS.add(filter)) {
+                    LOGGER.warn("Spell combat target filter {} threw; ignoring it", filter.getClass().getName(), e);
+                }
+            }
+        }
+        return true;
     }
 
     @Override
@@ -326,10 +391,6 @@ public class SpellCombatMeleeTask implements IRangedAttackTask {
      */
     static class CombatLookControlTask extends Behavior<EntityMaid> {
         private final boolean ridePose;
-
-        CombatLookControlTask() {
-            this(false);
-        }
 
         CombatLookControlTask(boolean ridePose) {
             super(Map.of(

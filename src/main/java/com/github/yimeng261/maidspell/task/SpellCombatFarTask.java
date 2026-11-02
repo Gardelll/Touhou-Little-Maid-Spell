@@ -1,12 +1,9 @@
 package com.github.yimeng261.maidspell.task;
 
-import com.github.tartaricacid.touhoulittlemaid.api.task.IAttackTask;
-import com.github.tartaricacid.touhoulittlemaid.entity.ai.brain.task.MaidRangedWalkToTarget;
 import com.github.tartaricacid.touhoulittlemaid.entity.passive.EntityMaid;
+import com.github.yimeng261.maidspell.Config;
 import com.github.yimeng261.maidspell.item.MaidSpellItems;
 import com.github.yimeng261.maidspell.spell.SimplifiedSpellCaster;
-import com.google.common.collect.Lists;
-import com.mojang.datafixers.util.Pair;
 import com.mojang.logging.LogUtils;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
@@ -15,14 +12,11 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.behavior.BehaviorControl;
-import net.minecraft.world.entity.ai.behavior.StartAttacking;
-import net.minecraft.world.entity.ai.behavior.StopAttackingIfTargetInvalid;
 import net.minecraft.world.entity.ai.memory.MemoryModuleType;
 import net.minecraft.world.item.ItemStack;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 
-import java.util.List;
 
 
 /**
@@ -66,23 +60,14 @@ public class SpellCombatFarTask extends SpellCombatMeleeTask {
 
 
     @Override
-    public @NotNull List<Pair<Integer, BehaviorControl<? super EntityMaid>>> createBrainTasks(@NotNull EntityMaid maid) {
-        BehaviorControl<EntityMaid> supplementedTask = StartAttacking.create(this::hasSpellBook, this::findValidAttackTarget);
-        BehaviorControl<EntityMaid> findTargetTask = StopAttackingIfTargetInvalid.create(target -> farAway(target, maid) || !SpellCombatMeleeTask.isValidSpellCombatTarget(maid, target));
-        BehaviorControl<EntityMaid> moveToTargetTask = MaidRangedWalkToTarget.create(0.6f);
-        BehaviorControl<EntityMaid> spellCastingTask = createSpellCastingBehavior(false);
-        BehaviorControl<EntityMaid> strafingTask = new SpellStrafingTask();
-        // 添加高优先级的视线控制任务，阻止女仆看向玩家
-        BehaviorControl<EntityMaid> lookControlTask = new CombatLookControlTask();
+    protected BehaviorControl<EntityMaid> createStrafingBehavior(EntityMaid maid) {
+        return new SpellStrafingTask();
+    }
 
-        return Lists.newArrayList(
-                Pair.of(1, lookControlTask),      // 最高优先级，控制视线
-                Pair.of(2, supplementedTask),     // 提高战斗行为优先级
-                Pair.of(2, findTargetTask),
-                Pair.of(2, moveToTargetTask),
-                Pair.of(2, spellCastingTask),
-                Pair.of(2, strafingTask)
-        );
+    /** 远程任务的站位距离带 {@code {min, max}}，与本任务走位一致，已按最大施法距离截断 */
+    public static double[] farEngageBand() {
+        double max = Config.maxSpellRange;
+        return new double[]{Math.min(Config.farRange, max), Math.min(Config.farRange + 5, max)};
     }
 
     @Override

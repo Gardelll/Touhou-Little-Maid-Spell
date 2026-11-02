@@ -185,11 +185,17 @@ public abstract class IMaidSpellData {
     }
 
     /**
-     * 更新所有法术的冷却时间(每秒一次)
+     * 所有法术的冷却减少一 tick，每 tick 调用一次
      */
     public void updateCooldowns() {
-        spellCooldowns.replaceAll((spellId, cooldown) -> Math.max(0, cooldown - 20));
-        spellCooldowns.entrySet().removeIf(entry -> entry.getValue() <= 0);
+        if (spellCooldowns.isEmpty()) {
+            return;
+        }
+        spellCooldowns.entrySet().removeIf(entry -> {
+            int remaining = entry.getValue() - 1;
+            entry.setValue(remaining);
+            return remaining <= 0;
+        });
     }
 
     public void refundCooldowns(double refundRatio) {

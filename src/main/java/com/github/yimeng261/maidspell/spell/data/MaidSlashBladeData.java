@@ -119,7 +119,7 @@ public class MaidSlashBladeData extends IMaidSpellData {
 
     @Override
     public void updateCooldowns() {
-        cooldown -= 20;
+        cooldown--;
     }
 
     @Override

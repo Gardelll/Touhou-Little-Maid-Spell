@@ -170,7 +170,7 @@ public abstract class ISpellBookProvider<T extends IMaidSpellData, S> {
     }
 
     /**
-     * 更新法术冷却：每次一秒
+     * 更新法术冷却：每次一 tick
      */
     public void updateCooldown(EntityMaid maid){
         getData(maid).updateCooldowns();

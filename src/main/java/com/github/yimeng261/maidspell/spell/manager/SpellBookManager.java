@@ -231,7 +231,7 @@ public class SpellBookManager {
 
 
     /**
-     * 更新法术冷却：每次一秒
+     * 更新法术冷却：每次一 tick
      */
     public void updateCooldown(EntityMaid maid){
         for (ISpellBookProvider<?, ?> provider : getProviders()) {
@@ -247,6 +247,9 @@ public class SpellBookManager {
 
 
     public void tick(EntityMaid maid){
+        // 冷却先走，下面清理失效目标时会提前返回
+        updateCooldown(maid);
+
         // provider tick 之前先清理失效的 ATTACK_TARGET，避免持续施法/连段对死亡或被移除的实体生效。
         LivingEntity attackTarget = maid.getBrain().getMemory(MemoryModuleType.ATTACK_TARGET).orElse(null);
         if (attackTarget != null && !isValidTarget(attackTarget)) {
@@ -276,11 +279,6 @@ public class SpellBookManager {
                 }
             }
             provider.processContinuousCasting(maid);
-        }
-
-        // 每秒更新法术冷却
-        if(maid.tickCount % 20 == 0){
-            updateCooldown(maid);
         }
     }
 

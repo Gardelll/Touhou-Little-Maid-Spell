@@ -1,6 +1,7 @@
 package com.github.yimeng261.maidspell.compat;
 
 import com.github.tartaricacid.touhoulittlemaid.entity.passive.EntityMaid;
+import com.github.yimeng261.maidspell.api.MaidSpellAllies;
 import com.github.yimeng261.maidspell.compat.goety.GoetyMinionOwners;
 import com.github.yimeng261.maidspell.compat.goety.GoetySpellEntityOwners;
 import com.github.yimeng261.maidspell.compat.irons_spellbooks.IronsSpellEntityOwners;
@@ -22,10 +23,12 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Predicate;
 
 /**
@@ -42,6 +45,9 @@ public final class MaidSpellAllyResolver {
     private static final Map<Class<?>, Boolean> OWNER_CAPABLE_CACHE = new ConcurrentHashMap<>();
     /** 每类实体在各桥接表里命中的表项，按表序；常见实体为空表 */
     private static final Map<Class<?>, List<BridgedGetter>> BRIDGED_GETTERS = new ConcurrentHashMap<>();
+    private static final List<MaidSpellAllies.AllyRule> ALLY_RULES = new CopyOnWriteArrayList<>();
+    /** 抛过异常的规则，只记一次警告 */
+    private static final Set<MaidSpellAllies.AllyRule> FAILED_ALLY_RULES = ConcurrentHashMap.newKeySet();
 
     private MaidSpellAllyResolver() {
     }
@@ -53,10 +59,10 @@ public final class MaidSpellAllyResolver {
         if (hasExplicitTeamAlliance(first, second)) {
             return true;
         }
-        if (!couldHaveOwner(first) && !couldHaveOwner(second)) {
-            return false;
+        if ((couldHaveOwner(first) || couldHaveOwner(second)) && sharesAffinity(affinity(first), second)) {
+            return true;
         }
-        return sharesAffinity(affinity(first), second);
+        return matchesAllyRules(first, second);
     }
 
     /**
@@ -67,7 +73,37 @@ public final class MaidSpellAllyResolver {
         boolean casterCouldHaveOwner = couldHaveOwner(caster);
         return target -> target == caster
                 || hasExplicitTeamAlliance(caster, target)
-                || ((casterCouldHaveOwner || couldHaveOwner(target)) && sharesAffinity(casterAffinity, target));
+                || ((casterCouldHaveOwner || couldHaveOwner(target)) && sharesAffinity(casterAffinity, target))
+                || matchesAllyRules(caster, target);
+    }
+
+    /** 外部模组请经 {@link MaidSpellAllies#registerRule} 注册，约定见 {@link MaidSpellAllies.AllyRule} */
+    public static void registerAllyRule(MaidSpellAllies.AllyRule rule) {
+        ALLY_RULES.add(Objects.requireNonNull(rule, "rule"));
+    }
+
+    /** 已注册规则判为友好；两个方向各查一次，规则不必自行处理对称 */
+    private static boolean matchesAllyRules(Entity first, Entity second) {
+        if (ALLY_RULES.isEmpty()) {
+            return false;
+        }
+        for (MaidSpellAllies.AllyRule rule : ALLY_RULES) {
+            if (testAllyRule(rule, first, second) || testAllyRule(rule, second, first)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static boolean testAllyRule(MaidSpellAllies.AllyRule rule, Entity first, Entity second) {
+        try {
+            return rule.areAllied(first, second);
+        } catch (RuntimeException e) {
+            if (FAILED_ALLY_RULES.add(rule)) {
+                LOGGER.warn("Ally rule {} threw; treating as not allied", rule.getClass().getName(), e);
+            }
+            return false;
+        }
     }
 
     private record Affinity(Set<UUID> ids, Set<Team> teams) { }
@@ -125,12 +161,17 @@ public final class MaidSpellAllyResolver {
      * 玩家之间的伤害交给原版处理。
      */
     private static boolean isFriendlyPlayerDamage(LivingEntity target, Player player, boolean indirect) {
-        // 没有主人的生物（绝大多数怪物）不走主人链
-        if (target instanceof Player || !couldHaveOwner(target)) {
+        if (target instanceof Player) {
             return false;
         }
-        if (indirect && isOwnedById(target, player.getUUID(), 0)) {
+        boolean targetCouldHaveOwner = couldHaveOwner(target);
+        if (indirect && (targetCouldHaveOwner && isOwnedById(target, player.getUUID(), 0)
+                || matchesAllyRules(target, player))) {
             return true;
+        }
+        // 没有主人的生物（绝大多数怪物）不走主人链
+        if (!targetCouldHaveOwner) {
+            return false;
         }
         Team team = player.getTeam();
         if (team == null || team.isAllowFriendlyFire()) {

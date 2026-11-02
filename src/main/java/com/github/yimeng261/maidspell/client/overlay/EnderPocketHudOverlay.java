@@ -1,8 +1,10 @@
 package com.github.yimeng261.maidspell.client.overlay;
 
 import com.github.tartaricacid.touhoulittlemaid.entity.passive.EntityMaid;
+import com.github.yimeng261.maidspell.api.EnderPocketBars;
 import com.github.yimeng261.maidspell.client.EnderPocketClientConfig;
 import com.github.yimeng261.maidspell.item.MaidSpellItems;
+import com.github.yimeng261.maidspell.item.bauble.enderPocket.EnderPocketBarRegistry;
 import com.github.yimeng261.maidspell.item.bauble.enderPocket.EnderPocketService;
 import com.mojang.math.Axis;
 import net.minecraft.client.DeltaTracker;
@@ -11,7 +13,9 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.LayeredDraw;
 import net.minecraft.client.gui.screens.inventory.InventoryScreen;
 import net.minecraft.client.renderer.Rect2i;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.item.ItemStack;
@@ -33,6 +37,12 @@ import java.util.UUID;
 public final class EnderPocketHudOverlay implements LayeredDraw.Layer {
     public static final int ROW_WIDTH = 176;
     private static final int ROW_HEIGHT = 44;
+    private static final int ROW_SPACING = 3;
+    /** 附加条之间、附加条与坐标之间的间距 */
+    private static final int BAR_GAP = 2;
+    private static final int EXTRA_BAR_BORDER = 0xFF0E0E14;
+    private static final int EXTRA_BAR_EMPTY = 0xFF262630;
+    private static final Map<ResourceLocation, ItemStack> ICON_STACKS = new HashMap<>();
     private static final Map<UUID, EntityMaid> PREVIEW_MAIDS = new HashMap<>();
     private static List<EnderPocketService.EnderPocketMaidInfo> maidInfos = List.of();
     private static ItemStack enderPocketIcon;
@@ -56,13 +66,12 @@ public final class EnderPocketHudOverlay implements LayeredDraw.Layer {
             return;
         }
 
-        int rowPitch = ROW_HEIGHT + 3;
         int usableBottom = screenHeight - Math.max(mc.gui.leftHeight, mc.gui.rightHeight) - 6;
         int preferredX = Mth.clamp(EnderPocketClientConfig.HUD_X.get(),
                 0, Math.max(0, screenWidth - ROW_WIDTH));
         int preferredY = Mth.clamp(EnderPocketClientConfig.HUD_Y.get(),
-                0, Math.max(0, usableBottom - ROW_HEIGHT));
-        int maxRows = Math.min(visibleInfos.size(), Math.max(0, (usableBottom + 3) / rowPitch));
+                0, Math.max(0, usableBottom - rowHeight(visibleInfos.get(0))));
+        int maxRows = rowsThatFit(visibleInfos, usableBottom);
         if (maxRows == 0) {
             return;
         }
@@ -71,7 +80,7 @@ public final class EnderPocketHudOverlay implements LayeredDraw.Layer {
         int[] position = null;
         int visibleRows = maxRows;
         while (visibleRows > 0 && position == null) {
-            int hudHeight = visibleRows * rowPitch - 3;
+            int hudHeight = stackHeight(visibleInfos, visibleRows);
             position = findNearestFreePosition(preferredX, preferredY, ROW_WIDTH, hudHeight,
                     screenWidth, usableBottom, exclusions);
             if (position == null) {
@@ -82,8 +91,51 @@ public final class EnderPocketHudOverlay implements LayeredDraw.Layer {
             return;
         }
 
-        for (int i = 0; i < visibleRows; i++) {
-            renderRow(graphics, mc, visibleInfos.get(i), position[0], position[1] + i * rowPitch);
+        renderRows(graphics, mc, visibleInfos, visibleRows, position[0], position[1]);
+    }
+
+    /** 一行的高度：基础行高加上附加条占的高度 */
+    private static int rowHeight(EnderPocketService.EnderPocketMaidInfo info) {
+        return ROW_HEIGHT + barsHeight(info);
+    }
+
+    private static int barsHeight(EnderPocketService.EnderPocketMaidInfo info) {
+        int height = 0;
+        for (EnderPocketBars.Bar bar : info.extraBars) {
+            height += barLineHeight(bar) + BAR_GAP;
+        }
+        return height;
+    }
+
+    private static int barLineHeight(EnderPocketBars.Bar bar) {
+        return bar.icon().isPresent() ? Math.max(bar.height(), bar.iconSize()) : bar.height();
+    }
+
+    /** 前 {@code rows} 行叠起来（含行间距）的总高度 */
+    private static int stackHeight(List<EnderPocketService.EnderPocketMaidInfo> infos, int rows) {
+        int height = 0;
+        for (int i = 0; i < rows; i++) {
+            height += rowHeight(infos.get(i)) + ROW_SPACING;
+        }
+        return Math.max(0, height - ROW_SPACING);
+    }
+
+    /** 从上往下叠，高度不超过 {@code available} 时最多容得下几行 */
+    private static int rowsThatFit(List<EnderPocketService.EnderPocketMaidInfo> infos, int available) {
+        int rows = 0;
+        while (rows < infos.size() && stackHeight(infos, rows + 1) <= available) {
+            rows++;
+        }
+        return rows;
+    }
+
+    private static void renderRows(GuiGraphics graphics, Minecraft mc, List<EnderPocketService.EnderPocketMaidInfo> infos,
+                                   int rows, int x, int y) {
+        int rowY = y;
+        for (int i = 0; i < rows; i++) {
+            EnderPocketService.EnderPocketMaidInfo info = infos.get(i);
+            renderRow(graphics, mc, info, x, rowY);
+            rowY += rowHeight(info) + ROW_SPACING;
         }
     }
 
@@ -140,10 +192,11 @@ public final class EnderPocketHudOverlay implements LayeredDraw.Layer {
     }
 
     public static int getEditorPreviewHeight(int availableBottom, int y) {
-        int rowPitch = ROW_HEIGHT + 3;
-        int requestedRows = Math.max(1, getVisibleMaidInfos().size());
-        int visibleRows = Math.min(requestedRows, Math.max(1, (availableBottom - y) / rowPitch));
-        return visibleRows * rowPitch - 3;
+        List<EnderPocketService.EnderPocketMaidInfo> visibleInfos = getVisibleMaidInfos();
+        if (visibleInfos.isEmpty()) {
+            return ROW_HEIGHT;
+        }
+        return stackHeight(visibleInfos, Math.max(1, rowsThatFit(visibleInfos, availableBottom - y)));
     }
 
     public static void renderEditorPreview(GuiGraphics graphics, int x, int y, int availableBottom) {
@@ -161,11 +214,8 @@ public final class EnderPocketHudOverlay implements LayeredDraw.Layer {
             return;
         }
 
-        int rowPitch = ROW_HEIGHT + 3;
-        int visibleRows = Math.min(visibleInfos.size(), Math.max(1, (availableBottom - y) / rowPitch));
-        for (int i = 0; i < visibleRows; i++) {
-            renderRow(graphics, mc, visibleInfos.get(i), x, y + i * rowPitch);
-        }
+        int visibleRows = Math.max(1, rowsThatFit(visibleInfos, availableBottom - y));
+        renderRows(graphics, mc, visibleInfos, visibleRows, x, y);
     }
 
     private static List<EnderPocketService.EnderPocketMaidInfo> getVisibleMaidInfos() {
@@ -176,8 +226,9 @@ public final class EnderPocketHudOverlay implements LayeredDraw.Layer {
 
     private static void renderRow(GuiGraphics graphics, Minecraft mc,
                                   EnderPocketService.EnderPocketMaidInfo info, int x, int y) {
-        graphics.fill(x, y, x + ROW_WIDTH, y + ROW_HEIGHT, 0xB8101018);
-        graphics.renderOutline(x, y, ROW_WIDTH, ROW_HEIGHT,
+        int rowHeight = rowHeight(info);
+        graphics.fill(x, y, x + ROW_WIDTH, y + rowHeight, 0xB8101018);
+        graphics.renderOutline(x, y, ROW_WIDTH, rowHeight,
                 info.hasAnchorCore ? 0xFF8A6BC7 : 0xFF565664);
 
         renderAvatar(graphics, mc, info, x + 2, y + 2);
@@ -202,19 +253,71 @@ public final class EnderPocketHudOverlay implements LayeredDraw.Layer {
         graphics.drawCenteredString(mc.font, health, barX + barWidth / 2, barY, 0xFFFFFFFF);
 
         graphics.drawString(mc.font, "\u25C6 " + info.armor, x + 125, y + 17, 0xFFB8D5ED, true);
+
+        // 附加条插在血条与坐标之间，坐标一行随之下移
+        int lineY = y + 27;
+        for (EnderPocketBars.Bar bar : info.extraBars) {
+            int lineHeight = barLineHeight(bar);
+            renderExtraBar(graphics, mc, bar, barX, lineY, lineHeight);
+            lineY += lineHeight + BAR_GAP;
+        }
+        int textY = y + 31 + barsHeight(info);
+
         String coordinates = Mth.floor(info.x) + ", " + Mth.floor(info.y) + ", " + Mth.floor(info.z);
         graphics.drawString(mc.font, trimToWidth(mc, coordinates, 96),
-                x + 42, y + 31, 0xFFB8B8C5, false);
+                x + 42, textY, 0xFFB8B8C5, false);
 
         boolean sameDimension = mc.level.dimension().equals(info.levelKey);
         renderDirectionArrow(graphics, mc, info, x + 163, y + 14,
                 sameDimension ? 0xFFFFFFFF : 0xFFB78CFF);
         if (sameDimension) {
             int distance = Mth.floor(Math.sqrt(mc.player.distanceToSqr(info.x, info.y, info.z)));
-            graphics.drawCenteredString(mc.font, distance + "m", x + 158, y + 31, 0xFFD6D6DE);
+            graphics.drawCenteredString(mc.font, distance + "m", x + 158, textY, 0xFFD6D6DE);
         } else {
-            graphics.drawCenteredString(mc.font, "DIM", x + 158, y + 31, 0xFFB78CFF);
+            graphics.drawCenteredString(mc.font, "DIM", x + 158, textY, 0xFFB78CFF);
         }
+    }
+
+    private static void renderExtraBar(GuiGraphics graphics, Minecraft mc, EnderPocketBars.Bar bar,
+                                       int barX, int lineY, int lineHeight) {
+        int width = bar.width();
+        int height = bar.height();
+        int barY = lineY + (lineHeight - height) / 2;
+        float ratio = bar.max() <= 0.0F ? 0.0F : Mth.clamp(bar.current() / bar.max(), 0.0F, 1.0F);
+        graphics.fill(barX, barY, barX + width, barY + height, EXTRA_BAR_BORDER);
+        graphics.fill(barX + 1, barY + 1, barX + width - 1, barY + height - 1, EXTRA_BAR_EMPTY);
+        int fillWidth = Math.round((width - 2) * ratio);
+        if (fillWidth > 0) {
+            graphics.fill(barX + 1, barY + 1, barX + 1 + fillWidth, barY + height - 1, bar.fillColor());
+        }
+
+        if (bar.showsLabel()) {
+            Component label = bar.label().orElseGet(() -> EnderPocketBarRegistry.defaultLabel(bar));
+            float scale = bar.textScale();
+            graphics.pose().pushPose();
+            // 字形约 7px 高，在条内垂直居中
+            graphics.pose().translate(barX + width / 2.0F, barY + (height - 7 * scale) / 2.0F, 0.0F);
+            graphics.pose().scale(scale, scale, 1.0F);
+            graphics.drawCenteredString(mc.font, label, 0, 0, 0xFFFFFFFF);
+            graphics.pose().popPose();
+        }
+
+        bar.icon().map(EnderPocketHudOverlay::iconStack).filter(stack -> !stack.isEmpty()).ifPresent(stack -> {
+            int iconSize = bar.iconSize();
+            float iconScale = iconSize / 16.0F;
+            graphics.pose().pushPose();
+            graphics.pose().translate(barX + width + 2, lineY + (lineHeight - iconSize) / 2.0F, 0.0F);
+            graphics.pose().scale(iconScale, iconScale, 1.0F);
+            graphics.renderItem(stack, 0, 0);
+            graphics.pose().popPose();
+        });
+    }
+
+    /** 找不到的物品得到空堆，不画 */
+    private static ItemStack iconStack(ResourceLocation itemId) {
+        return ICON_STACKS.computeIfAbsent(itemId, id -> BuiltInRegistries.ITEM.getOptional(id)
+                .map(ItemStack::new)
+                .orElse(ItemStack.EMPTY));
     }
 
     private static void renderAvatar(GuiGraphics graphics, Minecraft mc,

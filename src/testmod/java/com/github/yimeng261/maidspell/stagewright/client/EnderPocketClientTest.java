@@ -60,7 +60,7 @@ class EnderPocketClientTest {
 
     private static EnderPocketService.EnderPocketMaidInfo info(String name, boolean anchor) {
         return new EnderPocketService.EnderPocketMaidInfo(UUID.nameUUIDFromBytes(name.getBytes()), Component.literal(name), Level.OVERWORLD, -1,
-                20, 20, 0, 0, 64, 0, anchor, "touhou_little_maid:hakurei_reimu");
+                20, 20, 0, 0, 64, 0, anchor, "touhou_little_maid:hakurei_reimu", List.of());
     }
 
     private static List<EnderPocketService.EnderPocketMaidInfo> infos(int count) {

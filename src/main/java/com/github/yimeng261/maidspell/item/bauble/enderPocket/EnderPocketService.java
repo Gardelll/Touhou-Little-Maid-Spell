@@ -4,6 +4,7 @@ import com.github.tartaricacid.touhoulittlemaid.entity.passive.EntityMaid;
 import com.github.tartaricacid.touhoulittlemaid.entity.passive.TabIndex;
 import com.github.tartaricacid.touhoulittlemaid.inventory.container.AbstractMaidContainer;
 import com.github.yimeng261.maidspell.Global;
+import com.github.yimeng261.maidspell.api.EnderPocketBars;
 import com.github.yimeng261.maidspell.item.MaidSpellItems;
 import com.github.yimeng261.maidspell.mixin.accessor.SynchedEntityDataAccessor;
 import com.github.yimeng261.maidspell.network.message.MaidEntityRestoreMessage;
@@ -67,6 +68,8 @@ public class EnderPocketService {
         public final double z;
         public final boolean hasAnchorCore;
         public final String modelId;
+        /** 附加条，见 {@link EnderPocketBars} */
+        public final List<EnderPocketBars.Bar> extraBars;
 
         public static final int MAX_RESOURCE_ID_LENGTH = 256;
         public static final int MAX_NAME_NBT_DEPTH = 64;
@@ -91,6 +94,7 @@ public class EnderPocketService {
                     buf.writeDouble(info.z);
                     buf.writeBoolean(info.hasAnchorCore);
                     RESOURCE_ID_CODEC.encode(buf, info.modelId);
+                    EnderPocketBarRegistry.BAR_LIST_STREAM_CODEC.encode(buf, info.extraBars);
                 },
                 buf -> new EnderPocketMaidInfo(
                         UUIDUtil.STREAM_CODEC.decode(buf),
@@ -104,7 +108,8 @@ public class EnderPocketService {
                         buf.readDouble(),
                         buf.readDouble(),
                         buf.readBoolean(),
-                        RESOURCE_ID_CODEC.decode(buf)
+                        RESOURCE_ID_CODEC.decode(buf),
+                        EnderPocketBarRegistry.BAR_LIST_STREAM_CODEC.decode(buf)
                 )
         );
 
@@ -120,7 +125,7 @@ public class EnderPocketService {
 
         public EnderPocketMaidInfo(UUID maidUUID, Component maidName, ResourceKey<Level> levelKey, int maidEntityId,
                                    float health, float maxHealth, int armor, double x, double y, double z,
-                                   boolean hasAnchorCore, String modelId) {
+                                   boolean hasAnchorCore, String modelId, List<EnderPocketBars.Bar> extraBars) {
             this.maidUUID = maidUUID;
             this.maidName = maidName;
             this.levelKey = levelKey;
@@ -133,6 +138,7 @@ public class EnderPocketService {
             this.z = z;
             this.hasAnchorCore = hasAnchorCore;
             this.modelId = truncate(modelId, MAX_RESOURCE_ID_LENGTH);
+            this.extraBars = List.copyOf(extraBars.subList(0, Math.min(extraBars.size(), EnderPocketBars.MAX_BARS)));
         }
 
         public UUID getMaidUUID() {
@@ -209,7 +215,8 @@ public class EnderPocketService {
                         maid.getY(),
                         maid.getZ(),
                         BaubleStateManager.hasBauble(maid, MaidSpellItems.ANCHOR_CORE),
-                        maid.getModelId()
+                        maid.getModelId(),
+                        EnderPocketBarRegistry.collect(maid)
                 ));
             }
         }

@@ -39,16 +39,15 @@ public class SevenStarGuidanceSpell extends AbstractSpell implements BossExclusi
     private static final float FINAL_DAMAGE_RATIO = 0.325F;
 
     /**
-     * 收束一击每被前七次落击命中一次就提高这么多。
+     * 收束一击每被前七次落击命中一次就提高这么多，见 {@link #finalBeamDamage}。
      *
-     * <p>加成只能在实体侧结算 —— 只有它知道锁定目标吃了几发。所以这里给出的是唯一来源：
-     * 实体收束时调 {@link #finalBeamDamage}，tooltip 报 0 次命中的基础值，两边共用同一份数字。
+     * <p>加成只能在实体侧结算 —— 只有它知道锁定目标吃了几发；tooltip 只报 0 次命中的基础值。
      */
-    public static final float FINAL_HIT_BONUS = 0.20F;
+    private static final float FINAL_HIT_BONUS = 0.20F;
 
     /** 碎裂补刀的基础倍率与每次命中的追加，见 {@link #shatterDamage}。 */
-    public static final float SHATTER_BASE_RATIO = 0.75F;
-    public static final float SHATTER_HIT_BONUS = 0.10F;
+    private static final float SHATTER_BASE_RATIO = 0.75F;
+    private static final float SHATTER_HIT_BONUS = 0.10F;
 
     private final DefaultConfig defaultConfig = new DefaultConfig()
             .setMinRarity(SpellRarity.EPIC)
@@ -101,7 +100,7 @@ public class SevenStarGuidanceSpell extends AbstractSpell implements BossExclusi
     public List<MutableComponent> getUniqueInfo(int spellLevel, LivingEntity caster) {
         return List.of(
                 Component.translatable("ui.irons_spellbooks.damage",
-                        Utils.stringTruncation(getFinalDamage(spellLevel, caster, 0), 1)),
+                        Utils.stringTruncation(getBaseFinalDamage(spellLevel, caster), 1)),
                 Component.translatable("ui.irons_spellbooks.projectile_count", 8));
     }
 
@@ -152,11 +151,6 @@ public class SevenStarGuidanceSpell extends AbstractSpell implements BossExclusi
     /** 碎裂补刀的最终伤害：{@code 基础 × (75% + 命中次数 × 10%)}。 */
     public static float shatterDamage(float baseFinalDamage, int hitCount) {
         return baseFinalDamage * (SHATTER_BASE_RATIO + Math.max(0, hitCount) * SHATTER_HIT_BONUS);
-    }
-
-    /** {@code hitCount} 只用于估算「吃到几发」时的预期值，实际伤害由实体调上面的静态方法结算。 */
-    public float getFinalDamage(int spellLevel, LivingEntity caster, int hitCount) {
-        return finalBeamDamage(getBaseFinalDamage(spellLevel, caster), hitCount);
     }
 
     @Override

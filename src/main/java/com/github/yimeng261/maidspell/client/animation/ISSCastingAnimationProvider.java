@@ -9,7 +9,10 @@ import com.github.tartaricacid.touhoulittlemaid.geckolib3.core.builder.Animation
 import com.github.tartaricacid.touhoulittlemaid.geckolib3.core.builder.ILoopType;
 import com.github.tartaricacid.touhoulittlemaid.geckolib3.file.AnimationFile;
 import com.github.tartaricacid.touhoulittlemaid.geckolib3.resource.GeckoLibCache;
+import com.github.tartaricacid.touhoulittlemaid.entity.passive.EntityMaid;
+import com.github.yimeng261.maidspell.api.ISpellBookProvider;
 import com.github.yimeng261.maidspell.client.spell.CastingAnimateStateAccessor;
+import com.github.yimeng261.maidspell.spell.manager.SpellBookManager;
 import io.redspace.ironsspellbooks.api.registry.SpellRegistry;
 import io.redspace.ironsspellbooks.api.spells.AbstractSpell;
 import io.redspace.ironsspellbooks.api.spells.CastType;
@@ -28,11 +31,19 @@ import java.util.Optional;
  */
 public class ISSCastingAnimationProvider implements IMagicCastingAnimationProvider {
     private static final String ANIMATION_NAME_PREFIX = "iss:";
+    private static final String IRONS_MOD_ID = "irons_spellbooks";
 
     @Override
     public @Nullable IMagicCastingState getMagicCastingState(IMaid maid) {
         if (!(maid.asEntity() instanceof CastingAnimateStateAccessor animateStateAccessor)) {
             return null;
+        }
+        // 铁魔法 provider 被换成自行驱动动画的实现时，女仆的铁魔法施法动画由对方负责，这里让出，免得瞬发动画播两遍
+        if (maid.asEntity() instanceof EntityMaid) {
+            ISpellBookProvider<?, ?> provider = SpellBookManager.getProvider(IRONS_MOD_ID);
+            if (provider != null && provider.drivesOwnCastingAnimation()) {
+                return null;
+            }
         }
         return animateStateAccessor.maidspell$getCastingAnimateState();
     }

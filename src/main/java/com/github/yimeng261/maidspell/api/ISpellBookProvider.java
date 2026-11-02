@@ -236,6 +236,13 @@ public abstract class ISpellBookProvider<T extends IMaidSpellData, S> {
     }
 
     /**
+     * 该模组的女仆施法动画是否由 provider 一方自行驱动；为 true 时本模组对应的施法动画对女仆让出。客户端也会调用
+     */
+    public boolean drivesOwnCastingAnimation() {
+        return false;
+    }
+
+    /**
      * 本轮是否持有施法优先权（例如已选好法术、尚未起手）；为 true 时其余占槽 provider 让出。默认不持有
      */
     public boolean holdsCastPriority(EntityMaid maid) {

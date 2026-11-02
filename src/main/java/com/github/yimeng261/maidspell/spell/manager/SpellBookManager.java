@@ -246,12 +246,34 @@ public class SpellBookManager {
 
 
     /**
-     * 执行法术
+     * 执行法术：占用施法槽的 provider 在别的占槽 provider 施法中或持有优先权时本轮让出。
+     * 每个 provider 出手前都重新判断，同一轮里先起手的会挡住后面的
      */
     public void castSpell(EntityMaid maid) {
-        for (ISpellBookProvider<?, ?> provider : getProviders()) {
+        checkFrozen();
+        for (Map.Entry<String, ISpellBookProvider<?, ?>> entry : providerMap.entrySet()) {
+            ISpellBookProvider<?, ?> provider = entry.getValue();
+            if (provider.occupiesCastingSlot() && isCastingSlotOccupiedByOthers(maid, entry.getKey())) {
+                continue;
+            }
             provider.castSpell(maid);
         }
+    }
+
+    /**
+     * 除 {@code selfModId} 外，是否有占用施法槽的 provider 正在施法或持有施法优先权
+     */
+    public static boolean isCastingSlotOccupiedByOthers(EntityMaid maid, String selfModId) {
+        for (Map.Entry<String, ISpellBookProvider<?, ?>> entry : providerMap.entrySet()) {
+            ISpellBookProvider<?, ?> provider = entry.getValue();
+            if (entry.getKey().equals(selfModId) || !provider.occupiesCastingSlot()) {
+                continue;
+            }
+            if (provider.isCasting(maid) || provider.holdsCastPriority(maid)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**

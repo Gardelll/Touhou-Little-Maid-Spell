@@ -78,6 +78,12 @@ public class SlashBladeProvider extends ISpellBookProvider<MaidSlashBladeData, R
 
     // ==================== ISpellBookProvider API ====================
 
+    /** 拔刀剑与普攻并行，不占施法槽 */
+    @Override
+    public boolean occupiesCastingSlot() {
+        return false;
+    }
+
     @Override
     protected List<ResourceLocation> collectSpellFromSingleSpellBook(ItemStack spellBook, EntityMaid maid) {
         List<ResourceLocation> slashArts = new ArrayList<>();

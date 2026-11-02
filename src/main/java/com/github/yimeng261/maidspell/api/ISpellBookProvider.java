@@ -228,6 +228,21 @@ public abstract class ISpellBookProvider<T extends IMaidSpellData, S> {
 
 
     /**
+     * 是否占用施法槽：占槽的 provider 同一时刻只有一个在施法（见 {@code SpellBookManager#castSpell}）。
+     * 与普攻并行、不影响朝向和动画的（如拔刀剑）返回 false
+     */
+    public boolean occupiesCastingSlot() {
+        return true;
+    }
+
+    /**
+     * 本轮是否持有施法优先权（例如已选好法术、尚未起手）；为 true 时其余占槽 provider 让出。默认不持有
+     */
+    public boolean holdsCastPriority(EntityMaid maid) {
+        return false;
+    }
+
+    /**
      * 检查是否正在施法
      */
     public boolean isCasting(EntityMaid maid) {

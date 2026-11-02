@@ -33,6 +33,7 @@ import com.github.yimeng261.maidspell.worldgen.MaidSpellStructurePieceTypes;
 import com.github.yimeng261.maidspell.worldgen.MaidSpellStructurePlacements;
 import com.github.yimeng261.maidspell.worldgen.MaidSpellStructures;
 import com.github.yimeng261.maidspell.worldgen.structure.MaidSpellPoolElementTypes;
+import com.github.yimeng261.maidspell.spell.manager.SpellBookManager;
 import net.minecraft.core.Registry;
 import net.minecraft.resources.ResourceLocation;
 import net.neoforged.api.distmarker.Dist;
@@ -124,6 +125,7 @@ public class MaidSpellMod {
 
     private void setup(final FMLCommonSetupEvent event) {
         event.enqueueWork(() -> {
+            SpellBookManager.finishRegistration();
             MaidSpellBlocks.registerPottedPlants();
 
             // 内置女仆模型包自解压：TLM 只从 gameDir/tlm_custom_pack 读模型包。

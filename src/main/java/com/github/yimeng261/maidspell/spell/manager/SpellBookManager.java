@@ -3,12 +3,14 @@ package com.github.yimeng261.maidspell.spell.manager;
 import com.github.tartaricacid.touhoulittlemaid.entity.passive.EntityMaid;
 import com.github.yimeng261.maidspell.api.IAuthoritativeHealth;
 import com.github.yimeng261.maidspell.api.ISpellBookProvider;
+import com.github.yimeng261.maidspell.api.RegisterSpellBookProvidersEvent;
 import com.mojang.logging.LogUtils;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.memory.MemoryModuleType;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.fml.ModList;
+import net.neoforged.fml.ModLoader;
 import net.neoforged.neoforge.items.wrapper.CombinedInvWrapper;
 import org.slf4j.Logger;
 
@@ -16,6 +18,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -37,14 +40,73 @@ public class SpellBookManager {
 
     public static final List<String> loadedMods = new ArrayList<>();
 
-    static {
-        // 静态初始化：注册所有已知的提供者
+    /** provider 表已装填完毕；此前读取 provider 表视为时机错误 */
+    private static volatile boolean frozen = false;
+    private static volatile boolean warnedEarlyAccess = false;
+
+    /**
+     * 装填 provider 表：先装内置 provider，再发 {@link RegisterSpellBookProvidersEvent} 让附属模组注册或替换，然后冻结。
+     * 在通用初始化阶段的主线程上调用，客户端与服务端各一次。
+     */
+    public static synchronized void finishRegistration() {
+        if (frozen) {
+            return;
+        }
         initializeProviderFactories();
+        RegisterSpellBookProvidersEvent event = new RegisterSpellBookProvidersEvent(providerMap.keySet());
+        ModLoader.postEvent(event);
+        for (RegisterSpellBookProvidersEvent.ProviderRegistration registration : event.registrations()) {
+            applyRegistration(registration);
+        }
+        for (RegisterSpellBookProvidersEvent.ProviderOverride override : event.overrides()) {
+            applyOverride(override);
+        }
+        immutableProviders = null;
+        frozen = true;
+        LOGGER.info("Spell book providers: {}", providerMap.keySet());
+    }
+
+    private static void applyRegistration(RegisterSpellBookProvidersEvent.ProviderRegistration registration) {
+        String modId = registration.modId();
+        if (providerMap.containsKey(modId)) {
+            LOGGER.error("Spell book provider for {} is already registered; use override to replace it", modId);
+            return;
+        }
+        try {
+            ISpellBookProvider<?, ?> provider = Objects.requireNonNull(registration.factory().get(), "provider");
+            providerMap.put(modId, provider);
+            loadedMods.add(modId);
+        } catch (Exception | LinkageError e) {
+            LOGGER.error("Failed to register spell book provider for {}", modId, e);
+        }
+    }
+
+    private static void applyOverride(RegisterSpellBookProvidersEvent.ProviderOverride override) {
+        String modId = override.modId();
+        ISpellBookProvider<?, ?> original = providerMap.get(modId);
+        if (original == null) {
+            LOGGER.debug("Skipping spell book provider override for {}: no provider registered", modId);
+            return;
+        }
+        try {
+            ISpellBookProvider<?, ?> replacement = Objects.requireNonNull(override.replacer().apply(original), "replacement");
+            providerMap.put(modId, replacement);
+            LOGGER.info("Spell book provider for {} replaced by {}", modId, replacement.getClass().getName());
+        } catch (Exception | LinkageError e) {
+            LOGGER.error("Failed to override spell book provider for {}; keeping {}", modId, original.getClass().getName(), e);
+        }
+    }
+
+    private static void checkFrozen() {
+        if (!frozen && !warnedEarlyAccess) {
+            warnedEarlyAccess = true;
+            LOGGER.error("Spell book providers accessed before registration finished; the provider table is incomplete",
+                    new IllegalStateException("early access"));
+        }
     }
 
     /**
-     * 初始化提供者工厂注册表
-     * 这里注册所有已知的ISpellBookProvider实现
+     * 内置 provider 名单
      */
     private static void initializeProviderFactories() {
         LOGGER.info("Initializing spell book provider factories...");
@@ -197,6 +259,11 @@ public class SpellBookManager {
      * 返回不可变列表，避免每次调用都创建新的 ArrayList
      */
     public List<ISpellBookProvider<?, ?>> getProviders() {
+        if (!frozen) {
+            // 装填完之前不缓存快照，免得冻结后仍拿到不全的表
+            checkFrozen();
+            return List.copyOf(providerMap.values());
+        }
         if (immutableProviders == null) {
             synchronized (SpellBookManager.class) {
                 if (immutableProviders == null) {
@@ -208,10 +275,12 @@ public class SpellBookManager {
     }
 
     public static ISpellBookProvider<?, ?> getProvider(String modId) {
+        checkFrozen();
         return providerMap.get(modId);
     }
 
     public static List<String> getLoadedMods() {
+        checkFrozen();
         return new ArrayList<>(providerMap.keySet());
     }
 

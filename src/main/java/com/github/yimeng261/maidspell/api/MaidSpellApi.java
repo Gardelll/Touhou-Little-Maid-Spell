@@ -12,7 +12,7 @@ public final class MaidSpellApi {
     /**
      * API 版本，新增或变更公开 API 时递增。用方法而不是常量，避免调用方编译时把值内联进自己的字节码。
      * <ul>
-     *     <li>1：{@link MaidSpellAllies}、{@link EnderPocketBars}</li>
+     *     <li>1：{@link MaidSpellAllies}、{@link EnderPocketBars}、{@link RegisterSpellBookProvidersEvent}</li>
      * </ul>
      */
     public static int version() {

@@ -4,6 +4,7 @@ import com.github.tartaricacid.touhoulittlemaid.entity.passive.EntityMaid;
 import com.github.yimeng261.maidspell.Global;
 import com.github.yimeng261.maidspell.api.IAuthoritativeHealth;
 import com.github.yimeng261.maidspell.item.MaidSpellItems;
+import com.github.yimeng261.maidspell.item.bauble.hairpin.HairpinBauble;
 import com.github.yimeng261.maidspell.spell.manager.BaubleStateManager;
 import com.github.yimeng261.maidspell.utils.FoxLeafOwnerEffectHelper;
 import net.minecraft.core.Holder;
@@ -28,7 +29,7 @@ import java.util.Map;
 import java.util.function.BiFunction;
 
 /**
- * LivingEntity 的 Mixin：权威生命上限、女仆效果拦截与水上行走。
+ * LivingEntity 的 Mixin：权威生命上限、女仆效果拦截、发簪采样免击退与水上行走。
  * 生命写入的守卫在 {@link SynchedEntityDataHealthMixin}。
  */
 @Mixin(LivingEntity.class)
@@ -47,6 +48,16 @@ public abstract class LivingEntityMixin {
     protected abstract void onEffectRemoved(MobEffectInstance effectInstance);
 
     @Shadow public abstract void remove(Entity.RemovalReason pReason);
+
+    /**
+     * 发簪采样主人伤害期间，只借用主人的减伤链路，不产生真实击退。
+     */
+    @Inject(method = "knockback", at = @At("HEAD"), cancellable = true)
+    private void maidspell$skipHairpinSampleKnockback(double strength, double x, double z, CallbackInfo ci) {
+        if (HairpinBauble.isSamplingOwnerDamage((LivingEntity) (Object) this)) {
+            ci.cancel();
+        }
+    }
 
     /**
      * @Redirect 重定向 addEffect 中的 activeEffects.put 调用。

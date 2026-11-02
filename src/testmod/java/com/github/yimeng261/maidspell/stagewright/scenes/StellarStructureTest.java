@@ -121,7 +121,7 @@ class StellarStructureTest {
         ctx.run(() -> sweepingEdgeBook(ctx));
     }
 
-    @DisplayName("观星塔：桶里的四幅画物品保留各自的图案，末地折跃门的出口是 (91, 75, 29)")
+    @DisplayName("观星塔：桶里的四幅画物品保留各自的图案，末地折跃门不固定出口")
     @Test
     void towerPaintingItemsAndGateway(Game game, @Plot.Size(x = 144, y = 256, z = 144) @Plot.Centered Plot plot,
                                       TestReporter reporter) {
@@ -315,7 +315,7 @@ class StellarStructureTest {
         ctx.check(new TreeSet<>(variants)).as("桶里画物品的图案").isEqualTo(new TreeSet<>(List.of(
                 NS + "astronomical_object", NS + "falling_star", NS + "magic_wine_fox", NS + "starry_flower_sea")));
         ctx.check(variants.size()).as("画物品数").isEqualTo(4);
-        ctx.check(exits).as("末地折跃门的出口").isEqualTo(List.of("91, 75, 29", "91, 75, 29", "91, 75, 29", "91, 75, 29"));
+        ctx.check(exits).as("末地折跃门的出口（不固定，随机折跃）").isEqualTo(List.of("无", "无", "无", "无"));
     }
 
     private static void sweepingEdgeBook(Stage ctx) {

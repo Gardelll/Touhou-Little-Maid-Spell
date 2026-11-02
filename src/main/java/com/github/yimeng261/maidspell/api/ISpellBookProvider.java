@@ -176,6 +176,24 @@ public abstract class ISpellBookProvider<T extends IMaidSpellData, S> {
         getData(maid).updateCooldowns();
     }
 
+    /**
+     * 写入法术冷却，{@code baseTicks} 之上再叠加全局冷却倍率与饰品修正
+     */
+    public void applySpellCooldown(EntityMaid maid, String spellId, int baseTicks) {
+        T data = getData(maid);
+        if (data != null) {
+            data.setSpellCooldown(spellId, baseTicks, maid);
+        }
+    }
+
+    /**
+     * 剩余冷却 tick，不在冷却中为 0；不为女仆创建数据
+     */
+    public int getSpellCooldownRemaining(EntityMaid maid, String spellId) {
+        T data = getExistingData(maid.getUUID());
+        return data == null ? 0 : Math.max(0, data.getSpellCooldown(spellId));
+    }
+
     public void refundCooldowns(EntityMaid maid, double refundRatio) {
         T data = getData(maid);
         if (data != null) {

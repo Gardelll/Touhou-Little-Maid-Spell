@@ -2,6 +2,7 @@ package com.github.yimeng261.maidspell.compat.irons_spellbooks.entity.spell;
 
 import com.github.yimeng261.maidspell.compat.irons_spellbooks.registry.IronsSpellbooksCompatEntities;
 import com.github.yimeng261.maidspell.api.IAuthoritativeHealth;
+import com.github.yimeng261.maidspell.compat.MaidSpellAllyResolver;
 import io.redspace.ironsspellbooks.entity.mobs.AntiMagicSusceptible;
 import io.redspace.ironsspellbooks.entity.mobs.IMagicSummon;
 import io.redspace.ironsspellbooks.entity.spells.black_hole.BlackHole;
@@ -18,6 +19,8 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import org.joml.Vector3f;
+
+import java.util.function.Predicate;
 
 public class SpellbreakingEchoEntity extends BlackHole {
     /** 球心位于施法者眼睛上方 5 格。 */
@@ -125,7 +128,7 @@ public class SpellbreakingEchoEntity extends BlackHole {
         Vec3 center = caster.getBoundingBox().getCenter();
         double radius = effectRadius;
         AABB area = new AABB(center, center).inflate(radius);
-        for (Entity entity : level().getEntities(this, area, e -> isSpellTarget(e, caster))) {
+        for (Entity entity : level().getEntities(this, area, spellTargets(caster))) {
             Vec3 away = entity.getBoundingBox().getCenter().subtract(center);
             double distance = away.length();
             if (distance > radius + entity.getBbWidth() * 0.5D) {
@@ -150,7 +153,7 @@ public class SpellbreakingEchoEntity extends BlackHole {
         double searchRadius = outerRadius + 1.0D;
         AABB area = new AABB(center.x - searchRadius, center.y - searchRadius, center.z - searchRadius,
                 center.x + searchRadius, center.y + searchRadius, center.z + searchRadius);
-        for (Entity entity : level().getEntities(this, area, e -> isSpellTarget(e, caster))) {
+        for (Entity entity : level().getEntities(this, area, spellTargets(caster))) {
             AABB box = entity.getBoundingBox();
             double nearest = distanceToBox(center, box);
             double farthest = farthestCornerDistance(center, box);
@@ -206,19 +209,24 @@ public class SpellbreakingEchoEntity extends BlackHole {
         }
     }
 
-    /** 对弹射物、召唤物和非生物法术生效，但保留施法者自己的造物。 */
+    /** 对弹射物、召唤物和非生物法术生效，但保留与施法者友好一方（施法者自己、主人、姐妹女仆等）的造物。 */
     public static boolean isSpellTarget(Entity entity, Entity caster) {
-        // RootEntity 是承载被定身目标的 LivingEntity，但本身是可被反魔法清除的法术造物，需要清除
-        if (entity instanceof RootEntity) {
-            return true;
-        }
-        if (entity instanceof IMagicSummon summon) {
-            return summon.getSummoner() != caster;
-        }
-        if (entity instanceof Projectile projectile) {
-            return projectile.getOwner() != caster;
-        }
-        return entity instanceof AntiMagicSusceptible && !(entity instanceof LivingEntity);
+        return spellTargets(caster).test(entity);
+    }
+
+    /** 同 {@link #isSpellTarget}，施法者一侧的主人链只算一次，供按同一个施法者过滤一批实体。 */
+    private static Predicate<Entity> spellTargets(Entity caster) {
+        Predicate<Entity> friendly = MaidSpellAllyResolver.friendlyTo(caster);
+        return entity -> {
+            // RootEntity 是承载被定身目标的 LivingEntity，本身是可被反魔法清除的法术造物；清除它是为了解除束缚，不分敌我
+            if (entity instanceof RootEntity) {
+                return true;
+            }
+            boolean dispellable = entity instanceof IMagicSummon || entity instanceof Projectile
+                    || entity instanceof AntiMagicSusceptible && !(entity instanceof LivingEntity);
+            // 弹射物与召唤物经主人链解析到射出者、召唤者再比对
+            return dispellable && !friendly.test(entity);
+        };
     }
 
     private static void removeSpellTarget(Entity entity) {

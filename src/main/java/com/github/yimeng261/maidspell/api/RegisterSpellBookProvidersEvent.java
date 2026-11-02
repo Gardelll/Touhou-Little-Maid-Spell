@@ -37,7 +37,8 @@ public final class RegisterSpellBookProvidersEvent extends Event implements IMod
     }
 
     /**
-     * 替换已有 provider，原实例传入以便委托；多个替换按调用顺序串联。
+     * 替换已有 provider，原实例传入以便委托；多个替换按调用顺序串联，即按 mod 加载顺序：
+     * 后调用的拿到的是前一个替换后的实例，而不是内置 provider。
      * modId 没有 provider（该模组未安装、版本不兼容而未装上等）时不生效
      */
     public synchronized void override(String modId, UnaryOperator<ISpellBookProvider<?, ?>> replacer) {

@@ -261,15 +261,18 @@ public class SpellBookManager {
     }
 
     /**
-     * 除 {@code selfModId} 外，是否有占用施法槽的 provider 正在施法或持有施法优先权
+     * 除 {@code selfModId} 外，是否有占用施法槽的 provider 正在施法或持有施法优先权。
+     * {@code selfModId} 自己也持有优先权时只看别人是否正在施法：双方都持有优先权时先起手的占槽，免得互相让出谁都不施法
      */
     public static boolean isCastingSlotOccupiedByOthers(EntityMaid maid, String selfModId) {
+        ISpellBookProvider<?, ?> self = providerMap.get(selfModId);
+        boolean selfHoldsPriority = self != null && self.holdsCastPriority(maid);
         for (Map.Entry<String, ISpellBookProvider<?, ?>> entry : providerMap.entrySet()) {
             ISpellBookProvider<?, ?> provider = entry.getValue();
             if (entry.getKey().equals(selfModId) || !provider.occupiesCastingSlot()) {
                 continue;
             }
-            if (provider.isCasting(maid) || provider.holdsCastPriority(maid)) {
+            if (provider.isCasting(maid) || (!selfHoldsPriority && provider.holdsCastPriority(maid))) {
                 return true;
             }
         }

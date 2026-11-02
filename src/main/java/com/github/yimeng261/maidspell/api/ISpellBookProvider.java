@@ -243,7 +243,8 @@ public abstract class ISpellBookProvider<T extends IMaidSpellData, S> {
     }
 
     /**
-     * 本轮是否持有施法优先权（例如已选好法术、尚未起手）；为 true 时其余占槽 provider 让出。默认不持有
+     * 本轮是否持有施法优先权（例如已选好法术、尚未起手）；为 true 时其余未持有优先权的占槽 provider 让出。
+     * 持有优先权的 provider 之间只对正在施法的一方让出，先起手的占槽。默认不持有
      */
     public boolean holdsCastPriority(EntityMaid maid) {
         return false;

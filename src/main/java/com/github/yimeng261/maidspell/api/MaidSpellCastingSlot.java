@@ -15,7 +15,8 @@ public final class MaidSpellCastingSlot {
     }
 
     /**
-     * 除 {@code selfModId} 外，是否有占用施法槽的 provider 正在施法或持有施法优先权
+     * 除 {@code selfModId} 外，是否有占用施法槽的 provider 正在施法或持有施法优先权。
+     * {@code selfModId} 的 provider 自己也持有优先权时只看别人是否正在施法、不看别人的优先权：双方都持有时先起手的占槽，另一方随后让出
      */
     public static boolean isOccupiedByOthers(EntityMaid maid, String selfModId) {
         return SpellBookManager.isCastingSlotOccupiedByOthers(maid, selfModId);

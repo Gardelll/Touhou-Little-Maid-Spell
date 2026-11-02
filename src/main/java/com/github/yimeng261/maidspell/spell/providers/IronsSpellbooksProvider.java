@@ -12,6 +12,7 @@ import com.github.yimeng261.maidspell.item.bauble.springBloomReturn.SpringBloomR
 import com.github.yimeng261.maidspell.mixin.iss.accessor.PlayerRecastsAccessor;
 import com.github.yimeng261.maidspell.spell.data.MaidIronsSpellData;
 import com.github.yimeng261.maidspell.spell.manager.BaubleStateManager;
+import com.github.yimeng261.maidspell.utils.IdMatcher;
 import com.mojang.logging.LogUtils;
 import io.redspace.ironsspellbooks.api.item.weapons.MagicSwordItem;
 import io.redspace.ironsspellbooks.api.magic.MagicData;
@@ -71,6 +72,19 @@ public class IronsSpellbooksProvider extends ISpellBookProvider<MaidIronsSpellDa
         "irons_spellbooks:summon_polar_bear",
         "irons_spellbooks:portal"
     );
+
+    /** 按配置列表实例缓存的黑名单匹配器；重载配置时列表会整个换掉，据此失效 */
+    private static List<String> cachedBlacklistSource;
+    private static IdMatcher cachedBlacklist = IdMatcher.empty();
+
+    private static synchronized IdMatcher spellBlacklist() {
+        List<String> source = Config.ironsSpellBlacklist;
+        if (source != cachedBlacklistSource) {
+            cachedBlacklist = IdMatcher.from(source);
+            cachedBlacklistSource = source;
+        }
+        return cachedBlacklist;
+    }
 
     /**
      * 构造函数，绑定 MaidIronsSpellData 数据类型和 SpellData 法术类型
@@ -174,7 +188,7 @@ public class IronsSpellbooksProvider extends ISpellBookProvider<MaidIronsSpellDa
                 return true;
             }
             // 检查法术是否在黑名单中
-            if (Config.ironsSpellBlacklist != null && Config.ironsSpellBlacklist.contains(spellId)) {
+            if (spellBlacklist().matches(spellId)) {
                 LOGGER.debug("法术 {} 在黑名单中，女仆 {} 跳过施放", spellId, maid.getUUID());
                 return true;
             }

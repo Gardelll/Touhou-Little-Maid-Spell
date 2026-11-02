@@ -40,13 +40,12 @@ import net.minecraft.world.level.Level;
 import com.github.yimeng261.maidspell.compat.curios.CuriosCompat;
 import com.github.yimeng261.maidspell.compat.curios.DreamCrystalCurios;
 import com.github.yimeng261.maidspell.compat.irons_spellbooks.IronsSpellbooksCompat;
+import com.github.yimeng261.maidspell.utils.IdMatcher;
 import net.neoforged.neoforge.items.IItemHandler;
 import org.slf4j.Logger;
 
 import javax.annotation.Nullable;
 import java.util.*;
-import java.util.regex.Pattern;
-import java.util.regex.PatternSyntaxException;
 
 /** 梦云水晶的战斗、支援、耐久修复与复活效果。具体数值由各处理方法维护。 */
 public class DreamCatCrystalBauble implements IMaidBauble {
@@ -459,10 +458,10 @@ public class DreamCatCrystalBauble implements IMaidBauble {
 
         List<Holder.Reference<MobEffect>> candidates = new ArrayList<>();
         boolean useWhitelist = Config.dreamCrystalUseEffectWhitelist;
-        EffectMatcher whitelistMatcher = useWhitelist
-                ? EffectMatcher.from(Config.dreamCrystalEffectWhitelist)
-                : EffectMatcher.empty();
-        EffectMatcher blacklistMatcher = EffectMatcher.from(Config.dreamCrystalEffectBlacklist);
+        IdMatcher whitelistMatcher = useWhitelist
+                ? IdMatcher.from(Config.dreamCrystalEffectWhitelist)
+                : IdMatcher.empty();
+        IdMatcher blacklistMatcher = IdMatcher.from(Config.dreamCrystalEffectBlacklist);
 
         BuiltInRegistries.MOB_EFFECT.holders().forEach(holder -> {
             MobEffect effect = holder.value();
@@ -487,62 +486,6 @@ public class DreamCatCrystalBauble implements IMaidBauble {
 
     public static void invalidateBeneficialEffectsCache() {
         CACHED_BENEFICIAL_EFFECTS = null;
-    }
-
-    private record EffectMatcher(Set<String> exactMatches, List<Pattern> regexPatterns) {
-        private static final String REGEX_PREFIX = "regex:";
-        private static final EffectMatcher EMPTY = new EffectMatcher(Collections.emptySet(), Collections.emptyList());
-
-        private static EffectMatcher empty() {
-            return EMPTY;
-        }
-
-        private static EffectMatcher from(List<String> entries) {
-            if (entries == null || entries.isEmpty()) {
-                return empty();
-            }
-
-            Set<String> exactMatches = new HashSet<>();
-            List<Pattern> regexPatterns = new ArrayList<>();
-
-            for (String entry : entries) {
-                if (entry == null || entry.isBlank()) {
-                    continue;
-                }
-
-                if (entry.startsWith(REGEX_PREFIX)) {
-                    String regex = entry.substring(REGEX_PREFIX.length());
-                    if (regex.isBlank()) {
-                        continue;
-                    }
-                    try {
-                        regexPatterns.add(Pattern.compile(regex));
-                    } catch (PatternSyntaxException exception) {
-                        LOGGER.warn("梦云水晶效果匹配正则无效：{}，已跳过", entry, exception);
-                    }
-                    continue;
-                }
-
-                exactMatches.add(entry);
-            }
-
-            if (exactMatches.isEmpty() && regexPatterns.isEmpty()) {
-                return empty();
-            }
-            return new EffectMatcher(exactMatches, regexPatterns);
-        }
-
-        private boolean matches(String effectId) {
-            if (exactMatches.contains(effectId)) {
-                return true;
-            }
-            for (Pattern pattern : regexPatterns) {
-                if (pattern.matcher(effectId).matches()) {
-                    return true;
-                }
-            }
-            return false;
-        }
     }
 
     // ========== 随机正面效果 ==========

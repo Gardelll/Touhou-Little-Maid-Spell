@@ -29,7 +29,7 @@ import java.util.Set;
 import java.util.TreeSet;
 
 /**
- * 从已放置的结构里读出与 {@link StructureSnapshots} 同一规则的内容（规则见 /tmp 生成脚本与快照类注释）。
+ * 从已放置的结构里读出与 {@link StructureSnapshots} 同一规则的内容（规则见快照类注释）。
  */
 public final class WorldExtract {
     /** 模板里只作可选装饰的模组：没装时它的方块按设计变成空气，不算缺失。 */
@@ -134,7 +134,7 @@ public final class WorldExtract {
         return tag;
     }
 
-    // ---- 以下与生成脚本逐条对应 ----
+    // ---- 以下与快照类注释里的规则逐条对应 ----
 
     public static String container(String block, CompoundTag nbt) {
         if (nbt.contains("LootTable")) {

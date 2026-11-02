@@ -30,7 +30,7 @@ import java.util.List;
  * 实现IRangedAttackTask接口，为女仆提供法术攻击能力和混合战斗模式
  * 负责统一的目标搜索、验证和管理
  * 索敌系统：
- * - 使用近战索敌方法 (IAttackTask::findFirstValidAttackTarget)
+ * - 使用近战任务的索敌方法（TLM 默认索敌条件加法术战斗过滤）
  * - 自动优先攻击距离最近的可见目标
  * - 简化代码并确保与其他攻击任务的一致性
  */

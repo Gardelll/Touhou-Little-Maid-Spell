@@ -147,12 +147,15 @@ public class SpellCombatMeleeTask implements IRangedAttackTask {
     }
 
     /**
-     * 自定义索敌方法，在默认索敌基础上进行额外过滤
+     * 自定义索敌方法：TLM 默认索敌的条件（{@link IAttackTask#findFirstValidAttackTarget}）之外再加法术战斗的过滤。
+     * 过滤放在取最近目标的谓词里，最近的实体被排除时继续找下一个，而不是整轮索敌落空。
      * 子类可覆写此方法添加更多过滤逻辑
      */
     protected Optional<? extends LivingEntity> findValidAttackTarget(EntityMaid maid) {
-        return IAttackTask.findFirstValidAttackTarget(maid)
-                .filter(target -> isValidSpellCombatTarget(maid, target));
+        return maid.getBrain().getMemory(MemoryModuleType.NEAREST_VISIBLE_LIVING_ENTITIES)
+                .flatMap(entities -> entities.findClosest(target -> maid.canAttack(target)
+                        && maid.isWithinRestriction(target.blockPosition())
+                        && isValidSpellCombatTarget(maid, target)));
     }
 
     protected static boolean isValidSpellCombatTarget(EntityMaid maid, LivingEntity target) {

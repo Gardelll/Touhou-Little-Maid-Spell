@@ -18,6 +18,44 @@
   Fixed Yue Linglan's Elven Realm search range being converted incorrectly and far exceeding the intended range;
   it is now about 5120 blocks and follows the Elven Realm structure set's actual spacing, so it stays correct when
   a data pack changes the spacing
+- 修复与 Naraka 等接管生命写入的模组同时安装时，女仆受到致死伤害后卡在残血、无法被击杀的问题；此时魂之书的伤害保护照常生效 /
+  Fixed maids getting stuck at low health instead of dying from a lethal hit when installed alongside mods that
+  take over health writes, such as Naraka; Soul Book damage protection still applies in this case
+- 修复卸下梦云水晶等提高生命上限的饰品后，女仆生命值停在新上限之上的问题 /
+  Fixed maids keeping health above their new maximum after removing the Dreamcloud Crystal or other baubles that
+  raise max health
+- 修复法术战斗中距离最近的实体是友方或坐下待机的女仆时，女仆不去攻击其他敌人的问题 /
+  Fixed maids in spell combat not attacking other enemies when the nearest entity was a friendly maid or a maid
+  sitting on standby
+- 修复女仆法术冷却每秒才结算一次，不足整秒的冷却被缩短的问题 /
+  Fixed maid spell cooldowns only ticking down once per second, which shortened cooldowns that were not whole
+  seconds
+- 修复破法回响会清除施法者友方（主人、同一主人的其他女仆等）的弹射物与召唤物的问题 /
+  Fixed Spellbreaking Echo clearing projectiles and summons belonging to the caster's allies, such as the owner and
+  other maids of the same owner
+- 修复铁魔法法术黑名单（`combat.toml` 中的 `spellBlacklist`）与馥郁巧思效果黑名单（`baubles.toml` 中的 `fragrantIngenuityEffectBlacklist`）不支持配置说明中 `regex:` 正则写法的问题 /
+  Fixed the Iron's Spells 'n Spellbooks spell blacklist (`spellBlacklist` in `combat.toml`) and the Fragrant
+  Ingenuity effect blacklist (`fragrantIngenuityEffectBlacklist` in `baubles.toml`) not accepting the `regex:`
+  patterns described in their comments
+- 修复星之魔女读档后可能一直卡在吟唱状态的问题 /
+  Fixed the Stellar Witch possibly getting stuck in an incantation after a save was reloaded
+- 修复在结构较密集的整合包中星落之庭几乎无法生成的问题：庭院悬于地表上空，不再避让其他结构的计划落点；补生成只避开与庭院高度范围重叠的已有结构，矿井、古城等地下结构不再阻挡 /
+  Fixed Starfall Garden almost never generating in modpacks with dense structures: since the garden floats above
+  the surface, it no longer avoids other structures' planned locations, and retroactive generation only avoids
+  existing structures that overlap its height range, so mineshafts, ancient cities and other underground
+  structures no longer block it
+- 修复誓约获得的星之魔女女仆每次进入世界时，都会把背包里所有铁魔法法术书扩充到 20 格的问题；现在只有她自带的法术书为 20 格，之后放入的法术书保持原容量 /
+  Fixed the Stellar Witch maid from the oath expanding every Iron's Spells 'n Spellbooks spell book in her
+  inventory to 20 slots each time she entered the world; only the spell books she comes with have 20 slots now,
+  and books added later keep their original capacity
+- 修复专用服务器上末影腰包中的女仆名称显示为翻译键的问题 /
+  Fixed maid names in the Ender Pocket showing as translation keys on dedicated servers
+- 修复未安装 Psi 时，其他模组的假玩家引发爆炸会导致崩溃的问题 /
+  Fixed a crash when another mod's fake player caused an explosion without Psi installed
+- 修复观星塔木桶里的画没有保留预设图案的问题 /
+  Fixed paintings in Starwatch Tower barrels not keeping their preset motifs
+- 补上配置界面中 `usefulMagicMaidTerrainProtection` 的中英文名称 /
+  Added the missing Chinese and English names for `usefulMagicMaidTerrainProtection` in the configuration screen
 
 ### 优化 / Improvements
 
@@ -25,11 +63,22 @@
   Updated the Cherry Cabin interior with hay bales, canvas rugs, wild onions, beetroot crates, campfires,
   cauldrons and an armor stand in leather gear; the template used without Iron's Spells 'n Spellbooks is updated
   to match
+- 女仆同时携带多个模组的法术书时，同一时刻只用其中一种施法，先起手的施法不会被其他法术书抢断；拔刀剑不受此限制 /
+  When a maid carries spell books from several mods, only one of them casts at a time, and a cast already under
+  way is not cut off by another spell book; SlashBlade is not affected
+- 星落之庭的生成密度提高到原来的约 4 倍，相邻两座仍至少相隔 6 个区块 /
+  Starfall Garden now generates about four times as often, while neighboring gardens stay at least 6 chunks apart
+- 锚定核心拦截其他模组移除女仆更严格：调用链中只要出现不受信任的模组代码就会拦下；跨维度移动始终放行 /
+  The Anchor Core now blocks other mods from removing maids more strictly: a removal is blocked whenever untrusted
+  mod code appears in the call chain, while dimension changes are always allowed
 
 ### 升级说明 / Upgrade Notes
 
-- 已生成的落樱厨舍不会更新陈设，只影响新生成的结构 /
-  Cherry Cabins that have already generated keep their old interior; only newly generated ones are affected
+- 已生成的落樱厨舍不会更新陈设，观星塔木桶里的画也不会改变，只影响新生成的结构 /
+  Cherry Cabins that have already generated keep their old interior and existing Starwatch Tower barrels keep
+  their paintings; only newly generated structures are affected
+- 星落之庭的新生成密度只作用于尚未生成的区块 /
+  The new Starfall Garden density only applies to chunks that have not generated yet
 
 ---
 

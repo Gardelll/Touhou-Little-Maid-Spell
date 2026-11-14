@@ -4,16 +4,9 @@ import com.github.tartaricacid.touhoulittlemaid.entity.passive.EntityMaid;
 import com.github.yimeng261.maidspell.Global;
 import com.github.yimeng261.maidspell.api.IAuthoritativeHealth;
 import com.github.yimeng261.maidspell.item.MaidSpellItems;
-import com.github.yimeng261.maidspell.item.bauble.hairpin.HairpinBauble;
-import com.github.yimeng261.maidspell.item.bauble.soulBook.SoulBookBauble;
-import com.github.yimeng261.maidspell.item.bauble.woundRimeBlade.WoundRimeBladeBauble;
 import com.github.yimeng261.maidspell.spell.manager.BaubleStateManager;
 import com.github.yimeng261.maidspell.utils.FoxLeafOwnerEffectHelper;
-import com.github.yimeng261.maidspell.utils.MaidDamageProcessor;
-import com.github.yimeng261.maidspell.utils.MaidHealthWriteGuard;
 import net.minecraft.core.Holder;
-import net.minecraft.network.syncher.EntityDataAccessor;
-import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.tags.FluidTags;
 import net.minecraft.world.effect.MobEffect;
 import net.minecraft.world.effect.MobEffectInstance;
@@ -22,7 +15,6 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.level.material.FluidState;
-import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
@@ -36,8 +28,8 @@ import java.util.Map;
 import java.util.function.BiFunction;
 
 /**
- * LivingEntity的Mixin，用于修改setHealth方法
- * 当EntityMaid装备SoulBookBauble时，对伤害进行额外处理
+ * LivingEntity 的 Mixin：权威生命上限、女仆效果拦截与水上行走。
+ * 生命写入的守卫在 {@link SynchedEntityDataHealthMixin}。
  */
 @Mixin(LivingEntity.class)
 public abstract class LivingEntityMixin {
@@ -48,10 +40,6 @@ public abstract class LivingEntityMixin {
         }
     }
 
-    @Final
-    @Shadow
-    private static EntityDataAccessor<Float> DATA_HEALTH_ID;
-
     @Shadow
     public abstract MobEffectInstance removeEffectNoUpdate(Holder<MobEffect> effect);
 
@@ -59,77 +47,6 @@ public abstract class LivingEntityMixin {
     protected abstract void onEffectRemoved(MobEffectInstance effectInstance);
 
     @Shadow public abstract void remove(Entity.RemovalReason pReason);
-
-    /**
-     * 拦截setHealth方法调用
-     */
-    @Inject(method = "setHealth", at = @At("HEAD"), cancellable = true)
-    private void onSetHealth(float health, CallbackInfo ci) {
-        LivingEntity entity = (LivingEntity) (Object) this;
-
-        //处理heal
-        float oldHealth = -114514;
-        try{
-            oldHealth = IAuthoritativeHealth.health(entity);
-        }catch(Exception ignored){
-        }
-
-        if(oldHealth == -114514){
-            return;
-        }
-
-        if(oldHealth <= health){
-            maidspell$handelHpIncrease(entity,health,ci);
-        }else{
-            maidspell$handelHpDecrease(entity,health,ci);
-        }
-
-
-    }
-
-    @Unique
-    private void maidspell$handelHpIncrease(LivingEntity entity, float health, CallbackInfo ci) {
-        if(WoundRimeBladeBauble.handleWoundRimeMap(entity, health)){
-            ci.cancel();
-        }
-    }
-
-    @Unique
-    private void maidspell$handelHpDecrease(LivingEntity entity, float health, CallbackInfo ci) {
-        //处理玩家hurt
-        if(entity instanceof ServerPlayer player) {
-            if (HairpinBauble.captureRedirectedDamage(player, player.getHealth() - health)) {
-                player.invulnerableTime = 0;
-                ci.cancel();
-                return;
-            }
-
-            if (!SoulBookBauble.hasOwnerProtection(player.getUUID())) {
-                return;
-            }
-
-            if(!MaidDamageProcessor.isCommonHurt(health, entity)){
-                ci.cancel();
-                return;
-            }
-        }
-
-        //处理女仆setHealth
-        if (!(entity instanceof EntityMaid maid)) {
-            return;
-        }
-        // 生命上限下降后把超出部分截到上限（卸下加上限的饰品、原版属性刷新）不是伤害，照常写入
-        if (health >= maid.getMaxHealth()) {
-            return;
-        }
-
-        MaidDamageProcessor.MaidHealthChange healthChange = MaidDamageProcessor.processMaidHealthDecrease(maid, health);
-        if (healthChange.writeHealth()) {
-            MaidHealthWriteGuard.runBypassing(() -> maid.getEntityData().set(DATA_HEALTH_ID, healthChange.health()));
-        }
-
-        ci.cancel();
-    }
 
     /**
      * @Redirect 重定向 addEffect 中的 activeEffects.put 调用。

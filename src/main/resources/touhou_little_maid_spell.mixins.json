@@ -46,7 +46,6 @@
     "ars.AbstractEffectMixin",
     "ars.SpellContextAccessor",
     "ars.SpellContextMixin",
-    "callresponse.CallResponseCageMixin",
     "enigmatic.ExtradimensionalScepterHelperMixin",
     "ftbquests.DimensionTaskMixin",
     "ftbquests.KnownServerRegistriesMixin",

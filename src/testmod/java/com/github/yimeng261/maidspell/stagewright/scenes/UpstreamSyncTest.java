@@ -72,8 +72,7 @@ class UpstreamSyncTest {
     private static final Map<String, String> OPTIONAL_MIXIN_PACKAGES = Map.of(
             "legendary.", "legendary_monsters",
             "explorerscompass.", "explorerscompass",
-            "ftbquests.", "ftbquests",
-            "callresponse.", "callresponse");
+            "ftbquests.", "ftbquests");
 
     private static final List<String> NEW_STRUCTURES = List.of("cherry_cabin", "enchantress_footsteps_crimson_cabin",
             "enchantress_footsteps_basalt_forge", "enchantress_footsteps_warped_perch", "enchantress_footsteps_soulvalley_nook");
@@ -162,7 +161,7 @@ class UpstreamSyncTest {
         }
         ctx.record("联动 mixin", expected);
         ctx.check(expected.keySet()).as("配置里的联动 mixin").isEqualTo(new TreeSet<>(List.of(
-                "callresponse.CallResponseCageMixin", "explorerscompass.StructureUtilsMixin", "ftbquests.DimensionTaskMixin",
+                "explorerscompass.StructureUtilsMixin", "ftbquests.DimensionTaskMixin",
                 "ftbquests.KnownServerRegistriesMixin", "legendary.SmallAnnihilationBombEntityMixin")));
         ctx.check(actual).as("插件是否应用（期望与模组是否在场一致）").isEqualTo(expected);
     }

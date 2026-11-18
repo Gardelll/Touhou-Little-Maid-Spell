@@ -123,7 +123,7 @@ public final class WinefoxTrades {
                 new ItemStack(IronsSpellbooksCompatItems.STAR_SHADOW_STAFF.get()), GEAR_DAILY_LIMIT));
         offers.add(offer(emeralds(16), new ItemStack(MaidSpellItems.NEBULA_CORE.get()),
                 new ItemStack(IronsSpellbooksCompatItems.STAR_SHADOW_LONGSWORD.get()), GEAR_DAILY_LIMIT));
-        // 共 8 张卷轴，均为 1 级、10 绿宝石。前四张是她自己在擂台上用的逐星飞瀑、星隙闪袭、星影斩击、星影剑阵（原「剑牢」）。
+        // 共 9 张卷轴，均为 1 级、10 绿宝石。前四张是她自己在擂台上用的逐星飞瀑、星隙闪袭、星影斩击、星影剑阵（原「剑牢」）。
         offers.add(offer(emeralds(10), scroll(IronsSpellbooksCompatSpells.MODIFIED_STARFALL.get())));
         offers.add(offer(emeralds(10), scroll(IronsSpellbooksCompatSpells.MODIFIED_TELEPORT.get())));
         offers.add(offer(emeralds(10), scroll(IronsSpellbooksCompatSpells.STAR_SHADOW_STRIKE.get())));
@@ -133,6 +133,8 @@ public final class WinefoxTrades {
         offers.add(offer(emeralds(10), scroll(IronsSpellbooksCompatSpells.COMPANION_BLACK_HOLE.get())));
         offers.add(offer(emeralds(10), scroll(IronsSpellbooksCompatSpells.SPELLBREAKING_ECHO.get())));
         offers.add(offer(emeralds(10), scroll(IronsSpellbooksCompatSpells.SEVEN_STAR_GUIDANCE.get())));
+        // 虚空相变：二阶段开场与二阶段随机池都会用，单独摆一行 1 级卷轴。
+        offers.add(offer(emeralds(10), scroll(IronsSpellbooksCompatSpells.VOID_PHASE.get())));
     }
 
     /**

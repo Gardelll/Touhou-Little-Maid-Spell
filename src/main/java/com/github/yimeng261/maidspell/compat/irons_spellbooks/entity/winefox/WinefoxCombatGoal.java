@@ -80,10 +80,14 @@ final class WinefoxCombatGoal extends Goal {
      * 二阶段跟目标保持的水平距离。
      *
      * <p>原先二阶段直接把目标所在的那一格当成目标点，她会一路顶到人身上：碰撞箱互相推挤，
-     * 画面里是她贴着玩家来回挤。改成站定在这个距离上出刀 —— 仍在近战判定
+     * 画面里是她贴着玩家来回挤。改成在这个距离上绕目标出刀 —— 仍在近战判定
      * （{@code distanceToSqr <= 9}，即 3 格）之内，但不会贴脸。
      */
     private static final double PHASE_TWO_STANDOFF_DISTANCE = 2.0D;
+    private static final double PHASE_TWO_MELEE_RANGE = 3.0D;
+    private static final double PHASE_TWO_MELEE_RANGE_SQR = PHASE_TWO_MELEE_RANGE * PHASE_TWO_MELEE_RANGE;
+    private static final float PHASE_TWO_ORBIT_LOOKAHEAD = 20.0F * Mth.DEG_TO_RAD;
+    private static final double PHASE_TWO_ORBIT_SPEED = 0.7D;
 
     /**
      * 二阶段站定时允许的高度差。
@@ -132,6 +136,7 @@ final class WinefoxCombatGoal extends Goal {
         WinefoxBossSpellAction.MODIFIED_TELEPORT,
         WinefoxBossSpellAction.STAR_SHADOW_STRIKE,
         WinefoxBossSpellAction.SHOCKWAVE,
+        WinefoxBossSpellAction.SWORD_PRISON,
         WinefoxBossSpellAction.SUMMON_SWORDS,
         WinefoxBossSpellAction.SPELLBREAKING_ECHO);
     private static final List<WinefoxBossSpellAction> PHASE_TWO_FAR_SPELLS = List.of(
@@ -490,7 +495,7 @@ final class WinefoxCombatGoal extends Goal {
         }
 
         if (this.tryConfiguredPool(target, false)) return;
-        WinefoxBossSpellAction action = this.chooseSpell(PHASE_ONE_SPELLS, target, horizontalDistance);
+        WinefoxBossSpellAction action = this.chooseSpell(PHASE_ONE_SPELLS);
         if (action == null) {
             this.boss.performRangedAttack(target, 1.0F);
             return;
@@ -711,7 +716,8 @@ final class WinefoxCombatGoal extends Goal {
             }
         }
 
-        if (this.meleeCooldown <= 0 && !this.spellTurnPending && this.boss.distanceToSqr(target) <= 9.0D
+        boolean inMeleeRange = this.boss.distanceToSqr(target) <= PHASE_TWO_MELEE_RANGE_SQR;
+        if (this.meleeCooldown <= 0 && !this.spellTurnPending && inMeleeRange
             && this.boss.getSensing().hasLineOfSight(target)
             && this.boss.tryMeleeAttack(target)) {
             if (this.meleeComboRemaining == 0) {
@@ -724,7 +730,7 @@ final class WinefoxCombatGoal extends Goal {
                 this.spellTurnPending = true;
             }
             return;
-        } else if (this.meleeComboRemaining > 0 && this.boss.distanceToSqr(target) <= 9.0D) {
+        } else if (this.meleeComboRemaining > 0 && inMeleeRange) {
             return;
         }
 
@@ -738,7 +744,7 @@ final class WinefoxCombatGoal extends Goal {
         }
 
         if (this.tryConfiguredPool(target, true)) return;
-        WinefoxBossSpellAction action = this.choosePhaseTwoSpell(target, horizontalDistance);
+        WinefoxBossSpellAction action = this.choosePhaseTwoSpell(horizontalDistance);
         if (action == null) {
             return;
         }
@@ -794,17 +800,20 @@ final class WinefoxCombatGoal extends Goal {
         // 高度"，于是高度被永久冻在上方两格多 —— 三维距离永远进不了近战窗口，她一刀都砍不到人。
         // 所以水平收进站定距离之后一律压到目标高度；还在远处水平飞过来时，容忍带只用来
         // 忽略普通跳跃与台阶，免得每 tick 追着目标的垂直速度抖动。
-        double desiredY = horizontalDistance > PHASE_TWO_STANDOFF_DISTANCE
+        double desiredY = horizontalDistance > PHASE_TWO_MELEE_RANGE
                           ? targetFlightY(target.getY(), target.getY())
                           : target.getY();
-        // 站定要同时满足水平与垂直：水平进了 2 格、高度也收进近战余量，才算真的站到位。
-        if (horizontalDistance <= PHASE_TWO_STANDOFF_DISTANCE * 1.5D
+        Vec3 away = horizontalDirection(target.position(), this.boss.position());
+        if (this.boss.distanceToSqr(target) <= PHASE_TWO_MELEE_RANGE_SQR
             && horizontalDistance >= PHASE_TWO_STANDOFF_DISTANCE * 0.5D
             && Math.abs(target.getY() - this.boss.getY()) <= PHASE_TWO_MELEE_VERTICAL_TOLERANCE) {
-            this.holdPosition();
+            if (!this.boss.isCasting() && this.boss.getSensing().hasLineOfSight(target)) {
+                this.orbitPhaseTwo(target, away);
+            } else {
+                this.holdPosition();
+            }
             return;
         }
-        Vec3 away = horizontalDirection(target.position(), this.boss.position());
         // 站定点取在目标背面 PHASE_TWO_STANDOFF_DISTANCE 格处，而不是目标本身那一格。
         // 当前位置距离为零（同一格，比如刚传送落进去）时方向是常量 (1,0,0)，
         // 站定点自然就落在她当前所在的一侧，不会把她从目标身上穿过去。
@@ -818,11 +827,35 @@ final class WinefoxCombatGoal extends Goal {
         this.moveTowardClearPosition(desired, speedModifier, 1.5D);
     }
 
+    private void orbitPhaseTwo(LivingEntity target, Vec3 away) {
+        if (--this.movementRefreshCooldown <= 0) {
+            this.refreshMovementPattern();
+        }
+        if (this.boss.horizontalCollision) {
+            this.orbitDirection = -this.orbitDirection;
+        }
+        for (int attempt = 0; attempt < 2; ++attempt) {
+            Vec3 offset = away.yRot(PHASE_TWO_ORBIT_LOOKAHEAD * (float) this.orbitDirection)
+                    .scale(PHASE_TWO_STANDOFF_DISTANCE);
+            Vec3 destination = target.position().add(offset);
+            AABB destinationBox = this.boss.getBoundingBox().move(destination.subtract(this.boss.position()));
+            if (this.boss.level().noCollision(this.boss, destinationBox)) {
+                this.boss.getNavigation().stop();
+                this.boss.setFlightDestination(destination, PHASE_TWO_ORBIT_SPEED);
+                this.stuckTicks = 0;
+                this.lastPosition = this.boss.position();
+                return;
+            }
+            this.orbitDirection = -this.orbitDirection;
+        }
+        this.holdPosition();
+    }
+
     /**
      * 二阶段远距离接近时的高度命令：当前高度还在容忍带里就原地保持，否则收到目标高度。
      *
-     * <p>只在 {@code horizontalDistance > PHASE_TWO_STANDOFF_DISTANCE} 的接近段用得到 ——
-     * 站定段的垂直余量是另一个常量（见 {@link #PHASE_TWO_MELEE_VERTICAL_TOLERANCE}）。
+     * <p>二阶段只在近战范围外的接近段用得到；绕圈阶段另有垂直余量
+     * （见 {@link #PHASE_TWO_MELEE_VERTICAL_TOLERANCE}）。
      */
     private double targetFlightY(double targetY, double requestedY) {
         double currentY = this.boss.getY();
@@ -980,8 +1013,8 @@ final class WinefoxCombatGoal extends Goal {
     }
 
     @Nullable
-    private WinefoxBossSpellAction choosePhaseTwoSpell(LivingEntity target, double horizontalDistance) {
-        List<WinefoxBossSpellAction> rangePool = horizontalDistance <= 3.0D
+    private WinefoxBossSpellAction choosePhaseTwoSpell(double horizontalDistance) {
+        List<WinefoxBossSpellAction> rangePool = horizontalDistance <= PHASE_TWO_MELEE_RANGE
                                                  ? PHASE_TWO_CLOSE_SPELLS
                                                  : PHASE_TWO_FAR_SPELLS;
         // 净化两阶段都要能放，所以和 MAGIC_SHOTGUN 一样无条件进池，不跟着远近走。
@@ -989,12 +1022,11 @@ final class WinefoxCombatGoal extends Goal {
         pool.add(WinefoxBossSpellAction.MAGIC_SHOTGUN);
         pool.add(WinefoxBossSpellAction.CLEANSE);
         pool.addAll(rangePool);
-        return this.chooseSpell(pool, target, horizontalDistance);
+        return this.chooseSpell(pool);
     }
 
     @Nullable
-    private WinefoxBossSpellAction chooseSpell(List<WinefoxBossSpellAction> pool,
-                                               LivingEntity target, double horizontalDistance) {
+    private WinefoxBossSpellAction chooseSpell(List<WinefoxBossSpellAction> pool) {
         List<WinefoxBossSpellAction> eligible = new ArrayList<>();
         for (WinefoxBossSpellAction action : pool) {
             // 破法回响只由停驻判定触发；伴星黑洞在一阶段只由定时判定触发。
@@ -1019,9 +1051,6 @@ final class WinefoxCombatGoal extends Goal {
             // 铁魔法的净化不会回血，只清有害效果（见 {@code CleanseSpell.onCast}），
             // 所以这一关没得放宽。
             if (action == WinefoxBossSpellAction.CLEANSE && !this.bossHasHarmfulEffect()) {
-                continue;
-            }
-            if (action == WinefoxBossSpellAction.SWORD_PRISON && horizontalDistance < 3.0D) {
                 continue;
             }
             eligible.add(action);

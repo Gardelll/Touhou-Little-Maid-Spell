@@ -6,6 +6,7 @@ import net.neoforged.neoforge.common.ModConfigSpec;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Stream;
 
 /** 饰品相关的通用配置，存放在 baubles.toml。 */
 final class ConfigBaubles {
@@ -23,6 +24,9 @@ final class ConfigBaubles {
             "soulsweapons:chungus_tonic_effect", "goety:fire_trail", "goety:charged",
             "goety:rampage", "goety:shadow_walk", "goety:fiery_aura", "goety:frosty_aura",
             "minecraft:invisibility", "irons_spellbooks:true_invisibility", "goety:explosive");
+    private static final List<String> DREAM_CRYSTAL_DEFAULT_BLACKLIST = Stream.concat(
+            DEFAULT_BLACKLIST.stream(), Stream.of("irons_spellbooks:thunderstorm")).toList();
+    private static final int DREAM_CRYSTAL_BLACKLIST_VERSION = 2;
 
     private static final ModConfigSpec.DoubleValue SILVER_CERCIS_TRUE_DAMAGE_MULTIPLIER;
     private static final ModConfigSpec.DoubleValue SPRING_RING_MAX_DAMAGE_BONUS;
@@ -170,8 +174,8 @@ final class ConfigBaubles {
                         "Duration in ticks of the random beneficial effect granted when the maid feeds her owner.")
                 .defineInRange("fragrantIngenuityBuffDuration", 2400, 200, 120000);
         FRAGRANT_INGENUITY_EFFECT_BLACKLIST = BUILDER
-                .comment("馥郁巧思随机效果黑名单；支持完整 id 和 regex: 正则，默认与梦云水晶相同",
-                        "Fragrant Ingenuity effect blacklist; supports ids and regex: patterns, defaults to Dream Crystal's list.")
+                .comment("馥郁巧思随机效果黑名单；支持完整 id 和 regex: 正则",
+                        "Fragrant Ingenuity effect blacklist; supports ids and regex: patterns.")
                 .defineListAllowEmpty(
                 List.of("fragrantIngenuityEffectBlacklist"), () -> DEFAULT_BLACKLIST, obj -> obj instanceof String);
         BUILDER.pop();
@@ -222,12 +226,12 @@ final class ConfigBaubles {
                 .comment("梦云水晶随机效果黑名单；支持完整 id 和 regex: 正则",
                         "Dream Crystal effect blacklist; supports full ids and regex: patterns.")
                 .defineListAllowEmpty(
-                List.of("dreamCrystalEffectBlacklist"), () -> DEFAULT_BLACKLIST, obj -> obj instanceof String);
+                List.of("dreamCrystalEffectBlacklist"), () -> DREAM_CRYSTAL_DEFAULT_BLACKLIST, obj -> obj instanceof String);
         DREAM_CRYSTAL_EFFECT_BLACKLIST_MIGRATION_VERSION = BUILDER
                 .comment("梦云水晶与馥郁巧思黑名单默认值迁移版本；请勿手动修改",
                         "Dream Crystal and Fragrant Ingenuity blacklist default migration version; do not edit manually.")
                 .defineInRange(
-                "dreamCrystalEffectBlacklistMigrationVersion", 0, 0, 1);
+                "dreamCrystalEffectBlacklistMigrationVersion", 0, 0, DREAM_CRYSTAL_BLACKLIST_VERSION);
         DREAM_CRYSTAL_USE_EFFECT_WHITELIST = BUILDER
                 .comment("true: 只抽白名单效果；false: 按黑名单排除",
                         "true: roll only whitelisted effects; false: exclude blacklisted effects.")
@@ -308,28 +312,25 @@ final class ConfigBaubles {
 
     /**
      * 已有的 TOML 在默认值新增条目后仍保留旧列表，这里只迁移「原封未动的旧默认值」，
-     * 玩家自定义过的黑名单保持由玩家掌控。梦云水晶与馥郁巧思共用同一份默认值，一并迁移。
+     * 玩家自定义过的黑名单保持由玩家掌控。版本 1 给两份黑名单补上 goety:explosive，
+     * 版本 2 只给梦云水晶补上 irons_spellbooks:thunderstorm，馥郁巧思仍用原列表。
      */
     private static void migrateRandomEffectBlacklists() {
-        if (DREAM_CRYSTAL_EFFECT_BLACKLIST_MIGRATION_VERSION.get() >= 1) {
+        int version = DREAM_CRYSTAL_EFFECT_BLACKLIST_MIGRATION_VERSION.get();
+        if (version >= DREAM_CRYSTAL_BLACKLIST_VERSION) {
             return;
         }
 
-        migrateRandomEffectBlacklist(DREAM_CRYSTAL_EFFECT_BLACKLIST);
-        migrateRandomEffectBlacklist(FRAGRANT_INGENUITY_EFFECT_BLACKLIST);
-
-        DREAM_CRYSTAL_EFFECT_BLACKLIST_MIGRATION_VERSION.set(1);
-        SPEC.save();
-    }
-
-    private static void migrateRandomEffectBlacklist(ModConfigSpec.ConfigValue<List<? extends String>> blacklist) {
-        int lastIndex = DEFAULT_BLACKLIST.size() - 1;
-        List<? extends String> configured = blacklist.get();
-        List<String> previousDefaults = DEFAULT_BLACKLIST.subList(0, lastIndex);
-        if (configured.equals(previousDefaults)) {
-            List<String> migrated = new ArrayList<>(configured);
-            migrated.add(DEFAULT_BLACKLIST.get(lastIndex));
-            blacklist.set(migrated);
+        List<String> versionZeroDefaults = DEFAULT_BLACKLIST.subList(0, DEFAULT_BLACKLIST.size() - 1);
+        if (version == 0 && FRAGRANT_INGENUITY_EFFECT_BLACKLIST.get().equals(versionZeroDefaults)) {
+            FRAGRANT_INGENUITY_EFFECT_BLACKLIST.set(new ArrayList<>(DEFAULT_BLACKLIST));
         }
+        List<? extends String> crystal = DREAM_CRYSTAL_EFFECT_BLACKLIST.get();
+        if (crystal.equals(DEFAULT_BLACKLIST) || (version == 0 && crystal.equals(versionZeroDefaults))) {
+            DREAM_CRYSTAL_EFFECT_BLACKLIST.set(new ArrayList<>(DREAM_CRYSTAL_DEFAULT_BLACKLIST));
+        }
+
+        DREAM_CRYSTAL_EFFECT_BLACKLIST_MIGRATION_VERSION.set(DREAM_CRYSTAL_BLACKLIST_VERSION);
+        SPEC.save();
     }
 }

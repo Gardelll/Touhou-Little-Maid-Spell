@@ -28,6 +28,7 @@ import com.github.yimeng261.maidspell.compat.irons_spellbooks.spell.ModifiedTele
 import com.github.yimeng261.maidspell.compat.irons_spellbooks.spell.StarShadowStrikeSpell;
 import com.github.yimeng261.maidspell.mixin.accessor.LivingEntityHealthAccessor;
 import com.github.yimeng261.maidspell.api.IPersistentEncounterEntity;
+import com.github.yimeng261.maidspell.api.IMovementGuardedEntity;
 import com.github.yimeng261.maidspell.api.IAuthoritativeHealth;
 import com.github.yimeng261.maidspell.api.IBossSyncedDataGuard;
 import com.github.yimeng261.maidspell.utils.BossLifecycleAccess;
@@ -87,6 +88,7 @@ import net.minecraft.world.entity.ExperienceOrb;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.MobSpawnType;
+import net.minecraft.world.entity.MoverType;
 import net.minecraft.world.entity.SpawnGroupData;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
@@ -102,6 +104,7 @@ import net.minecraft.world.entity.ai.goal.target.NearestAttackableTargetGoal;
 import net.minecraft.world.entity.ai.memory.MemoryModuleType;
 import net.minecraft.world.entity.ai.navigation.FlyingPathNavigation;
 import net.minecraft.world.entity.ai.navigation.PathNavigation;
+import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.monster.Enemy;
 import net.minecraft.world.entity.monster.Monster;
 import net.minecraft.world.entity.player.Player;
@@ -128,6 +131,7 @@ import com.github.yimeng261.maidspell.winefox.WinefoxAdvancements;
 import com.github.yimeng261.maidspell.winefox.WinefoxChallengeConfig;
 import com.github.yimeng261.maidspell.event.WinefoxProgressSyncEvents;
 import com.github.yimeng261.maidspell.winefox.WinefoxChallengeProgress;
+import com.github.yimeng261.maidspell.winefox.WinefoxMovementGuard;
 import com.github.yimeng261.maidspell.winefox.WinefoxVowProgress;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
@@ -142,7 +146,8 @@ import org.jetbrains.annotations.Nullable;
 
 public class MagicalWinefoxBossEntity extends AbstractSpellCastingMob
     implements Enemy, IMaid, CastingAnimateStateAccessor, ITrueDamageRedirect, Merchant,
-        IPersistentEncounterEntity, IBossSyncedDataGuard, IBossDamageClamp, IAuthoritativeHealth {
+        IPersistentEncounterEntity, IBossSyncedDataGuard, IBossDamageClamp, IAuthoritativeHealth,
+        IMovementGuardedEntity {
     static final String RETIRED_MAID_TAG = "MaidSpellWinefoxRetired";
     static final String RETIRED_MAID_BOSS_TAG = "MaidSpellWinefoxRetiredBoss";
     /** {@code Mob.DATA_MOB_FLAGS_ID} 里"关闭 AI"那一位，{@code Mob#setNoAi} 写的就是它。 */
@@ -431,6 +436,8 @@ public class MagicalWinefoxBossEntity extends AbstractSpellCastingMob
     private boolean customChallenge;
     private boolean healthReady;
     private final WinefoxHealthState healthState = new WinefoxHealthState();
+    /** 外部位移判定：只有她自己 aiStep 调用栈（或显式 bypass）里的位置/速度写入才被接受。 */
+    private final WinefoxMovementGuard maidspell$movementGuard = new WinefoxMovementGuard();
     private boolean authoritativeHealthReady;
     private boolean authoritativeMaxHealthReady;
     /** A low-level duplicate write is expected after an external setHealth call. */
@@ -553,6 +560,11 @@ public class MagicalWinefoxBossEntity extends AbstractSpellCastingMob
 
     @Override
     public void tick() {
+        // 被第三方塞进载具时，位置由载具的 positionRider 在"载具的 tick"里写，移动判定处理不了
+        // （拦掉只会服务端拒绝、客户端还在跟车）。这里在任意状态（含坐姿）强制下车，把控制权收回。
+        if (!this.level().isClientSide && this.isPassenger()) {
+            this.maidspell$withMovementBypass(this::stopRiding);
+        }
         this.maidspell$clearExpectedHealthWrite();
         if (!this.level().isClientSide && this.authoritativeMaxHealthReady) {
             this.maidspell$reconcileMaxHealthAttribute();
@@ -1026,6 +1038,293 @@ public class MagicalWinefoxBossEntity extends AbstractSpellCastingMob
         }
     }
 
+    // ==================== 外部位移判定 ====================
+    //
+    // 判定模型：地牢里"她的位置只能由她自己决定"。
+    // 唯一的可信窗口是整个 aiStep()：goal 选择、ISS 施法结算（customServerAiStep）、
+    // travel/move、坐姿锚定与归位都在那条调用栈里。窗口之外的一切位置/速度写入
+    // （第三方模组抬走、击飞、强制 tp、载具搬运）一律拒绝；击退例外，见 knockback。
+    //
+    // 注意：不要把 setNoGravity 也纳入判定 —— beginDefeat/读档会在外部 tick 里设置重力，
+    // 拦掉会让她战败时悬空、读档后姿态错乱。
+
+    @Override
+    public boolean maidspell$canChangeMovement() {
+        WinefoxMovementGuard guard = this.maidspell$movementGuard;
+        if (guard == null) {
+            // 父类构造期间本类字段还没初始化（Entity/LivingEntity 的构造会写位置/速度），
+            // 那一段不可能有"外部写入"需要拦，直接放行。
+            return true;
+        }
+        Level level = this.level();
+        boolean clientSide = level != null && level.isClientSide;
+        return guard.canChange(clientSide, Config.winefoxMovementGuardEnabled);
+    }
+
+    @Override
+    public void maidspell$onRejectedMovement(String method) {
+        WinefoxMovementGuard guard = this.maidspell$movementGuard;
+        if (guard != null) {
+            guard.recordRejection(method);
+        }
+    }
+
+    @Override
+    public void maidspell$withMovementBypass(Runnable action) {
+        WinefoxMovementGuard guard = this.maidspell$movementGuard;
+        if (guard == null) {
+            action.run();
+            return;
+        }
+        guard.enterBypass();
+        try {
+            action.run();
+        } finally {
+            guard.exitBypass();
+        }
+    }
+
+    @Override
+    public boolean maidspell$blocksExternalMovement() {
+        WinefoxMovementGuard guard = this.maidspell$movementGuard;
+        if (guard == null) {
+            return false;
+        }
+        Level level = this.level();
+        boolean clientSide = level != null && level.isClientSide;
+        return guard.blocksExternalWrites(clientSide, Config.winefoxMovementGuardEnabled);
+    }
+
+    /** 由 {@code EntityJoinLevelEvent}(HIGHEST) 与 {@code onAddedToLevel} 调用。 */
+    public void maidspell$armMovementGuard() {
+        this.maidspell$movementGuard.arm();
+    }
+
+    public void maidspell$disarmMovementGuard() {
+        this.maidspell$movementGuard.disarm();
+    }
+
+    /** 诊断/命令用的一行摘要。 */
+    public String maidspell$movementStatus() {
+        WinefoxMovementGuard guard = this.maidspell$movementGuard;
+        return (this.maidspell$blocksExternalMovement() ? "guarded" : "open")
+            + " " + (guard == null ? "uninitialised" : guard.describe());
+    }
+
+    private boolean maidspell$allowMovement(String method) {
+        if (this.maidspell$canChangeMovement()) {
+            return true;
+        }
+        this.maidspell$onRejectedMovement(method);
+        return false;
+    }
+
+    // ---- 位置写入 ----
+
+    @Override
+    public void setPos(double x, double y, double z) {
+        if (!this.maidspell$allowMovement("setPos")) {
+            return;
+        }
+        super.setPos(x, y, z);
+    }
+
+    @Override
+    public void absMoveTo(double x, double y, double z) {
+        if (!this.maidspell$allowMovement("absMoveTo")) {
+            return;
+        }
+        super.absMoveTo(x, y, z);
+    }
+
+    @Override
+    public void absMoveTo(double x, double y, double z, float yRot, float xRot) {
+        if (!this.maidspell$allowMovement("absMoveTo")) {
+            return;
+        }
+        super.absMoveTo(x, y, z, yRot, xRot);
+    }
+
+    @Override
+    public void moveTo(Vec3 pos) {
+        if (!this.maidspell$allowMovement("moveTo")) {
+            return;
+        }
+        super.moveTo(pos);
+    }
+
+    @Override
+    public void moveTo(double x, double y, double z) {
+        if (!this.maidspell$allowMovement("moveTo")) {
+            return;
+        }
+        super.moveTo(x, y, z);
+    }
+
+    @Override
+    public void moveTo(double x, double y, double z, float yRot, float xRot) {
+        if (!this.maidspell$allowMovement("moveTo")) {
+            return;
+        }
+        super.moveTo(x, y, z, yRot, xRot);
+    }
+
+    @Override
+    public void moveTo(BlockPos pos, float yRot, float xRot) {
+        if (!this.maidspell$allowMovement("moveTo")) {
+            return;
+        }
+        super.moveTo(pos, yRot, xRot);
+    }
+
+    @Override
+    public void teleportTo(double x, double y, double z) {
+        if (!this.maidspell$allowMovement("teleportTo")) {
+            return;
+        }
+        super.teleportTo(x, y, z);
+    }
+
+    // ---- 运动写入 ----
+
+    @Override
+    public void move(MoverType type, Vec3 pos) {
+        if (!this.maidspell$allowMovement("move")) {
+            return;
+        }
+        super.move(type, pos);
+    }
+
+    @Override
+    public void setDeltaMovement(Vec3 deltaMovement) {
+        if (!this.maidspell$allowMovement("setDeltaMovement")) {
+            return;
+        }
+        super.setDeltaMovement(deltaMovement);
+    }
+
+    @Override
+    public void setDeltaMovement(double x, double y, double z) {
+        if (!this.maidspell$allowMovement("setDeltaMovement")) {
+            return;
+        }
+        super.setDeltaMovement(x, y, z);
+    }
+
+    @Override
+    public void addDeltaMovement(Vec3 addend) {
+        if (!this.maidspell$allowMovement("addDeltaMovement")) {
+            return;
+        }
+        super.addDeltaMovement(addend);
+    }
+
+    @Override
+    public void push(double x, double y, double z) {
+        if (!this.maidspell$allowMovement("push")) {
+            return;
+        }
+        super.push(x, y, z);
+    }
+
+    @Override
+    public void push(Entity entity) {
+        if (!this.maidspell$allowMovement("push")) {
+            return;
+        }
+        super.push(entity);
+    }
+
+    @Override
+    public void lerpMotion(double x, double y, double z) {
+        if (!this.maidspell$allowMovement("lerpMotion")) {
+            return;
+        }
+        super.lerpMotion(x, y, z);
+    }
+
+    /**
+     * 击退是唯一保留的外力反馈：{@code WinefoxKnockbackGuard} 已经把它压到 0.2，
+     * 这里给 {@code super.knockback} 开一个局部的 bypass —— 否则它内部的
+     * {@code setDeltaMovement} 会被上面的入口拦掉，表现为"抗推力看着在跑、其实不生效"。
+     * 别把这里换成无条件放行 {@code setDeltaMovement}：那会把所有外部位移一起放开。
+     */
+    @Override
+    public void knockback(double strength, double x, double z) {
+        this.maidspell$movementGuard.enterBypass();
+        try {
+            super.knockback(strength, x, z);
+        } finally {
+            this.maidspell$movementGuard.exitBypass();
+        }
+    }
+
+    // ---- 骑乘：策略性禁止，而不是交给移动判定 ----
+    //
+    // 乘客的位置由载具的 positionRider / 乘客的 rideTick 在"载具的 tick"里写，
+    // 都不在她的 aiStep 内；靠守卫只有 desync。所以从入口拒绝，并在 tick 里弹出残留状态。
+
+    @Override
+    public boolean startRiding(Entity vehicle, boolean force) {
+        if (!this.level().isClientSide && Config.winefoxPreventRiding) {
+            this.maidspell$onRejectedMovement("startRiding");
+            return false;
+        }
+        return super.startRiding(vehicle, force);
+    }
+
+    @Override
+    protected boolean canRide(Entity vehicle) {
+        return !Config.winefoxPreventRiding && super.canRide(vehicle);
+    }
+
+    @Override
+    protected boolean couldAcceptPassenger() {
+        return !Config.winefoxPreventRiding && super.couldAcceptPassenger();
+    }
+
+    @Override
+    protected boolean canAddPassenger(Entity passenger) {
+        return !Config.winefoxPreventRiding && super.canAddPassenger(passenger);
+    }
+
+    /**
+     * 管理员命令 {@code /maidspell_winefox <targets> tp <pos>} 的唯一入口。
+     *
+     * <p>只挪位置是不够的：坐姿每 tick 会被 {@code tickSeatedAnchor} 拉回 {@code homePos}，
+     * 所以家位要一起改；{@code /tp} 被静默拒绝之后，这是管理员移动她的唯一正路。
+     */
+    public boolean maidspell$relocateAuthorized(double x, double y, double z) {
+        if (this.level().isClientSide || this.isRemoved()
+            || !Double.isFinite(x) || !Double.isFinite(y) || !Double.isFinite(z)) {
+            return false;
+        }
+        BlockPos target = BlockPos.containing(x, y, z);
+        if (this.level().isOutsideBuildHeight(target) || !Level.isInSpawnableBounds(target)) {
+            return false;
+        }
+        this.maidspell$withMovementBypass(() -> {
+            if (this.isPassenger()) {
+                this.stopRiding();
+            }
+            // 战败/归位的倒计时会把她送回"旧的"家位；先收敛到可挑战状态，再换家。
+            if (this.isDefeated() || this.maidspell$encounterState() == WinefoxEncounterState.RETURNING) {
+                this.maidspell$repairAuthorized();
+            }
+            this.homePos = target;
+            this.teleportTo(x, y, z);
+            this.setDeltaMovement(Vec3.ZERO);
+            this.resetFallDistance();
+            if (this.isCastingPalmBlackHole()) {
+                // 仪式期间 travel 每 tick 把水平位置钉回起手点，不改这三个值会被当场拉回去。
+                this.palmBlackHoleBaseX = x;
+                this.palmBlackHoleBaseY = y;
+                this.palmBlackHoleBaseZ = z;
+            }
+        });
+        return true;
+    }
+
     @Override
     protected float getFlyingSpeed() {
         return 0.04F;
@@ -1033,6 +1332,9 @@ public class MagicalWinefoxBossEntity extends AbstractSpellCastingMob
 
     @Override
     public void travel(Vec3 travelVector) {
+        if (!this.maidspell$allowMovement("travel")) {
+            return;
+        }
         if (this.isDizzy() || this.entityData.get(SWORD_PRISON_RECOVERING) || this.swordPrisonCombo.isActive()) {
             this.setDeltaMovement(Vec3.ZERO);
             return;
@@ -1378,6 +1680,12 @@ public class MagicalWinefoxBossEntity extends AbstractSpellCastingMob
      */
     @Override
     public void aiStep() {
+        // 整个 aiStep 都是"她自己的 tick"：goal 选择、ISS 施法结算、travel/move、
+        // 坐姿锚定与归位全部在这条调用栈内，所以这里是唯一的可信移动窗口。
+        // 不能只包 super.aiStep()：tickSeatedAnchor/tickReturnHome 在 super 之后，
+        // 包窄了会把它们每 tick 的传送拦掉。
+        this.maidspell$movementGuard.enterTrusted();
+        try {
         // 在目标选择以及铁魔法本 tick 放出法术之前，先更新隐身状态。
         if (!this.level().isClientSide && this.isBattleActive()) {
             this.tickPlayerInvisibility();
@@ -1437,6 +1745,9 @@ public class MagicalWinefoxBossEntity extends AbstractSpellCastingMob
         this.yBodyRot = Mth.approachDegrees(this.yBodyRot, wanted, BODY_TURN_DEGREES_PER_TICK);
         this.setYRot(this.yBodyRot);
         this.yHeadRot = Mth.approachDegrees(this.yHeadRot, wanted, BODY_TURN_DEGREES_PER_TICK);
+        } finally {
+            this.maidspell$movementGuard.exitTrusted();
+        }
     }
 
     @Override
@@ -1959,6 +2270,10 @@ public class MagicalWinefoxBossEntity extends AbstractSpellCastingMob
     /** 仪式完成或被打断之后，恢复常规的战斗飞行。 */
     public void endPalmBlackHoleCast() {
         if (this.level().isClientSide) return;
+        // tick() 里也会调用到这里（施法被打断/数据被外部清掉），它不在 aiStep 内，
+        // 而下面要清速度，所以显式开 bypass。语义上是"内部生命周期"，不是外部位移。
+        this.maidspell$movementGuard.enterBypass();
+        try {
         // 仪式开始前可能已有一次普通的「深渊庇佑」在生效；
         // 只移除本次仪式添加的那一个实例，不动另一个增益。
         if (this.palmBlackHoleShroud != null
@@ -1971,6 +2286,9 @@ public class MagicalWinefoxBossEntity extends AbstractSpellCastingMob
         this.getNavigation().stop();
         this.resetFlightControl();
         this.setDeltaMovement(Vec3.ZERO);
+        } finally {
+            this.maidspell$movementGuard.exitBypass();
+        }
     }
 
     private void ensurePalmBlackHoleShroud() {
@@ -2443,9 +2761,10 @@ public class MagicalWinefoxBossEntity extends AbstractSpellCastingMob
         return this.tradingPlayer;
     }
 
-    /** 授权清除、卸载或换维度后，旧实体不能再成交。 */
+    /** 授权清除、卸载或换维度后，旧实体不能再成交；移动判定回到加载窗口。 */
     @Override
     public void onRemovedFromLevel() {
+        this.maidspell$disarmMovementGuard();
         super.onRemovedFromLevel();
         this.setTradingPlayer(null);
     }
@@ -2980,6 +3299,9 @@ public class MagicalWinefoxBossEntity extends AbstractSpellCastingMob
     public boolean teleportTo(ServerLevel destination, double x, double y, double z,
                               Set<net.minecraft.world.entity.RelativeMovement> relative,
                               float yaw, float pitch) {
+        if (!this.maidspell$allowMovement("teleportTo(ServerLevel)")) {
+            return false;
+        }
         return destination == this.level()
             && super.teleportTo(destination, x, y, z, relative, yaw, pitch);
     }
@@ -3178,6 +3500,10 @@ public class MagicalWinefoxBossEntity extends AbstractSpellCastingMob
      * 行礼位与归位倒计时（两种演出的时长与台词不同）。
      */
     private void maidspell$teardownCombat() {
+        // 收场既可能发生在 aiStep（正常结束），也可能发生在外部 tick（被打死那一下），
+        // 后者不在可信窗口内，所以整段开 bypass；里面的清理项都是幂等的内部语义。
+        this.maidspell$movementGuard.enterBypass();
+        try {
         this.cancelSwordPrisonCombo();
         this.removeEffect(MaidSpellEffects.STARANCHOR_STUN);
         this.entityData.set(SWORD_PRISON_RECOVERING, false);
@@ -3200,6 +3526,9 @@ public class MagicalWinefoxBossEntity extends AbstractSpellCastingMob
         this.setTarget(null);
         this.entityData.set(BATTLE_MUSIC, false);
         this.bossEvent.setVisible(false);
+        } finally {
+            this.maidspell$movementGuard.exitBypass();
+        }
     }
 
     /** 权威生命归零后提交战败；动画由同步遭遇状态驱动而非原版死亡计时。 */
@@ -3287,7 +3616,7 @@ public class MagicalWinefoxBossEntity extends AbstractSpellCastingMob
      * <p><b>必须自己调 {@code dropFromLootTable}。</b>原版死亡流程已被禁用，
      * 只有正式挑战中的合法战败才能调用这个奖励入口。
      *
-     * <p>星云核心与星之魔女战斗曲唱片不走战利品表而是直接落地；
+     * <p>星云核心与星之魔女战斗曲唱片不走战利品表而是直接生成；核心悬浮在掉落高度。
      * 女仆代打或使用自定义配置的挑战均不掉落。
      */
     private void dropDefeatRewards(@Nullable DamageSource source) {
@@ -3300,7 +3629,11 @@ public class MagicalWinefoxBossEntity extends AbstractSpellCastingMob
         }
         this.dropFromLootTable(rewardSource, this.lastHurtByPlayerTime > 0);
         if (!this.isRestricted() && !this.customChallenge) {
-            this.spawnAtLocation(new ItemStack(MaidSpellItems.NEBULA_CORE.get()));
+            ItemEntity core = this.spawnAtLocation(new ItemStack(MaidSpellItems.NEBULA_CORE.get()));
+            if (core != null) {
+                core.setNoGravity(true);
+                core.setDeltaMovement(Vec3.ZERO);
+            }
             this.spawnAtLocation(new ItemStack(MaidSpellItems.MUSIC_DISC_CONCERTO_NO_10_B_MINOR.get()));
         }
         if (this.level() instanceof ServerLevel serverLevel) {
@@ -3322,6 +3655,9 @@ public class MagicalWinefoxBossEntity extends AbstractSpellCastingMob
 
     /** 虚空归位使用记录下来的秋千位，坐姿或正在归位途中也一样。 */
     private void recoverFromVoid() {
+        // tick()/hurt() 两条调用路径都在 aiStep 之外，归位传送与本方法里的速度清零要显式放行。
+        this.maidspell$movementGuard.enterBypass();
+        try {
         if (this.homePos == null || this.level().isOutsideBuildHeight(this.homePos)) {
             return;
         }
@@ -3336,6 +3672,9 @@ public class MagicalWinefoxBossEntity extends AbstractSpellCastingMob
         } else {
             this.returnHomeTicks = 1;
             this.tickReturnHome();
+        }
+        } finally {
+            this.maidspell$movementGuard.exitBypass();
         }
     }
 
@@ -3895,10 +4234,12 @@ public class MagicalWinefoxBossEntity extends AbstractSpellCastingMob
                 && (state == WinefoxEncounterState.CHALLENGE_START || state == WinefoxEncounterState.COMBAT);
     }
 
+    /** 加载窗口：join 事件之前/之后都可能被别的事件处理器写位置，所以 join 事件与这里两处都武装移动判定。 */
     @Override
     public void onAddedToLevel() {
         super.onAddedToLevel();
         if (!this.level().isClientSide) {
+            this.maidspell$armMovementGuard();
             this.restoreChallengeActiveMark();
         }
     }
@@ -4542,6 +4883,9 @@ public class MagicalWinefoxBossEntity extends AbstractSpellCastingMob
 
     /** 管理员法术预览：以 25% 血量进入二阶段，并完整重放整套仪式。 */
     public boolean maidspell$testPalmBlackHoleAuthorized() {
+        // 管理员预览会直接调 tickReturnHome（真实传送），命令线程不在 aiStep 内。
+        this.maidspell$movementGuard.enterBypass();
+        try {
         if (this.level().isClientSide || this.isRemoved()
                 || this.maidspell$rewardState() == WinefoxRewardState.GRANTING || !this.ensureHomePos()) {
             return false;
@@ -4585,6 +4929,9 @@ public class MagicalWinefoxBossEntity extends AbstractSpellCastingMob
         boolean started = this.spells().cast(this.getTarget(), WinefoxBossSpellAction.PALM_BLACK_HOLE, 1);
         this.maidspell$setPalmBlackHoleTriggeredThisPhase(started);
         return started;
+        } finally {
+            this.maidspell$movementGuard.exitBypass();
+        }
     }
 
     public boolean maidspell$resolvePendingReward(boolean reissue) {
@@ -4628,7 +4975,8 @@ public class MagicalWinefoxBossEntity extends AbstractSpellCastingMob
             + " wins=" + this.playerWinCount + "/" + WinefoxVowProgress.REQUIRED_WINS
             + " soloWin=" + this.soloWinAfterRequiredWins
             + " vow=" + this.vowStage + (this.vowSealed ? "(sealed)" : "")
-            + " vowTicks=" + this.vowTicks);
+            + " vowTicks=" + this.vowTicks
+            + " movement=" + this.maidspell$movementStatus());
     }
 
     /**

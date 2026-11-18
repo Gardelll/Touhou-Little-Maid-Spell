@@ -13,6 +13,7 @@
     "ChunkGeneratorMixin",
     "DeltaFeatureMixin",
     "EntityMixin",
+    "TeleportCommandMixin",
     "FriendlyDamageHealthMixin",
     "HairpinArmorDurabilityMixin",
     "HairpinServerLevelMixin",

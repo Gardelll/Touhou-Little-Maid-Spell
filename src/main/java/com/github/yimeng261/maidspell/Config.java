@@ -107,6 +107,8 @@ public final class Config {
     public static double winefoxAdaptiveFinalBudgetMultiplier;
     public static double winefoxDuelSurvivalFloor;
     public static int winefoxInvisibilitySearchTicks = 200;
+    public static boolean winefoxMovementGuardEnabled = true;
+    public static boolean winefoxPreventRiding = true;
 
     private static boolean combatLoaded;
     private static boolean baublesLoaded;

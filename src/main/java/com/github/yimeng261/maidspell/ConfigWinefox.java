@@ -103,6 +103,14 @@ final class ConfigWinefox {
             .comment("酒狐专注搜索隐身玩家的时长，单位 tick；玩家持续隐身时刷新",
                     "Ticks spent searching only for the hidden player, refreshed while invisible.")
             .defineInRange("winefoxInvisibilitySearchTicks", 200, 1, 1200);
+    private static final ModConfigSpec.BooleanValue MOVEMENT_GUARD_ENABLED = BUILDER
+            .comment("是否启用星之魔女的外部位移判定：不在她自己 aiStep 调用链内的位置/速度写入一律拒绝",
+                    "Whether the Stellar Witch rejects movement writes that do not originate from her own aiStep.")
+            .define("winefoxMovementGuardEnabled", true);
+    private static final ModConfigSpec.BooleanValue PREVENT_RIDING = BUILDER
+            .comment("是否禁止星之魔女骑乘或被骑乘；关闭后第三方载具可以把她带走（移动判定处理不了载具内的位置同步）",
+                    "Whether the Stellar Witch is forbidden from riding or carrying passengers; disabling this lets third-party vehicles carry her away.")
+            .define("winefoxPreventRiding", true);
 
     static {
         BUILDER.pop();
@@ -137,5 +145,7 @@ final class ConfigWinefox {
         Config.winefoxAdaptiveFinalBudgetMultiplier = ADAPTIVE_FINAL_BUDGET_MULTIPLIER.get();
         Config.winefoxDuelSurvivalFloor = DUEL_SURVIVAL_FLOOR.get();
         Config.winefoxInvisibilitySearchTicks = INVISIBILITY_SEARCH_TICKS.get();
+        Config.winefoxMovementGuardEnabled = MOVEMENT_GUARD_ENABLED.get();
+        Config.winefoxPreventRiding = PREVENT_RIDING.get();
     }
 }

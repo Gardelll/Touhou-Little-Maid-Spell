@@ -8,6 +8,7 @@ import com.github.yimeng261.maidspell.compat.irons_spellbooks.event.PalmBlackHol
 import com.github.yimeng261.maidspell.compat.irons_spellbooks.event.StaranchorStunSpellInterrupt;
 import com.github.yimeng261.maidspell.compat.irons_spellbooks.event.VoidPhaseDamageHandler;
 import com.github.yimeng261.maidspell.compat.irons_spellbooks.event.WinefoxCounterspellGuard;
+import com.github.yimeng261.maidspell.compat.irons_spellbooks.event.WinefoxMovementGuardEvents;
 import com.github.yimeng261.maidspell.compat.irons_spellbooks.item.StarShadowLongswordItem;
 import com.github.yimeng261.maidspell.compat.irons_spellbooks.item.StarShadowStaffItem;
 import com.github.yimeng261.maidspell.compat.irons_spellbooks.item.StarWitchArmorMaterial;
@@ -52,6 +53,8 @@ public final class IronsSpellbooksCompat {
         NeoForge.EVENT_BUS.register(WinefoxKnockbackGuard.class);
         NeoForge.EVENT_BUS.register(WinefoxCounterspellGuard.class);
         NeoForge.EVENT_BUS.register(WinefoxSpellPowerBonus.class);
+        // 移动判定要在实体加入世界的第一时间武装。
+        NeoForge.EVENT_BUS.register(WinefoxMovementGuardEvents.class);
     }
 
     public static void initClientSetup() {

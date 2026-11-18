@@ -4,6 +4,7 @@ package com.github.yimeng261.maidspell.mixin;
 import com.github.tartaricacid.touhoulittlemaid.entity.passive.EntityMaid;
 import com.github.yimeng261.maidspell.Global;
 import com.github.yimeng261.maidspell.api.IBossSyncedDataGuard;
+import com.github.yimeng261.maidspell.api.IMovementGuardedEntity;
 import com.github.yimeng261.maidspell.api.IPersistentEncounterEntity;
 import com.github.yimeng261.maidspell.item.bauble.unholyHat.UnholyHatBauble;
 import com.github.yimeng261.maidspell.utils.AnchorCoreProtection;
@@ -77,6 +78,30 @@ public class EntityMixin {
     private void onFireImmune(CallbackInfoReturnable<Boolean> cir) {
         if ((Object) this instanceof EntityMaid maid && UnholyHatBauble.hasUnholyHat(maid)) {
             cir.setReturnValue(true);
+        }
+    }
+
+    /**
+     * 外部位移判定的最后一道闸。
+     *
+     * <p>{@code Entity#setPosRaw} 是 {@code public final}，子类无法覆写；而
+     * {@code Entity#moveTo(DDDFF)} 这类入口会直接写它。所以凡是实现了
+     * {@link IMovementGuardedEntity} 的实体，都在这里统一问一次"这次写入允许吗"。</p>
+     *
+     * <p>客户端一律放行（判定在接口实现里），否则同步/插值包会被拦。</p>
+     */
+    @Inject(method = "setPosRaw", at = @At("HEAD"), cancellable = true, remap = true)
+    private void maidspell$guardExternalSetPosRaw(double x, double y, double z, CallbackInfo ci) {
+        if (!((Object) this instanceof IMovementGuardedEntity guard)) {
+            return;
+        }
+        try {
+            if (!guard.maidspell$canChangeMovement()) {
+                guard.maidspell$onRejectedMovement("setPosRaw");
+                ci.cancel();
+            }
+        } catch (Exception exception) {
+            Global.LOGGER.error("[MaidSpell] Failed to check movement authority", exception);
         }
     }
 

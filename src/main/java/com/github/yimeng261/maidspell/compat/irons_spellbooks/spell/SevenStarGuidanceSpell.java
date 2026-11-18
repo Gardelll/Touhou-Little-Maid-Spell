@@ -34,8 +34,9 @@ public class SevenStarGuidanceSpell extends AbstractSpell implements BossExclusi
             ResourceLocation.fromNamespaceAndPath(MaidSpellMod.MOD_ID, "seven_star_guidance");
 
     private static final int TARGET_RANGE = 32;
+    private static final float DAMAGE_MULTIPLIER = 1.5F;
 
-    /** 收束一击在 0 次命中时的基础倍率（法强 × 该值即 {@link #getBaseFinalDamage}）。 */
+    /** 收束一击在 0 次命中时的基础倍率，另计通用伤害倍率。 */
     private static final float FINAL_DAMAGE_RATIO = 0.325F;
 
     /**
@@ -130,12 +131,12 @@ public class SevenStarGuidanceSpell extends AbstractSpell implements BossExclusi
 
     /** 前七次是较轻的落击，避免仪式过程本身压过最后的收束。 */
     public float getStarDamage(int spellLevel, LivingEntity caster) {
-        return getSpellPower(spellLevel, caster) * 0.18F;
+        return getSpellPower(spellLevel, caster) * 0.18F * DAMAGE_MULTIPLIER;
     }
 
     /** 0 次命中时的收束伤害；落进实体后由实体按命中次数加成。 */
     public float getBaseFinalDamage(int spellLevel, LivingEntity caster) {
-        return getSpellPower(spellLevel, caster) * FINAL_DAMAGE_RATIO;
+        return getSpellPower(spellLevel, caster) * FINAL_DAMAGE_RATIO * DAMAGE_MULTIPLIER;
     }
 
     /**

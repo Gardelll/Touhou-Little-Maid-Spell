@@ -8,7 +8,9 @@ import com.github.yimeng261.maidspell.item.bauble.soulBook.SoulBookBauble;
 import com.github.yimeng261.maidspell.item.bauble.woundRimeBlade.WoundRimeBladeBauble;
 import com.github.yimeng261.maidspell.mixin.accessor.LivingEntityHealthAccessor;
 import com.github.yimeng261.maidspell.utils.MaidDamageProcessor;
+import com.github.yimeng261.maidspell.utils.MaidHealthDataItem;
 import com.github.yimeng261.maidspell.utils.MaidHealthWriteGuard;
+import com.github.yimeng261.maidspell.utils.SoulBookHealthProtection;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.SyncedDataHolder;
 import net.minecraft.network.syncher.SynchedEntityData;
@@ -32,6 +34,18 @@ public abstract class SynchedEntityDataHealthMixin {
     @org.spongepowered.asm.mixin.Final
     private SyncedDataHolder entity;
 
+    @Shadow
+    @org.spongepowered.asm.mixin.Final
+    private SynchedEntityData.DataItem<?>[] itemsById;
+
+    @Inject(method = "<init>", at = @At("RETURN"))
+    private void maidspell$bindMaidHealthEntry(SyncedDataHolder holder, SynchedEntityData.DataItem<?>[] items,
+                                               CallbackInfo ci) {
+        if (holder instanceof EntityMaid maid && !maid.level().isClientSide()) {
+            ((MaidHealthDataItem) items[maidspell$healthAccessor().id()]).maidspell$bindHealthOwner(maid);
+        }
+    }
+
     @Inject(method = "set(Lnet/minecraft/network/syncher/EntityDataAccessor;Ljava/lang/Object;Z)V",
             at = @At("HEAD"),
             cancellable = true)
@@ -41,16 +55,31 @@ public abstract class SynchedEntityDataHealthMixin {
             ci.cancel();
             return;
         }
-        if (MaidHealthWriteGuard.isBypassing()) {
-            return;
-        }
         if (!maidspell$isHealthAccessor(accessor)) {
             return;
         }
-        if (!(value instanceof Float requestedHealth)) {
+        if (!(this.entity instanceof LivingEntity living) || living.level().isClientSide()) {
             return;
         }
-        if (!(this.entity instanceof LivingEntity living) || living.level().isClientSide()) {
+        if (living instanceof EntityMaid maid) {
+            SynchedEntityData.DataItem<?> item = this.itemsById[accessor.id()];
+            if (SoulBookHealthProtection.isProtected(maid)) {
+                if (!(value instanceof Float requestedHealth) || !Float.isFinite(requestedHealth)) {
+                    ci.cancel();
+                    return;
+                }
+                // 魂之书女仆的掉血只认伤害结算许可的那一笔，回血照常往下走
+                if (requestedHealth < maid.getHealth()) {
+                    if (!MaidHealthWriteGuard.permits(maid, item, requestedHealth)) {
+                        ci.cancel();
+                    }
+                    return;
+                }
+            } else if (value instanceof Float requestedHealth && MaidHealthWriteGuard.permits(maid, item, requestedHealth)) {
+                return;
+            }
+        }
+        if (!(value instanceof Float requestedHealth)) {
             return;
         }
 
@@ -93,7 +122,7 @@ public abstract class SynchedEntityDataHealthMixin {
         MaidDamageProcessor.MaidHealthChange healthChange = MaidDamageProcessor.processMaidHealthDecrease(maid, requestedHealth);
         ci.cancel();
         if (healthChange.writeHealth()) {
-            MaidHealthWriteGuard.runBypassing(() -> maid.getEntityData().set(maidspell$healthAccessor(), healthChange.health(), force));
+            MaidHealthWriteGuard.write(maid, maidspell$healthAccessor(), healthChange.health(), force);
         }
     }
 

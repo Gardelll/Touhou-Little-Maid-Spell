@@ -98,11 +98,10 @@ public final class Actors {
 
     /**
      * 直接设置女仆生命。本模组拦截非正常受伤造成的女仆扣血（setHealth 往下调会被忽略），
-     * 这里走它自己的写入旁路，只用于布置场景初始状态。
+     * 这里走它自己的带许可写入，魂之书女仆也能改，只用于布置场景初始状态。
      */
     public static void setMaidHealth(EntityMaid maid, float health) {
-        MaidHealthWriteGuard.runBypassing(() ->
-                maid.getEntityData().set(LivingEntityHealthAccessor.maidspell$getHealthAccessor(), health));
+        MaidHealthWriteGuard.writeAuthorized(maid, LivingEntityHealthAccessor.maidspell$getHealthAccessor(), health, false);
     }
 
     /** 把饰品放进女仆第一个饰品槽，返回女仆身上实际的那份物品。 */

@@ -84,8 +84,18 @@ public final class MaidDamageProcessor {
     }
 
     public static MaidHealthChange processMaidHealthDecrease(EntityMaid maid, float requestedHealth) {
+        return processMaidHealthDecrease(maid, requestedHealth, false);
+    }
+
+    /** 魂之书结算点传来的是 actuallyHurt 未截断的目标生命，本身就是一次正常受伤，不再对战斗记录。 */
+    static MaidHealthChange processSettledMaidDamage(EntityMaid maid, float requestedHealth) {
+        return processMaidHealthDecrease(maid, requestedHealth, true);
+    }
+
+    private static MaidHealthChange processMaidHealthDecrease(EntityMaid maid, float requestedHealth,
+                                                              boolean settledDamage) {
         float currentHealth = maid.getHealth();
-        float hurtDamage = commonHurtDamage(requestedHealth, maid);
+        float hurtDamage = settledDamage ? currentHealth - requestedHealth : commonHurtDamage(requestedHealth, maid);
         boolean commonHurt = !Float.isNaN(hurtDamage);
         DataItem dataItem = new DataItem(maid, commonHurt ? hurtDamage : currentHealth - requestedHealth);
 

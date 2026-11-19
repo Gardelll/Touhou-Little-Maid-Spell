@@ -11,7 +11,6 @@ import com.github.yimeng261.maidspell.stagewright.support.Owners;
 import com.github.yimeng261.maidspell.stagewright.support.Players;
 import com.github.yimeng261.maidspell.stagewright.support.Stage;
 import com.github.yimeng261.maidspell.utils.DataItem;
-import com.github.yimeng261.maidspell.utils.MaidHealthWriteGuard;
 import net.magicterra.stagewright.test.Game;
 import net.magicterra.stagewright.test.Plot;
 import net.magicterra.stagewright.test.Scene;
@@ -164,9 +163,9 @@ class HealthWriteGuardTest {
         Stage ctx = Stage.flat(game, plot, reporter);
         ctx.run(() -> {
             ServerPlayer owner = Owners.visitor(ctx, "TlmsHealthOwner", 0, 0, 0);
+            // 受保护的主人直接改低生命会被拦下，残血要在魂之书女仆到场之前布置
+            owner.setHealth(2.0F);
             Players.ownedMaid(ctx, owner, 2, 0, 0, SOUL_BOOK);
-            // 受保护的主人直接改低生命会被拦下，布置残血走写血旁路
-            MaidHealthWriteGuard.runBypassing(() -> owner.setHealth(2.0F));
             owner.invulnerableTime = 0;
             owner.hurt(owner.damageSources().generic(), 6.0F);
             float after = owner.getHealth();

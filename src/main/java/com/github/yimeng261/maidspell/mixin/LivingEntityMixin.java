@@ -7,6 +7,7 @@ import com.github.yimeng261.maidspell.item.MaidSpellItems;
 import com.github.yimeng261.maidspell.item.bauble.hairpin.HairpinBauble;
 import com.github.yimeng261.maidspell.spell.manager.BaubleStateManager;
 import com.github.yimeng261.maidspell.utils.FoxLeafOwnerEffectHelper;
+import com.github.yimeng261.maidspell.utils.SoulBookHealthProtection;
 import net.minecraft.core.Holder;
 import net.minecraft.tags.FluidTags;
 import net.minecraft.world.effect.MobEffect;
@@ -29,7 +30,7 @@ import java.util.Map;
 import java.util.function.BiFunction;
 
 /**
- * LivingEntity 的 Mixin：权威生命上限、女仆效果拦截、发簪采样免击退与水上行走。
+ * LivingEntity 的 Mixin：权威生命上限、魂之书女仆 setHealth 拦截、女仆效果拦截、发簪采样免击退与水上行走。
  * 生命写入的守卫在 {@link SynchedEntityDataHealthMixin}。
  */
 @Mixin(LivingEntity.class)
@@ -38,6 +39,15 @@ public abstract class LivingEntityMixin {
     private void maidspell$readAuthoritativeMaxHealth(CallbackInfoReturnable<Float> cir) {
         if ((Object) this instanceof IAuthoritativeHealth authority) {
             cir.setReturnValue(authority.maidspell$authoritativeMaxHealth());
+        }
+    }
+
+    /** 魂之书女仆的 setHealth 不许掉血或写入非有限值，掉血只走伤害结算。 */
+    @Inject(method = "setHealth", at = @At("HEAD"), cancellable = true)
+    private void maidspell$rejectSoulBookHealthDrop(float health, CallbackInfo ci) {
+        if ((Object) this instanceof EntityMaid maid && SoulBookHealthProtection.isProtected(maid)
+                && (!Float.isFinite(health) || health < maid.getHealth())) {
+            ci.cancel();
         }
     }
 

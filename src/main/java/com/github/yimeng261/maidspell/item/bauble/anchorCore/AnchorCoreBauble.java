@@ -7,9 +7,11 @@ import com.github.yimeng261.maidspell.Global;
 import com.github.yimeng261.maidspell.MaidSpellMod;
 import com.github.yimeng261.maidspell.api.AnchorCoreWhitelist;
 import com.github.yimeng261.maidspell.api.entity.AnchoredEntityMaid;
+import com.github.yimeng261.maidspell.event.AnchorTrackingEvents;
 import com.github.yimeng261.maidspell.item.MaidSpellItems;
 import com.github.yimeng261.maidspell.player.ChunkLoadingData;
 import com.github.yimeng261.maidspell.spell.manager.BaubleStateManager;
+import com.github.yimeng261.maidspell.utils.MaidHardRemovalProtection;
 import it.unimi.dsi.fastutil.Pair;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceKey;
@@ -129,10 +131,21 @@ public class AnchorCoreBauble implements IMaidBauble {
     }
 
     @Override
+    public void onPutOn(EntityMaid maid, ItemStack baubleItem) {
+        if (maid.level().isClientSide()) {
+            return;
+        }
+        MaidHardRemovalProtection.rememberProtected(maid);
+        AnchorTrackingEvents.updateEquipped(maid, true);
+    }
+
+    @Override
     public void onTakeOff(EntityMaid maid, ItemStack baubleItem) {
         if (maid.level().isClientSide()) {
             return;
         }
+        MaidHardRemovalProtection.forgetRegistration(maid);
+        AnchorTrackingEvents.updateEquipped(maid, false);
         AnchoredEntityMaid anchoredEntityMaid = (AnchoredEntityMaid) maid;
         anchoredEntityMaid.maidSpell$setAnchored(false);
         releaseChunkLoading(maid);

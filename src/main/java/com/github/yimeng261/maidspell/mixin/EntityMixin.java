@@ -6,13 +6,16 @@ import com.github.yimeng261.maidspell.Global;
 import com.github.yimeng261.maidspell.api.IBossSyncedDataGuard;
 import com.github.yimeng261.maidspell.api.IMovementGuardedEntity;
 import com.github.yimeng261.maidspell.api.IPersistentEncounterEntity;
+import com.github.yimeng261.maidspell.coremod.AnchorWriteHooks;
 import com.github.yimeng261.maidspell.item.bauble.unholyHat.UnholyHatBauble;
+import com.github.yimeng261.maidspell.mixin.accessor.AnchorEntityCallbackAccessor;
 import com.github.yimeng261.maidspell.utils.AnchorCoreProtection;
 import com.github.yimeng261.maidspell.utils.FriendlyDamageHealthGuard;
 import com.github.yimeng261.maidspell.utils.PersistentEntityLifecycleGuard;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.level.entity.EntityInLevelCallback;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -21,6 +24,13 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 @Mixin(value = Entity.class,remap = false)
 public class EntityMixin {
+
+    @Inject(method = "setLevelCallback", at = @At("HEAD"), cancellable = true, remap = true)
+    private void maidspell$guardLevelCallback(EntityInLevelCallback next, CallbackInfo ci) {
+        Entity entity = (Entity) (Object) this;
+        var current = ((AnchorEntityCallbackAccessor) entity).maidspell$levelCallback();
+        if (!AnchorWriteHooks.allowLevelCallbackTransition(entity, current, next)) ci.cancel();
+    }
 
     @Inject(method = "setRemoved(Lnet/minecraft/world/entity/Entity$RemovalReason;)V",
             at = @At("HEAD"),

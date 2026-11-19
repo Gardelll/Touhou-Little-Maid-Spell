@@ -1,5 +1,6 @@
 package com.github.yimeng261.maidspell.network.message;
 
+import com.github.tartaricacid.touhoulittlemaid.entity.passive.EntityMaid;
 import com.github.yimeng261.maidspell.client.ClientMaidRemovalGuard;
 import com.github.yimeng261.maidspell.mixin.accessor.EntityInvoker;
 import net.minecraft.client.Minecraft;
@@ -24,20 +25,20 @@ public final class MaidEntityRestoreClientHandler {
         }
 
         ClientLevel level = minecraft.level;
-        ClientMaidRemovalGuard.markProtected(message.entityId());
         Entity entity = level.getEntity(message.entityId());
+        if (entity != null && (!(entity instanceof EntityMaid) || !entity.getUUID().equals(message.uuid()))) return;
         if (entity == null) {
             entity = createEntity(level, message);
             if (entity == null) {
                 return;
             }
+            if (!(entity instanceof EntityMaid)) return;
             level.addEntity(entity);
         }
 
+        ClientMaidRemovalGuard.markProtected(message.entityId(), message.uuid());
         ((EntityInvoker) entity).maidspell$invokeUnsetRemoved();
-        if (!message.entityData().isEmpty()) {
-            entity.getEntityData().assignValues(message.entityData());
-        }
+        message.applySyncedState((EntityMaid) entity);
         entity.moveTo(message.x(), message.y(), message.z(), message.yRot(), message.xRot());
         entity.setInvisible(false);
         entity.refreshDimensions();
@@ -61,6 +62,7 @@ public final class MaidEntityRestoreClientHandler {
             entity.setId(message.entityId());
             entity.setUUID(message.uuid());
         }
+        if (entity instanceof EntityMaid maid) message.applySyncedState(maid);
         entity.moveTo(message.x(), message.y(), message.z(), message.yRot(), message.xRot());
         return entity;
     }

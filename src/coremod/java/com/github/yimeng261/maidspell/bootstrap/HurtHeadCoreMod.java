@@ -11,7 +11,10 @@ import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassVisitor;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
+import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.AbstractInsnNode;
+import org.objectweb.asm.tree.ClassNode;
+import org.objectweb.asm.tree.FieldInsnNode;
 import org.objectweb.asm.tree.InsnList;
 import org.objectweb.asm.tree.InsnNode;
 import org.objectweb.asm.tree.JumpInsnNode;
@@ -30,6 +33,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -44,12 +48,16 @@ import java.util.stream.Stream;
  * {@code hurt(DamageSource, float)} 的 LivingEntity 子类，为它们的 hurt 方法头部插入
  * {@code HurtHeadCoremodHooks} 的进入调用，并在每个返回前和异常离开方法时插入退出调用。
  *
+ * <p>同一轮扫描还读取除原版、NeoForge 与本模组以外的类的方法体，找出直接改动实体索引（tick 表、UUID 表、
+ * 存盘区段等）的写入站点，交给 {@link AnchorWriteSites} 改写为经锚定检查的调用。
+ *
  * <p>本类只以字符串引用 Minecraft 与模组主体的类，不会提前加载游戏类；钩子类在模组主体里，
  * 插桩后的方法第一次执行时才由游戏层解析。
  */
 public final class HurtHeadCoreMod implements ICoreMod {
     private static final Logger LOGGER = LoggerFactory.getLogger("MaidSpell/HurtHeadCoreMod");
     private static final String LABEL = "maidspell_hurt_head";
+    private static final String ANCHOR_LABEL = "maidspell_anchor_index_writes";
     private static final String OBJECT = "java/lang/Object";
     private static final String LIVING_ENTITY = "net/minecraft/world/entity/LivingEntity";
     private static final String HURT_NAME = "hurt";
@@ -79,10 +87,15 @@ public final class HurtHeadCoreMod implements ICoreMod {
         if (LOGGER.isDebugEnabled()) {
             targets.forEach(target -> LOGGER.debug("[MaidSpell/Coremod] hurt 插桩目标: {}", target));
         }
-        if (targets.isEmpty()) {
-            return List.of();
+        List<ITransformer<?>> transformers = new ArrayList<>();
+        if (!targets.isEmpty()) {
+            transformers.add(new HurtMethodTransformer(targets));
         }
-        return List.of(new HurtMethodTransformer(targets));
+        LOGGER.info("[MaidSpell/Coremod] 实体索引写入扫描命中 {} 个类", scan.anchorWriters.size());
+        if (!scan.anchorWriters.isEmpty()) {
+            transformers.add(new AnchorWriterTransformer(scan.anchorWriters));
+        }
+        return List.copyOf(transformers);
     }
 
     /**
@@ -92,6 +105,7 @@ public final class HurtHeadCoreMod implements ICoreMod {
         private final Map<String, String> superClasses = new HashMap<>();
         private final Set<String> hurtDeclarers = new HashSet<>();
         private final Map<String, Boolean> livingCache = new HashMap<>();
+        private final Set<String> anchorWriters = new LinkedHashSet<>();
 
         private void scanRoot(Path root) {
             try (Stream<Path> paths = Files.walk(root)) {
@@ -110,6 +124,8 @@ public final class HurtHeadCoreMod implements ICoreMod {
         private void readClass(Path classFile) {
             try (InputStream input = Files.newInputStream(classFile)) {
                 ClassReader reader = new ClassReader(input);
+                boolean scanWrites = AnchorWriteSites.isCandidateClass(reader.getClassName());
+                IndexAccess access = new IndexAccess();
                 reader.accept(new ClassVisitor(Opcodes.ASM9) {
                     private String className;
 
@@ -123,17 +139,26 @@ public final class HurtHeadCoreMod implements ICoreMod {
                     }
 
                     @Override
-                    public MethodVisitor visitMethod(int access, String name, String descriptor,
+                    public MethodVisitor visitMethod(int methodAccess, String name, String descriptor,
                                                      String signature, String[] exceptions) {
                         if (this.className != null
                                 && HURT_NAME.equals(name)
                                 && HURT_DESC.equals(descriptor)
-                                && (access & (Opcodes.ACC_ABSTRACT | Opcodes.ACC_NATIVE)) == 0) {
+                                && (methodAccess & (Opcodes.ACC_ABSTRACT | Opcodes.ACC_NATIVE)) == 0) {
                             hurtDeclarers.add(this.className);
                         }
-                        return null;
+                        if (!scanWrites) {
+                            return null;
+                        }
+                        if (AnchorWriteSites.indexesReferencedBy(descriptor)) {
+                            access.referencesIndex = true;
+                        }
+                        return new IndexAccessScanner(access, name.equals("<init>"));
                     }
-                }, ClassReader.SKIP_CODE | ClassReader.SKIP_DEBUG | ClassReader.SKIP_FRAMES);
+                }, (scanWrites ? 0 : ClassReader.SKIP_CODE) | ClassReader.SKIP_DEBUG | ClassReader.SKIP_FRAMES);
+                if (access.directIndexAccess || access.handleOrLifecycleAccess && access.referencesIndex) {
+                    this.anchorWriters.add(reader.getClassName().replace('/', '.'));
+                }
             } catch (IOException | RuntimeException exception) {
                 LOGGER.debug("[MaidSpell/Coremod] 读取 {} 失败: {}", classFile, exception.toString());
             }
@@ -177,6 +202,85 @@ public final class HurtHeadCoreMod implements ICoreMod {
                 this.livingCache.put(visited, result);
             }
             return result;
+        }
+    }
+
+    /** 一个类对实体索引的访问情况；只有确实可能改动索引的类才交给改写。 */
+    private static final class IndexAccess {
+        private boolean directIndexAccess;
+        private boolean handleOrLifecycleAccess;
+        private boolean referencesIndex;
+    }
+
+    private static final class IndexAccessScanner extends MethodVisitor {
+        private final IndexAccess access;
+        private final boolean constructor;
+
+        private IndexAccessScanner(IndexAccess access, boolean constructor) {
+            super(Opcodes.ASM9);
+            this.access = access;
+            this.constructor = constructor;
+        }
+
+        @Override
+        public void visitFieldInsn(int opcode, String owner, String field, String descriptor) {
+            if (AnchorWriteSites.kind(new FieldInsnNode(opcode, owner, field, descriptor), this.constructor) != null) {
+                this.access.directIndexAccess = true;
+            }
+        }
+
+        @Override
+        public void visitLdcInsn(Object value) {
+            if (value instanceof Type type && AnchorWriteSites.indexesReferencedBy(type.getDescriptor())) {
+                this.access.referencesIndex = true;
+            }
+        }
+
+        @Override
+        public void visitMethodInsn(int opcode, String owner, String method, String descriptor, boolean isInterface) {
+            String kind = AnchorWriteSites.kind(new MethodInsnNode(opcode, owner, method, descriptor, isInterface), false);
+            if (AnchorWriteSites.indexesOwnedBy(owner) || AnchorWriteSites.indexesReferencedBy(descriptor)) {
+                this.access.referencesIndex = true;
+            }
+            // 只挑出确有 VarHandle、反射查找或客户端移除调用的类：无差别重算栈帧会解析到没加载的可选依赖。
+            if (opcode != Opcodes.INVOKESPECIAL && AnchorWriteSites.selectsClass(kind)) {
+                this.access.handleOrLifecycleAccess = true;
+            }
+        }
+    }
+
+    private static final class AnchorWriterTransformer implements ITransformer<ClassNode> {
+        private final Set<Target<ClassNode>> targets = new HashSet<>();
+
+        private AnchorWriterTransformer(Set<String> classNames) {
+            for (String className : classNames) {
+                this.targets.add(Target.targetClass(className));
+            }
+        }
+
+        @Override
+        public ClassNode transform(ClassNode classNode, ITransformerVotingContext context) {
+            return AnchorWriteSites.rewrite(classNode);
+        }
+
+        @Override
+        public TransformerVoteResult castVote(ITransformerVotingContext context) {
+            return TransformerVoteResult.YES;
+        }
+
+        @Override
+        public Set<Target<ClassNode>> targets() {
+            return this.targets;
+        }
+
+        @Override
+        public TargetType<ClassNode> getTargetType() {
+            return TargetType.CLASS;
+        }
+
+        @Override
+        public String[] labels() {
+            return new String[]{ANCHOR_LABEL};
         }
     }
 

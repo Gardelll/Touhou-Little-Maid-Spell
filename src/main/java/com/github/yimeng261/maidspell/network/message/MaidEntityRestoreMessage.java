@@ -9,8 +9,10 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.network.protocol.game.ClientboundUpdateAttributesPacket;
 import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.entity.LivingEntity;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -35,6 +37,7 @@ public final class MaidEntityRestoreMessage implements CustomPacketPayload {
     private final ResourceLocation entityTypeId;
     private final CompoundTag entityTag;
     private final List<SynchedEntityData.DataValue<?>> entityData;
+    private final ClientboundUpdateAttributesPacket attributes;
     private final double x;
     private final double y;
     private final double z;
@@ -43,12 +46,13 @@ public final class MaidEntityRestoreMessage implements CustomPacketPayload {
 
     public MaidEntityRestoreMessage(int entityId, UUID uuid, ResourceLocation entityTypeId, CompoundTag entityTag,
                                     List<SynchedEntityData.DataValue<?>> entityData,
-                                    double x, double y, double z, float yRot, float xRot) {
+                                    ClientboundUpdateAttributesPacket attributes, double x, double y, double z, float yRot, float xRot) {
         this.entityId = entityId;
         this.uuid = uuid;
         this.entityTypeId = entityTypeId;
         this.entityTag = entityTag == null ? new CompoundTag() : entityTag;
         this.entityData = entityData == null ? Collections.emptyList() : List.copyOf(entityData);
+        this.attributes = attributes;
         this.x = x;
         this.y = y;
         this.z = z;
@@ -79,6 +83,7 @@ public final class MaidEntityRestoreMessage implements CustomPacketPayload {
                 BuiltInRegistries.ENTITY_TYPE.getKey(maid.getType()),
                 entityTag,
                 entityData,
+                new ClientboundUpdateAttributesPacket(maid.getId(), maid.getAttributes().getSyncableAttributes()),
                 maid.getX(),
                 maid.getY(),
                 maid.getZ(),
@@ -98,6 +103,7 @@ public final class MaidEntityRestoreMessage implements CustomPacketPayload {
         buf.writeUtf(message.entityTypeId.toString(), MAX_ENTITY_TYPE_ID_LENGTH);
         buf.writeNbt(message.entityTag);
         DATA_VALUES_CODEC.encode(buf, message.entityData);
+        ClientboundUpdateAttributesPacket.STREAM_CODEC.encode(buf, message.attributes);
         buf.writeDouble(message.x);
         buf.writeDouble(message.y);
         buf.writeDouble(message.z);
@@ -121,12 +127,25 @@ public final class MaidEntityRestoreMessage implements CustomPacketPayload {
                 entityTypeId,
                 entityTag,
                 entityData,
+                ClientboundUpdateAttributesPacket.STREAM_CODEC.decode(buf),
                 buf.readDouble(),
                 buf.readDouble(),
                 buf.readDouble(),
                 buf.readFloat(),
                 buf.readFloat()
         );
+    }
+
+    /** 先套用同步属性（含临时修饰符），再套用当前生命值等同步数据，否则生命值会被旧的最大生命值截断。 */
+    public void applySyncedState(LivingEntity entity) {
+        for (var snapshot : attributes.getValues()) {
+            var instance = entity.getAttribute(snapshot.attribute());
+            if (instance == null) continue;
+            instance.setBaseValue(snapshot.base());
+            instance.removeModifiers();
+            for (var modifier : snapshot.modifiers()) instance.addTransientModifier(modifier);
+        }
+        entity.getEntityData().assignValues(entityData);
     }
 
     private static void encodeDataValues(RegistryFriendlyByteBuf buf, List<SynchedEntityData.DataValue<?>> values) {

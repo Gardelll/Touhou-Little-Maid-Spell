@@ -1,7 +1,14 @@
 package com.github.yimeng261.maidspell.mixin;
 
 import net.neoforged.fml.loading.LoadingModList;
+import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.tree.ClassNode;
+import org.objectweb.asm.tree.FieldInsnNode;
+import org.objectweb.asm.tree.InsnList;
+import org.objectweb.asm.tree.InsnNode;
+import org.objectweb.asm.tree.JumpInsnNode;
+import org.objectweb.asm.tree.LabelNode;
+import org.objectweb.asm.tree.MethodInsnNode;
 import org.spongepowered.asm.mixin.extensibility.IMixinConfigPlugin;
 import org.spongepowered.asm.mixin.extensibility.IMixinInfo;
 
@@ -131,5 +138,37 @@ public class MaidSpellMixinPlugin implements IMixinConfigPlugin {
 
     @Override
     public void postApply(String targetClassName, ClassNode targetClass, String mixinClassName, IMixinInfo mixinInfo) {
+        if (!targetClassName.equals("net.minecraft.world.entity.Entity") || !mixinClassName.endsWith(".EntityMixin")) return;
+        // 其他模组的 Accessor setter 在启动扫描之后才生成进 Entity，只能在这里给直接写字段的位置补闸。
+        for (var method : targetClass.methods) {
+            if (method.name.equals("<init>")) continue;
+            for (var instruction : method.instructions.toArray()) {
+                if (!(instruction instanceof FieldInsnNode field) || field.getOpcode() != Opcodes.PUTFIELD
+                        || !field.owner.equals(targetClass.name)) continue;
+                String guard;
+                if (field.name.equals("removalReason")
+                        && !method.name.equals("setRemoved") && !method.name.equals("unsetRemoved")) {
+                    guard = "allowDirectRemovalFlagWrite";
+                } else if (field.name.equals("levelCallback") && !method.name.equals("setLevelCallback")) {
+                    guard = "allowDirectLevelCallbackWrite";
+                } else continue;
+                var denied = new LabelNode();
+                var exit = new LabelNode();
+                var gate = new InsnList();
+                gate.add(new InsnNode(Opcodes.DUP2));
+                gate.add(new MethodInsnNode(Opcodes.INVOKESTATIC,
+                        "com/github/yimeng261/maidspell/coremod/AnchorWriteHooks", guard,
+                        "(L" + targetClass.name + ";" + field.desc + ")Z", false));
+                gate.add(new JumpInsnNode(Opcodes.IFEQ, denied));
+                method.instructions.insertBefore(field, gate);
+                var end = new InsnList();
+                end.add(new JumpInsnNode(Opcodes.GOTO, exit));
+                end.add(denied);
+                end.add(new InsnNode(Opcodes.POP2));
+                end.add(exit);
+                method.instructions.insert(field, end);
+                method.maxStack += 2;
+            }
+        }
     }
 }

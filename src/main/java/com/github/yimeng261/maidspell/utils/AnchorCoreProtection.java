@@ -58,8 +58,12 @@ public final class AnchorCoreProtection {
         if (maid == null || maid.level().isClientSide()) {
             return false;
         }
-        if (MaidHardRemovalProtection.isAllowingHardRemoval()) {
+        if (MaidHardRemovalProtection.isRemovalAuthorized(maid)) {
             return false;
+        }
+        if (MaidHardRemovalProtection.shouldDenyRegisteredRemoval(maid, reason)) {
+            MaidHardRemovalProtection.handleBlockedRemoveCall(maid, reason, path);
+            return true;
         }
         if (!hasAnchorCore(maid)) {
             Global.LOGGER.debug("Maid {} does not have anchor_core, allowing removal", maid.getUUID());

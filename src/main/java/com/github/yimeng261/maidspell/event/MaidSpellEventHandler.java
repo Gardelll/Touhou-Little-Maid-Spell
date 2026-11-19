@@ -111,6 +111,12 @@ public class MaidSpellEventHandler {
             // 区块加载时这个事件可能不在服务端主线程上触发，效果补回交给主线程做。
             maid.getServer().execute(() -> MaidOriginData.maintainPresetEffects(maid));
 
+            if (BaubleStateManager.hasBauble(maid, MaidSpellItems.ANCHOR_CORE)) {
+                maid.getServer().execute(() -> {
+                    if (maid.isAddedToLevel()) MaidHardRemovalProtection.rememberIfProtected(maid);
+                });
+            }
+
             SpellBookManager manager = SpellBookManager.getOrCreateManager(maid);
             manager.onMaidJoin(maid);
 
@@ -233,11 +239,7 @@ public class MaidSpellEventHandler {
             SpellBookManager manager = SpellBookManager.getOrCreateManager(maid);
             cleanupMaidBaubleRuntimeState(maid.getUUID());
 
-            if (MaidHardRemovalProtection.handleMaidLeaveLevel(maid)) {
-                manager.releaseMaidRuntimeReferences(maid);
-                Global.updateMaidInfo(maid,true);
-                return;
-            }
+            MaidHardRemovalProtection.forgetRegistration(maid);
 
             MinecraftServer server = event.getLevel().getServer();
             if (server != null) {

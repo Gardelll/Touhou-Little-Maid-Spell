@@ -1,60 +1,40 @@
 package com.github.yimeng261.maidspell.utils;
 
 import com.github.tartaricacid.touhoulittlemaid.entity.passive.EntityMaid;
-import com.github.tartaricacid.touhoulittlemaid.init.InitItems;
-import com.github.tartaricacid.touhoulittlemaid.item.ItemSmartSlab;
 import com.github.yimeng261.maidspell.Global;
-import com.github.yimeng261.maidspell.item.MaidSpellItems;
+import com.github.yimeng261.maidspell.api.AnchorSectionMembership;
+import com.github.yimeng261.maidspell.mixin.accessor.AnchorEntityCallbackAccessor;
+import com.github.yimeng261.maidspell.mixin.accessor.AnchorPersistentManagerAccessor;
 import com.github.yimeng261.maidspell.item.bauble.anchorCore.AnchorCoreBauble;
 import com.github.yimeng261.maidspell.network.message.MaidClientRemovalGuardMessage;
 import com.github.yimeng261.maidspell.network.message.MaidEntityRestoreMessage;
-import com.github.yimeng261.maidspell.spell.manager.BaubleStateManager;
-import net.minecraft.core.BlockPos;
-import net.minecraft.nbt.CompoundTag;
-import net.minecraft.network.chat.Component;
-import net.minecraft.network.protocol.game.ClientboundAddEntityPacket;
-import net.minecraft.network.protocol.game.ClientboundSetEntityDataPacket;
-import net.minecraft.network.protocol.game.ClientboundTeleportEntityPacket;
-import net.minecraft.network.syncher.SynchedEntityData;
-import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
-import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.Blocks;
-import net.minecraft.world.level.block.entity.ChestBlockEntity;
-import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.phys.Vec3;
+import net.minecraft.world.level.entity.PersistentEntitySectionManager;
 
-import java.util.List;
 import java.util.Map;
-import java.util.Queue;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentLinkedQueue;
 
 /**
- * Generic hard-removal guard for anchored maids.
+ * 锚定女仆的通用硬移除守卫。
  *
- * <p>This deliberately works on vanilla entity removal primitives instead of
- * checking any external mod or entity id.
+ * <p>守卫作用在原版的实体移除原语与实体索引上，不按外部模组或实体编号判断；
+ * 女仆按 UUID 登记，登记期间未经授权的移除与索引改动一律原地拦下，不重建实体。
  */
 public final class MaidHardRemovalProtection {
-    private static final int PERIODIC_CHECK_INTERVAL_TICKS = 20;
+    private static final int REGISTRATION_CLEANUP_INTERVAL_TICKS = 20;
     private static final int WARN_INTERVAL_TICKS = 100;
     private static final int CLIENT_RESTORE_RESEND_TICKS = 10;
 
-    private static final Map<UUID, ProtectedMaidSnapshot> TRACKED_MAIDS = new ConcurrentHashMap<>();
-    private static final Map<UUID, Boolean> PENDING_RESTORE = new ConcurrentHashMap<>();
+    private static final Map<UUID, EntityMaid> TRACKED_MAIDS = new ConcurrentHashMap<>();
     private static final Map<UUID, Integer> PENDING_CLIENT_RESTORE = new ConcurrentHashMap<>();
     private static final Map<UUID, Long> LAST_WARN_TICK = new ConcurrentHashMap<>();
-    private static final Map<UUID, Boolean> RECOVERED_MAIDS = new ConcurrentHashMap<>();
-    private static final Queue<PendingChestRecovery> PENDING_CHEST_RECOVERIES = new ConcurrentLinkedQueue<>();
     private static final ThreadLocal<Boolean> ALLOW_HARD_REMOVAL = ThreadLocal.withInitial(() -> false);
+    private static final ThreadLocal<EntityMaid> AUTHORIZED_MAID = new ThreadLocal<>();
     private static final ThreadLocal<Boolean> FORCE_PROTECTION_CHECK = ThreadLocal.withInitial(() -> false);
-    private static int serverTickCounter;
 
     private MaidHardRemovalProtection() {
     }
@@ -63,8 +43,12 @@ public final class MaidHardRemovalProtection {
         if (!(entity instanceof EntityMaid maid)) {
             return false;
         }
-        if (ALLOW_HARD_REMOVAL.get()) {
+        if (isRemovalAuthorized(maid)) {
             return false;
+        }
+        if (shouldDenyRegisteredRemoval(maid, reason)) {
+            handleBlockedRemoveCall(maid, reason, "setRemoved");
+            return true;
         }
         if (!isProtectedMaid(maid) || !isHardRemovalReason(reason)) {
             return false;
@@ -74,8 +58,7 @@ public final class MaidHardRemovalProtection {
         }
 
         rememberProtected(maid);
-        markPendingRestore(maid);
-        syncClientEntityRestore(maid);
+        queueClientRestore(maid);
         logBlockedAttempt(maid, reason, "setRemoved");
         return true;
     }
@@ -90,89 +73,109 @@ public final class MaidHardRemovalProtection {
         return entity instanceof EntityMaid maid && isProtectedMaid(maid);
     }
 
+    /** 索引写入不能信任被改动对象自身的生命值或移除标记，只看登记。 */
+    public static boolean isRegisteredForIndexGuard(EntityMaid maid) {
+        return TRACKED_MAIDS.get(maid.getUUID()) == maid;
+    }
+
+    public static boolean isRegisteredForIndexGuard(UUID uuid) {
+        return TRACKED_MAIDS.containsKey(uuid);
+    }
+
+    public static boolean shouldDenyRegisteredRemoval(EntityMaid maid, Entity.RemovalReason reason) {
+        return isHardRemovalReason(reason) && !isRemovalAuthorized(maid) && isRegisteredForIndexGuard(maid);
+    }
+
+    public static boolean isRemovalAuthorized(EntityMaid maid) {
+        return AUTHORIZED_MAID.get() == maid || ALLOW_HARD_REMOVAL.get();
+    }
+
+    public static void runAuthorizedRemoval(EntityMaid maid, Runnable action) {
+        EntityMaid previous = AUTHORIZED_MAID.get();
+        AUTHORIZED_MAID.set(maid);
+        try {
+            action.run();
+        } finally {
+            if (previous == null) AUTHORIZED_MAID.remove();
+            else AUTHORIZED_MAID.set(previous);
+        }
+    }
+
+    public static boolean hasRegisteredAnchors() {
+        return !TRACKED_MAIDS.isEmpty();
+    }
+
+    public static boolean isOnWorldThread(Entity entity) {
+        return entity.level() instanceof ServerLevel level ? level.getServer().isSameThread()
+                : entity.level().isClientSide() && com.github.yimeng261.maidspell.client.ClientMaidRemovalGuard.isOnClientThread();
+    }
+
+    public static void forgetRegistration(EntityMaid maid) {
+        UUID maidId = maid.getUUID();
+        EntityMaid remaining = TRACKED_MAIDS.computeIfPresent(maidId,
+                (id, registered) -> registered == maid ? null : registered);
+        if (remaining == null) {
+            PENDING_CLIENT_RESTORE.remove(maidId);
+            LAST_WARN_TICK.remove(maidId);
+        }
+    }
+
     public static void handleBlockedRemoveCall(EntityMaid maid, Entity.RemovalReason reason, String path) {
         if (!isProtectedMaid(maid) || !isHardRemovalReason(reason)) {
             return;
         }
 
         rememberProtected(maid);
-        markPendingRestore(maid);
-        syncClientEntityRestore(maid);
+        queueClientRestore(maid);
         logBlockedAttempt(maid, reason, path);
     }
 
     public static void rememberProtected(EntityMaid maid) {
-        TRACKED_MAIDS.put(maid.getUUID(), ProtectedMaidSnapshot.of(maid));
+        TRACKED_MAIDS.put(maid.getUUID(), maid);
     }
 
     public static void rememberIfProtected(EntityMaid maid) {
         if (isProtectedMaid(maid)) {
             rememberProtected(maid);
         } else {
-            forget(maid);
+            forgetRegistration(maid);
         }
-    }
-
-    public static boolean handleMaidLeaveLevel(EntityMaid maid) {
-        if (!isProtectedMaid(maid) || !isHardRemovalReason(maid.getRemovalReason())) {
-            forget(maid);
-            return false;
-        }
-        if (ALLOW_HARD_REMOVAL.get()) {
-            return false;
-        }
-        if (!isForcingProtectionCheck() && AnchorCoreBauble.findIllegalCaller() == null) {
-            forget(maid);
-            return false;
-        }
-
-        rememberProtected(maid);
-        markPendingRestore(maid);
-        syncClientEntityRestore(maid);
-        logBlockedAttempt(maid, maid.getRemovalReason(), "leave-level");
-        return true;
     }
 
     public static void tick(MinecraftServer server) {
-        serverTickCounter++;
-        processPendingChestRecoveries(server);
-        boolean periodicCheck = serverTickCounter % PERIODIC_CHECK_INTERVAL_TICKS == 0;
-        if (!periodicCheck && PENDING_RESTORE.isEmpty() && PENDING_CLIENT_RESTORE.isEmpty()) {
+        syncPendingClientRestores(server);
+        if (server.getTickCount() % REGISTRATION_CLEANUP_INTERVAL_TICKS != 0) {
             return;
         }
 
-        syncPendingClientRestores(server);
-
-        for (Map.Entry<UUID, ProtectedMaidSnapshot> entry : TRACKED_MAIDS.entrySet()) {
-            UUID maidId = entry.getKey();
-            ProtectedMaidSnapshot snapshot = entry.getValue();
-            EntityMaid maid = snapshot.maid();
-            boolean forcedCheck = PENDING_RESTORE.remove(maidId) != null;
-            if (!periodicCheck && !forcedCheck) {
-                continue;
+        for (EntityMaid maid : TRACKED_MAIDS.values()) {
+            if (!(maid.level() instanceof ServerLevel level) || level.getServer() != server
+                    || !AnchorCoreProtection.hasAnchorCore(maid)
+                    || (maid.isRemoved() && level.getEntity(maid.getUUID()) != maid && level.getEntity(maid.getId()) != maid)) {
+                forgetRegistration(maid);
             }
+        }
+    }
 
-            if (!isProtectedMaid(maid) || !(maid.level() instanceof ServerLevel level) || level.getServer() != server) {
-                TRACKED_MAIDS.remove(maidId, snapshot);
-                LAST_WARN_TICK.remove(maidId);
-                RECOVERED_MAIDS.remove(maidId);
-                continue;
-            }
-
-            if (needsRecovery(maid, level, forcedCheck)) {
-                recoverMaidAsSoulSpell(snapshot, level, forcedCheck);
+    public static void restoreSectionsBeforeSave(PersistentEntitySectionManager<?> manager) {
+        var getter = manager.getEntityGetter();
+        var storage = ((AnchorPersistentManagerAccessor<?>) manager).maidspell$sectionStorage();
+        for (EntityMaid maid : TRACKED_MAIDS.values()) {
+            if (!isOnWorldThread(maid) || maid.isRemoved() || isRemovalAuthorized(maid)
+                    || getter.get(maid.getUUID()) != maid || getter.get(maid.getId()) != maid
+                    || !(maid instanceof AnchorEntityCallbackAccessor accessor)
+                    || !(accessor.maidspell$levelCallback() instanceof AnchorSectionMembership membership)) continue;
+            if (membership.maidspell$restoreSectionMembership(storage)) {
+                Global.LOGGER.warn("[MaidSpell] Repaired persistence section before save maid={} position={}",
+                        maid.getUUID(), maid.blockPosition());
             }
         }
     }
 
     public static void clear() {
         TRACKED_MAIDS.clear();
-        PENDING_RESTORE.clear();
         PENDING_CLIENT_RESTORE.clear();
-        PENDING_CHEST_RECOVERIES.clear();
         LAST_WARN_TICK.clear();
-        RECOVERED_MAIDS.clear();
-        serverTickCounter = 0;
     }
 
     public static void runAllowingHardRemoval(Runnable action) {
@@ -199,9 +202,23 @@ public final class MaidHardRemovalProtection {
         return FORCE_PROTECTION_CHECK.get();
     }
 
-    /** 当前线程是否处于“本模组主动回收女仆”的白名单移除流程中。 */
+    /** 当前线程是否临时允许硬移除。 */
     static boolean isAllowingHardRemoval() {
         return ALLOW_HARD_REMOVAL.get();
+    }
+
+    public static void allowClientRemoval(EntityMaid maid) {
+        if (!(maid.level() instanceof ServerLevel level)) {
+            return;
+        }
+
+        double range = clientRestoreRange(maid);
+        for (ServerPlayer player : level.players()) {
+            if (player.distanceToSqr(maid) <= range * range) {
+                player.connection.send(new MaidClientRemovalGuardMessage(
+                        maid.getId(), maid.getUUID(), MaidClientRemovalGuardMessage.Action.STOP_TRACKING));
+            }
+        }
     }
 
     private static boolean isProtectedMaid(EntityMaid maid) {
@@ -212,7 +229,7 @@ public final class MaidHardRemovalProtection {
             if (maid.getHealth() <= 0.0F || maid.isDeadOrDying()) {
                 return false;
             }
-            return BaubleStateManager.hasBauble(maid, MaidSpellItems.ANCHOR_CORE);
+            return AnchorCoreProtection.hasAnchorCore(maid);
         } catch (Exception e) {
             Global.LOGGER.error("[MaidSpell] Failed to check anchored maid hard-removal protection", e);
             return false;
@@ -228,65 +245,23 @@ public final class MaidHardRemovalProtection {
             return;
         }
 
-        MaidEntityRestoreMessage message = createRestoreMessage(maid);
+        MaidEntityRestoreMessage message;
+        try {
+            message = MaidEntityRestoreMessage.remoteSnapshot(maid);
+        } catch (RuntimeException e) {
+            Global.LOGGER.warn("[MaidSpell] Failed to serialize maid {} for client restore", maid.getUUID(), e);
+            return;
+        }
         double restoreRange = clientRestoreRange(maid);
         for (ServerPlayer player : level.players()) {
             if (player.distanceToSqr(maid) <= restoreRange * restoreRange) {
-                sendClientEntityRestore(player, maid, message);
+                player.connection.send(message);
             }
         }
-    }
-
-    private static void sendClientEntityRestore(ServerPlayer player, EntityMaid maid, MaidEntityRestoreMessage message) {
-        try {
-            ClientboundAddEntityPacket spawnPacket = createAddEntityPacket(maid);
-            player.connection.send(spawnPacket);
-
-            List<SynchedEntityData.DataValue<?>> entityData = maid.getEntityData().getNonDefaultValues();
-            if (entityData != null && !entityData.isEmpty()) {
-                player.connection.send(new ClientboundSetEntityDataPacket(maid.getId(), entityData));
-            }
-            player.connection.send(new ClientboundTeleportEntityPacket(maid));
-        } catch (Exception e) {
-            Global.LOGGER.warn("[MaidSpell] Failed to send vanilla maid restore packets maid={} player={}",
-                    maid.getUUID(), player.getUUID(), e);
-        }
-
-        player.connection.send(message);
-    }
-
-    private static ClientboundAddEntityPacket createAddEntityPacket(EntityMaid maid) {
-        Vec3 deltaMovement = maid.getDeltaMovement();
-        return new ClientboundAddEntityPacket(
-                maid.getId(),
-                maid.getUUID(),
-                maid.getX(),
-                maid.getY(),
-                maid.getZ(),
-                maid.getXRot(),
-                maid.getYRot(),
-                maid.getType(),
-                0,
-                deltaMovement,
-                maid.getYHeadRot()
-        );
     }
 
     private static double clientRestoreRange(EntityMaid maid) {
         return Math.max(128.0D, maid.getType().clientTrackingRange() * 16.0D + 16.0D);
-    }
-
-    private static MaidEntityRestoreMessage createRestoreMessage(EntityMaid maid) {
-        CompoundTag entityTag = new CompoundTag();
-        try {
-            // 此处在非法调用栈内构造，需走内部序列化豁免，否则 tag 会被序列化守卫清空。
-            CompoundTag target = entityTag;
-            AnchorCoreProtection.runWithInternalSerialization(maid, () -> maid.saveWithoutId(target));
-        } catch (Exception e) {
-            Global.LOGGER.warn("[MaidSpell] Failed to serialize maid {} for client restore packet", maid.getUUID(), e);
-            entityTag = new CompoundTag();
-        }
-        return MaidEntityRestoreMessage.of(maid, entityTag);
     }
 
     private static void syncPendingClientRestores(MinecraftServer server) {
@@ -296,14 +271,9 @@ public final class MaidHardRemovalProtection {
 
         for (Map.Entry<UUID, Integer> entry : PENDING_CLIENT_RESTORE.entrySet()) {
             UUID maidId = entry.getKey();
-            ProtectedMaidSnapshot snapshot = TRACKED_MAIDS.get(maidId);
-            if (snapshot == null) {
-                PENDING_CLIENT_RESTORE.remove(maidId);
-                continue;
-            }
-
-            EntityMaid maid = snapshot.maid();
-            if (!isProtectedMaid(maid) || !(maid.level() instanceof ServerLevel level) || level.getServer() != server) {
+            EntityMaid maid = TRACKED_MAIDS.get(maidId);
+            if (maid == null || !isProtectedMaid(maid) || maid.isRemoved() || !(maid.level() instanceof ServerLevel level) || level.getServer() != server
+                    || level.getEntity(maid.getUUID()) != maid || level.getEntity(maid.getId()) != maid) {
                 PENDING_CLIENT_RESTORE.remove(maidId);
                 continue;
             }
@@ -318,214 +288,8 @@ public final class MaidHardRemovalProtection {
         }
     }
 
-    private static boolean needsRecovery(EntityMaid maid, ServerLevel level, boolean forcedCheck) {
-        Entity.RemovalReason reason = maid.getRemovalReason();
-        if (maid.isRemoved() && (forcedCheck || isHardRemovalReason(reason))) {
-            return true;
-        }
-
-        Entity byUuid = level.getEntity(maid.getUUID());
-        Entity byId = level.getEntity(maid.getId());
-        return (forcedCheck || maid.isAddedToLevel()) && (byUuid != maid || byId != maid);
-    }
-
-    private static void recoverMaidAsSoulSpell(ProtectedMaidSnapshot snapshot, ServerLevel level, boolean forcedCheck) {
-        EntityMaid maid = snapshot.maid();
-        UUID maidId = maid.getUUID();
-        if (RECOVERED_MAIDS.putIfAbsent(maidId, Boolean.TRUE) != null) {
-            return;
-        }
-
-        try {
-            if (maid.isRemoved()) {
-                Entity.RemovalReason reason = maid.getRemovalReason();
-                if (!forcedCheck && !isHardRemovalReason(reason)) {
-                    RECOVERED_MAIDS.remove(maidId);
-                    return;
-                }
-                maid.revive();
-            }
-
-            ItemStack soulSpell = createSoulSpell(maid);
-            ServerPlayer owner = level.getServer().getPlayerList().getPlayer(snapshot.ownerId());
-            if (owner != null) {
-                ServerLevel ownerLevel = owner.serverLevel();
-                if (addSoulSpellToInventory(owner, soulSpell)) {
-                    owner.sendSystemMessage(Component.literal("MaidSpell: 已拦截异常删除，女仆已回收到魂符并放入你的背包。"));
-                    logRecovered(maid, "owner inventory");
-                } else {
-                    queueRecoveryChest(ownerLevel, owner.getUUID(), owner.blockPosition(), soulSpell);
-                    owner.sendSystemMessage(Component.literal("MaidSpell: 已拦截异常删除；你的背包已满，女仆魂符将在下一刻放入附近恢复箱。"));
-                    logRecovered(maid, "queued recovery chest near owner");
-                }
-            } else {
-                BlockPos fallbackPos = BlockPos.containing(maid.position());
-                queueRecoveryChest(level, null, fallbackPos, soulSpell);
-                logRecovered(maid, "queued recovery chest near last maid position");
-            }
-
-            discardRecoveredMaid(maid);
-            Global.updateMaidInfo(maid, false);
-            TRACKED_MAIDS.remove(maidId, snapshot);
-            PENDING_RESTORE.remove(maidId);
-            PENDING_CLIENT_RESTORE.remove(maidId);
-            LAST_WARN_TICK.remove(maidId);
-            RECOVERED_MAIDS.remove(maidId);
-        } catch (Exception e) {
-            RECOVERED_MAIDS.remove(maidId);
-            Global.LOGGER.error("[MaidSpell] Failed to recover anchored maid {} as soul spell after hard removal", maidId, e);
-        }
-    }
-
-    private static void discardRecoveredMaid(EntityMaid maid) {
-        allowClientRemoval(maid);
-        runAllowingHardRemoval(maid::discard);
-    }
-
-    private static ItemStack createSoulSpell(EntityMaid maid) {
-        ItemStack soulSpell = InitItems.SMART_SLAB_HAS_MAID.get().getDefaultInstance();
-        // storeMaidData 内部会 saveWithoutId，统一走内部豁免。
-        AnchorCoreProtection.runWithInternalSerialization(maid, () -> ItemSmartSlab.storeMaidData(soulSpell, maid));
-        return soulSpell;
-    }
-
-    private static boolean addSoulSpellToInventory(ServerPlayer owner, ItemStack soulSpell) {
-        int freeSlot = owner.getInventory().getFreeSlot();
-        if (freeSlot < 0) {
-            return false;
-        }
-
-        owner.getInventory().setItem(freeSlot, soulSpell.copy());
-        owner.getInventory().getItem(freeSlot).setPopTime(5);
-        owner.getInventory().setChanged();
-        owner.containerMenu.broadcastChanges();
-        owner.inventoryMenu.broadcastChanges();
-        return true;
-    }
-
-    private static void queueRecoveryChest(ServerLevel level, UUID ownerId, BlockPos origin, ItemStack soulSpell) {
-        PENDING_CHEST_RECOVERIES.add(new PendingChestRecovery(level.dimension(), ownerId, origin.immutable(), soulSpell.copy()));
-    }
-
-    private static void processPendingChestRecoveries(MinecraftServer server) {
-        PendingChestRecovery recovery;
-        while ((recovery = PENDING_CHEST_RECOVERIES.poll()) != null) {
-            ServerPlayer owner = recovery.ownerId() == null ? null : server.getPlayerList().getPlayer(recovery.ownerId());
-            ServerLevel level = owner != null ? owner.serverLevel() : server.getLevel(recovery.levelKey());
-            if (level == null) {
-                continue;
-            }
-
-            BlockPos origin = owner != null ? owner.blockPosition() : recovery.origin();
-            BlockPos chestPos = placeRecoveryChest(level, origin, recovery.soulSpell());
-            if (chestPos != null) {
-                if (owner != null) {
-                    owner.sendSystemMessage(Component.literal(String.format(
-                            "MaidSpell: 女仆魂符已放入附近恢复箱：%d %d %d。",
-                            chestPos.getX(), chestPos.getY(), chestPos.getZ()
-                    )));
-                }
-            } else {
-                dropSoulSpell(level, origin, recovery.soulSpell());
-                if (owner != null) {
-                    owner.sendSystemMessage(Component.literal("MaidSpell: 无法放置恢复箱，女仆魂符已掉落在你附近。"));
-                }
-            }
-        }
-    }
-
-    private static BlockPos placeRecoveryChest(ServerLevel level, BlockPos origin, ItemStack soulSpell) {
-        BlockPos chestPos = findChestPos(level, origin);
-        if (chestPos == null) {
-            Global.LOGGER.warn("[MaidSpell] Failed to find recovery chest position near {}", origin);
-            return null;
-        }
-
-        Global.LOGGER.warn("[MaidSpell] Placing recovery chest at {} in {}", chestPos, level.dimension().location());
-        BlockState chestState = Blocks.CHEST.defaultBlockState();
-        if (!level.setBlock(chestPos, chestState, 3)) {
-            Global.LOGGER.warn("[MaidSpell] Failed to place recovery chest at {} in {}", chestPos, level.dimension().location());
-            return null;
-        }
-
-        if (level.getBlockEntity(chestPos) instanceof ChestBlockEntity chest) {
-            chest.setItem(13, soulSpell.copy());
-            chest.setChanged();
-            return chestPos;
-        }
-        Global.LOGGER.warn("[MaidSpell] Recovery chest block entity missing at {} in {}", chestPos, level.dimension().location());
-        return null;
-    }
-
-    private static BlockPos findChestPos(ServerLevel level, BlockPos origin) {
-        BlockPos.MutableBlockPos mutablePos = new BlockPos.MutableBlockPos();
-        int baseY = Math.max(level.getMinBuildHeight(), Math.min(level.getMaxBuildHeight() - 1, origin.getY()));
-        for (int radius = 1; radius <= 5; radius++) {
-            for (int dy = 0; dy <= 3; dy++) {
-                for (int dx = -radius; dx <= radius; dx++) {
-                    for (int dz = -radius; dz <= radius; dz++) {
-                        if (Math.max(Math.abs(dx), Math.abs(dz)) != radius) {
-                            continue;
-                        }
-                        mutablePos.set(origin.getX() + dx, baseY + dy, origin.getZ() + dz);
-                        if (isValidRecoveryChestPos(level, mutablePos)) {
-                            return mutablePos.immutable();
-                        }
-                    }
-                }
-            }
-        }
-        return null;
-    }
-
-    private static boolean isValidRecoveryChestPos(ServerLevel level, BlockPos pos) {
-        if (!level.isInWorldBounds(pos) || !level.getBlockState(pos).canBeReplaced()) {
-            return false;
-        }
-        if (!level.getWorldBorder().isWithinBounds(pos)) {
-            return false;
-        }
-        return level.getBlockState(pos.below()).isFaceSturdy(level, pos.below(), net.minecraft.core.Direction.UP);
-    }
-
-    public static void allowClientRemoval(EntityMaid maid) {
-        if (!(maid.level() instanceof ServerLevel level)) {
-            return;
-        }
-
-        for (ServerPlayer player : level.getServer().getPlayerList().getPlayers()) {
-            player.connection.send(new MaidClientRemovalGuardMessage(maid.getId(), true));
-        }
-    }
-
-    private static void dropSoulSpell(ServerLevel level, BlockPos origin, ItemStack soulSpell) {
-        BlockPos dropPos = level.isInWorldBounds(origin) ? origin : level.getSharedSpawnPos();
-        net.minecraft.world.entity.item.ItemEntity itemEntity = new net.minecraft.world.entity.item.ItemEntity(
-                level,
-                dropPos.getX() + 0.5D,
-                dropPos.getY() + 0.5D,
-                dropPos.getZ() + 0.5D,
-                soulSpell.copy());
-        itemEntity.setInvulnerable(true);
-        itemEntity.setGlowingTag(true);
-        level.addFreshEntity(itemEntity);
-    }
-
-    private static void markPendingRestore(EntityMaid maid) {
-        PENDING_RESTORE.put(maid.getUUID(), Boolean.TRUE);
+    private static void queueClientRestore(EntityMaid maid) {
         PENDING_CLIENT_RESTORE.put(maid.getUUID(), CLIENT_RESTORE_RESEND_TICKS);
-    }
-
-    private static void forget(EntityMaid maid) {
-        if (maid == null) {
-            return;
-        }
-        UUID maidId = maid.getUUID();
-        TRACKED_MAIDS.remove(maidId);
-        PENDING_RESTORE.remove(maidId);
-        PENDING_CLIENT_RESTORE.remove(maidId);
-        LAST_WARN_TICK.remove(maidId);
-        RECOVERED_MAIDS.remove(maidId);
     }
 
     private static void logBlockedAttempt(EntityMaid maid, Entity.RemovalReason reason, String path) {
@@ -535,10 +299,11 @@ public final class MaidHardRemovalProtection {
         }
     }
 
-    private static void logRecovered(EntityMaid maid, String destination) {
-        if (shouldLog(maid)) {
-            Global.LOGGER.warn("[MaidSpell] Recovered anchored maid {} as soul spell after hard removal attempt: {}",
-                    maid.getUUID(), destination);
+    public static void logBlockedDirectRemovalFlagWrite(EntityMaid maid, Entity.RemovalReason attempted) {
+        Entity.RemovalReason current = maid.getRemovalReason();
+        if (current != attempted && shouldLog(maid)) {
+            Global.LOGGER.warn("[MaidSpell] Blocked direct removalReason write maid={} old={} attempted={} (anchor_core protection)",
+                    maid.getUUID(), current, attempted);
         }
     }
 
@@ -550,14 +315,5 @@ public final class MaidHardRemovalProtection {
         }
         LAST_WARN_TICK.put(maid.getUUID(), gameTime);
         return true;
-    }
-
-    private record ProtectedMaidSnapshot(EntityMaid maid, UUID ownerId) {
-        private static ProtectedMaidSnapshot of(EntityMaid maid) {
-            return new ProtectedMaidSnapshot(maid, maid.getOwnerUUID());
-        }
-    }
-
-    private record PendingChestRecovery(ResourceKey<Level> levelKey, UUID ownerId, BlockPos origin, ItemStack soulSpell) {
     }
 }

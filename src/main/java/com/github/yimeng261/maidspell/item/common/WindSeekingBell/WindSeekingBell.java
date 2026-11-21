@@ -68,6 +68,9 @@ public class WindSeekingBell extends Item {
         player.startUsingItem(hand);
 
         if (level instanceof ServerLevel serverLevel && player instanceof ServerPlayer serverPlayer) {
+            if (RetreatTransition.isPending(serverPlayer)) {
+                return InteractionResultHolder.success(itemStack);
+            }
             BlockPos playerPos = player.blockPosition();
 
             // Shift+右键：从归隐之地返回主世界
@@ -105,11 +108,12 @@ public class WindSeekingBell extends Item {
         MinecraftServer server = player.server;
         ServerLevel retreatLevel = PlayerRetreatManager.getLoadedPlayerRetreat(server, player.getUUID());
         if (retreatLevel == null) {
+            ServerLevel source = player.serverLevel();
             UUID playerUUID = player.getUUID();
             PlayerRetreatManager.getOrCreatePlayerRetreatAsync(server, playerUUID).whenComplete((createdLevel, throwable) ->
                     server.execute(() -> {
                         ServerPlayer currentPlayer = server.getPlayerList().getPlayer(playerUUID);
-                        if (currentPlayer == null) {
+                        if (currentPlayer != player || currentPlayer.level() != source) {
                             return;
                         }
 
@@ -121,18 +125,12 @@ public class WindSeekingBell extends Item {
                             return;
                         }
 
-                        TheRetreatDimension.teleportToRetreat(currentPlayer, createdLevel);
-                        currentPlayer.displayClientMessage(
-                                Component.translatable("item.touhou_little_maid_spell.wind_seeking_bell.entered_retreat")
-                                        .withStyle(ChatFormatting.LIGHT_PURPLE), true);
+                        RetreatTransition.enter(currentPlayer, createdLevel);
                     }));
             return;
         }
 
-        TheRetreatDimension.teleportToRetreat(player, retreatLevel);
-        player.displayClientMessage(
-            Component.translatable("item.touhou_little_maid_spell.wind_seeking_bell.entered_retreat")
-                    .withStyle(ChatFormatting.LIGHT_PURPLE), true);
+        RetreatTransition.enter(player, retreatLevel);
     }
 
     private void teleportToSharedRetreat(ServerPlayer player) {
@@ -143,11 +141,12 @@ public class WindSeekingBell extends Item {
             return;
         }
 
+        ServerLevel source = player.serverLevel();
         UUID playerUUID = player.getUUID();
         PlayerRetreatManager.getOrCreateSharedRetreatAsync(server).whenComplete((createdLevel, throwable) ->
                 server.execute(() -> {
                     ServerPlayer currentPlayer = server.getPlayerList().getPlayer(playerUUID);
-                    if (currentPlayer == null) {
+                    if (currentPlayer != player || currentPlayer.level() != source) {
                         return;
                     }
 
@@ -179,23 +178,25 @@ public class WindSeekingBell extends Item {
             data.updateAccessTime(player.getUUID());
         }
 
-        TheRetreatDimension.teleportToRetreat(player, sharedRetreat);
-        player.displayClientMessage(
-                Component.translatable(firstEntry
-                        ? "item.touhou_little_maid_spell.wind_seeking_bell.first_entry_shared"
-                        : "item.touhou_little_maid_spell.wind_seeking_bell.entered_retreat")
-                        .withStyle(ChatFormatting.LIGHT_PURPLE), true);
-        if (firstEntry) {
-            RetreatDimensionData.DimensionInfo entryInfo = info;
+        if (!firstEntry) {
+            RetreatTransition.enter(player, sharedRetreat);
+            return;
+        }
+        // 首次进入先显示配额说明，过一会儿再补上进入提示，两条都能看清
+        RetreatDimensionData.DimensionInfo entryInfo = info;
+        RetreatTransition.enter(player, sharedRetreat, arrived -> {
+            arrived.displayClientMessage(
+                    Component.translatable("item.touhou_little_maid_spell.wind_seeking_bell.first_entry_shared")
+                            .withStyle(ChatFormatting.LIGHT_PURPLE), true);
             com.github.yimeng261.maidspell.compat.irons_spellbooks.DelayedServerTasks.scheduleForCaster(
-                    sharedRetreat, player, 60, () -> {
-                        if (data.getDimensionInfo(player.getUUID()) == entryInfo) {
-                            player.displayClientMessage(
+                    sharedRetreat, arrived, 60, () -> {
+                        if (data.getDimensionInfo(arrived.getUUID()) == entryInfo) {
+                            arrived.displayClientMessage(
                                     Component.translatable("item.touhou_little_maid_spell.wind_seeking_bell.entered_retreat")
                                             .withStyle(ChatFormatting.LIGHT_PURPLE), true);
                         }
                     });
-        }
+        });
     }
 
     /**

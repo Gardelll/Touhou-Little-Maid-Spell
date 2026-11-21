@@ -1,5 +1,6 @@
 package com.github.yimeng261.maidspell.network;
 
+import com.github.yimeng261.maidspell.client.RetreatTransitionClient;
 import com.github.yimeng261.maidspell.client.winefox.WinefoxProgressClientCache;
 import com.github.yimeng261.maidspell.compat.irons_spellbooks.client.WinefoxSeatedAmbienceController;
 import com.github.yimeng261.maidspell.compat.travelerstitles.client.TravelerTitlesStructureClient;
@@ -10,6 +11,8 @@ import com.github.yimeng261.maidspell.network.message.C2SEnderPocketOpenInventor
 import com.github.yimeng261.maidspell.network.message.C2SEnderPocketTeleport;
 import com.github.yimeng261.maidspell.network.message.MaidClientRemovalGuardMessage;
 import com.github.yimeng261.maidspell.network.message.MaidEntityRestoreMessage;
+import com.github.yimeng261.maidspell.network.message.RetreatTransitionAckMessage;
+import com.github.yimeng261.maidspell.network.message.RetreatTransitionMessage;
 import com.github.yimeng261.maidspell.network.message.S2CEnderPocketHudUpdate;
 import com.github.yimeng261.maidspell.network.message.S2CEnderPocketMaidList;
 import com.github.yimeng261.maidspell.network.message.S2CEnderPocketMaidData;
@@ -33,7 +36,7 @@ import java.util.function.BiConsumer;
  * 网络消息处理器
  */
 public class NetworkHandler {
-    private static final String PROTOCOL_VERSION = "9";
+    private static final String PROTOCOL_VERSION = "10";
 
     public static void registerMessages(final RegisterPayloadHandlersEvent event) {
         final PayloadRegistrar registrar = event.registrar(PROTOCOL_VERSION);
@@ -44,6 +47,7 @@ public class NetworkHandler {
         registrar.playToServer(C2SEnderPocketTeleport.TYPE, C2SEnderPocketTeleport.STREAM_CODEC, toServer(C2SEnderPocketTeleport::handle));
         registrar.playToServer(TransmogNecklaceMessage.TYPE, TransmogNecklaceMessage.STREAM_CODEC, toServer(TransmogNecklaceMessage::handle));
         registrar.playToServer(WinefoxChallengeConfigMessage.TYPE, WinefoxChallengeConfigMessage.STREAM_CODEC, toServer(WinefoxChallengeConfigMessage::handle));
+        registrar.playToServer(RetreatTransitionAckMessage.TYPE, RetreatTransitionAckMessage.STREAM_CODEC, toServer(RetreatTransitionAckMessage::handle));
         registrar.playToClient(S2CEnderPocketMaidList.TYPE, S2CEnderPocketMaidList.STREAM_CODEC, NetworkHandler::handleEnderPocketResponseMaidList);
         registrar.playToClient(S2CEnderPocketPushUpdate.TYPE, S2CEnderPocketPushUpdate.STREAM_CODEC, NetworkHandler::handleEnderPocketPushUpdate);
         registrar.playToClient(S2CEnderPocketHudUpdate.TYPE, S2CEnderPocketHudUpdate.STREAM_CODEC, NetworkHandler::handleEnderPocketHudUpdate);
@@ -54,6 +58,7 @@ public class NetworkHandler {
         registrar.playToClient(WinefoxStructureMusicMessage.TYPE, WinefoxStructureMusicMessage.STREAM_CODEC, NetworkHandler::handleWinefoxStructureMusic);
         registrar.playToClient(TravelerTitlesStructureMessage.TYPE, TravelerTitlesStructureMessage.STREAM_CODEC, NetworkHandler::handleTravelerTitlesStructure);
         registrar.playToClient(WinefoxProgressMessage.TYPE, WinefoxProgressMessage.STREAM_CODEC, NetworkHandler::handleWinefoxProgress);
+        registrar.playToClient(RetreatTransitionMessage.TYPE, RetreatTransitionMessage.STREAM_CODEC, NetworkHandler::handleRetreatTransition);
     }
 
     /** 只处理服务端玩家发来的包。 */
@@ -103,5 +108,9 @@ public class NetworkHandler {
 
     public static void handleWinefoxProgress(WinefoxProgressMessage packet, IPayloadContext context) {
         WinefoxProgressClientCache.update(packet.wins(), packet.soloWin());
+    }
+
+    public static void handleRetreatTransition(RetreatTransitionMessage packet, IPayloadContext context) {
+        RetreatTransitionClient.receive(packet);
     }
 }

@@ -107,6 +107,7 @@
   "client": [
     "ClientPacketListenerMixin",
     "explorerscompass.StructureUtilsMixin",
+    "travelerstitles.TitleRenderManagerMixin",
     "iss.ClientMagicDataMixin",
     "iss.MaidEntityAnimateStateMixin",
     "iss.PalmBlackHoleRippleAlignmentMixin",

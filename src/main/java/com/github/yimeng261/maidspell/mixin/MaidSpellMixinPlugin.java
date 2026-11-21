@@ -34,6 +34,8 @@ public class MaidSpellMixinPlugin implements IMixinConfigPlugin {
     private static final String EXPLORERS_COMPASS_MIXIN_PACKAGE = "com.github.yimeng261.maidspell.mixin.explorerscompass.";
     private static final String FTB_QUESTS_MOD_ID = "ftbquests";
     private static final String FTB_QUESTS_MIXIN_PACKAGE = "com.github.yimeng261.maidspell.mixin.ftbquests.";
+    private static final String TRAVELER_TITLES_MIXIN_PACKAGE = "com.github.yimeng261.maidspell.mixin.travelerstitles.";
+    private static final String TRAVELER_TITLES_MOD_ID = "travelerstitles";
 
     private boolean isIronsSpellbooksLoaded = false;
     private boolean isTlmMagicAnimationSupported = false;
@@ -45,6 +47,7 @@ public class MaidSpellMixinPlugin implements IMixinConfigPlugin {
     private boolean isLegendaryMonstersLoaded = false;
     private boolean isExplorersCompassLoaded = false;
     private boolean isFtbQuestsLoaded = false;
+    private boolean isTravelerTitlesLoaded = false;
 
     @Override
     public void onLoad(String mixinPackage) {
@@ -63,6 +66,7 @@ public class MaidSpellMixinPlugin implements IMixinConfigPlugin {
         isLegendaryMonstersLoaded = LoadingModList.get().getModFileById(LEGENDARY_MONSTERS_MOD_ID) != null;
         isExplorersCompassLoaded = LoadingModList.get().getModFileById(EXPLORERS_COMPASS_MOD_ID) != null;
         isFtbQuestsLoaded = LoadingModList.get().getModFileById(FTB_QUESTS_MOD_ID) != null;
+        isTravelerTitlesLoaded = LoadingModList.get().getModFileById(TRAVELER_TITLES_MOD_ID) != null;
     }
 
     @Override
@@ -103,6 +107,9 @@ public class MaidSpellMixinPlugin implements IMixinConfigPlugin {
         }
         if (mixinClassName.startsWith(FTB_QUESTS_MIXIN_PACKAGE)) {
             return isFtbQuestsLoaded;
+        }
+        if (mixinClassName.startsWith(TRAVELER_TITLES_MIXIN_PACKAGE)) {
+            return isTravelerTitlesLoaded;
         }
 
         // 其他 Mixin 正常加载

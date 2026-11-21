@@ -51,6 +51,13 @@ public class TheRetreatDimension {
     // 估算点比估算地表高 5 格，再留出噪声误差的余量
     private static final int MAX_GROUND_SEARCH_DEPTH = 16;
 
+    // 玩家换维度时不会套用 DimensionTransition 的速度，要自己清掉，免得带着原维度的下落速度和距离落地
+    private static final DimensionTransition.PostDimensionTransition RESET_MOTION_AFTER_TELEPORT =
+            DimensionTransition.PLACE_PORTAL_TICKET.then(entity -> {
+                entity.setDeltaMovement(Vec3.ZERO);
+                entity.resetFallDistance();
+            });
+
     /**
      * 获取玩家专属的归隐之地维度ResourceKey
      * 格式：touhou_little_maid_spell:the_retreat_<player_uuid>
@@ -129,37 +136,49 @@ public class TheRetreatDimension {
         teleportToRetreat(player, retreatLevel, player.blockPosition());
     }
 
-    public static void teleportToRetreat(ServerPlayer player, ServerLevel retreatLevel, BlockPos targetPos) {
+    /**
+     * 异步加载目标区块后在主线程传送。返回的 future 在主线程完成，结果为玩家是否已身处归隐之地。
+     */
+    public static CompletableFuture<Boolean> teleportToRetreat(ServerPlayer player, ServerLevel retreatLevel, BlockPos targetPos) {
+        CompletableFuture<Boolean> entered = new CompletableFuture<>();
         MinecraftServer server = player.getServer();
-        if (server == null) return;
+        if (server == null) {
+            entered.complete(false);
+            return entered;
+        }
 
         // 异步加载目标区块并查找安全位置
-        loadChunkAsync(retreatLevel, targetPos).thenAccept(chunkLoaded -> {
+        loadChunkAsync(retreatLevel, targetPos).whenComplete((chunkLoaded, throwable) -> {
+            if (throwable != null) {
+                MaidSpellMod.LOGGER.error("Failed to load chunk for teleportation: {}", throwable.getMessage(), throwable);
+            }
             // 在主线程中执行传送
             server.execute(() -> {
                 try {
-                    // 查找安全位置
-                    BlockPos safePos = findSafePositionLoaded(retreatLevel, targetPos);
+                    if (throwable == null) {
+                        // 查找安全位置
+                        BlockPos safePos = findSafePositionLoaded(retreatLevel, targetPos);
 
-                    // 使用 DimensionTransition 传送玩家（NeoForge 1.21 API）
-                    DimensionTransition transition = new DimensionTransition(
-                            retreatLevel, safePos.getCenter(), Vec3.ZERO,
-                            player.getYRot(), player.getXRot(),
-                            DimensionTransition.PLACE_PORTAL_TICKET
-                    );
-                    player.changeDimension(transition);
+                        // 使用 DimensionTransition 传送玩家（NeoForge 1.21 API）
+                        DimensionTransition transition = new DimensionTransition(
+                                retreatLevel, safePos.getCenter(), Vec3.ZERO,
+                                player.getYRot(), player.getXRot(),
+                                RESET_MOTION_AFTER_TELEPORT
+                        );
+                        player.changeDimension(transition);
 
-                    MaidSpellMod.LOGGER.info("Teleported player {} to retreat dimension at {}",
-                            player.getName().getString(), safePos);
+                        MaidSpellMod.LOGGER.info("Teleported player {} to retreat dimension at {}",
+                                player.getName().getString(), safePos);
+                    }
                 } catch (Exception e) {
                     MaidSpellMod.LOGGER.error("Error during teleportation for player {}: {}",
                             player.getName().getString(), e.getMessage(), e);
+                } finally {
+                    entered.complete(player.level() == retreatLevel);
                 }
             });
-        }).exceptionally(throwable -> {
-            MaidSpellMod.LOGGER.error("Failed to load chunk for teleportation: {}", throwable.getMessage(), throwable);
-            return null;
         });
+        return entered;
     }
 
     /**
@@ -187,7 +206,7 @@ public class TheRetreatDimension {
                     DimensionTransition transition = new DimensionTransition(
                             overworld, safePos.getCenter(), Vec3.ZERO,
                             player.getYRot(), player.getXRot(),
-                            DimensionTransition.PLACE_PORTAL_TICKET
+                            RESET_MOTION_AFTER_TELEPORT
                     );
                     player.changeDimension(transition);
 
@@ -259,6 +278,7 @@ public class TheRetreatDimension {
             return createSafePlatform(level, new BlockPos(targetPos.getX(), safeY, targetPos.getZ()));
         }
 
+        int platformY = Math.max(level.getSeaLevel() + 5, 100);
         try {
             // 原坐标能站人就原地落下（例如从洞穴里传送），否则按地形噪声估算地表
             if (isSafeStandingPosition(level, targetPos)) {
@@ -279,11 +299,14 @@ public class TheRetreatDimension {
             if (surfaceY > level.getMinBuildHeight() && isSafeStandingPosition(level, surface)) {
                 return surface;
             }
+            // 地表高过默认平台高度时把平台抬到地表，免得平台埋进山体
+            if (surfaceY > level.getMinBuildHeight() && !level.isOutsideBuildHeight(surfaceY + 1)) {
+                platformY = Math.max(platformY, surfaceY);
+            }
         } catch (Exception e) {
             MaidSpellMod.LOGGER.error("Error while finding safe position at {}: {}", targetPos, e.getMessage(), e);
         }
 
-        int platformY = Math.max(level.getSeaLevel() + 5, 100);
         BlockPos platformPos = new BlockPos(targetPos.getX(), platformY, targetPos.getZ());
         MaidSpellMod.LOGGER.info("No safe ground found, creating platform at {}", platformPos);
         return createSafePlatform(level, platformPos);

@@ -206,6 +206,9 @@ public class MagicalWinefoxBossEntity extends AbstractSpellCastingMob
         SynchedEntityData.defineId(MagicalWinefoxBossEntity.class, EntityDataSerializers.BYTE);
     static final EntityDataAccessor<Integer> ENCOUNTER_SERIAL =
         SynchedEntityData.defineId(MagicalWinefoxBossEntity.class, EntityDataSerializers.INT);
+    private static final int NO_VISUAL_TARGET = -1;
+    private static final EntityDataAccessor<Integer> VISUAL_TARGET_ID =
+        SynchedEntityData.defineId(MagicalWinefoxBossEntity.class, EntityDataSerializers.INT);
 
     /** 战败演出放完到回秋千坐下之间的间隔。 */
     private static final int DEFEAT_RETURN_HOME_TICKS = WinefoxAction.DEFEAT.durationTicks();
@@ -272,7 +275,7 @@ public class MagicalWinefoxBossEntity extends AbstractSpellCastingMob
     /**
      * 身体转向目标的最大角速度。太大就是瞬间贴脸，太小绕圈时会追不上。
      */
-    private static final float BODY_TURN_DEGREES_PER_TICK = 15.0F;
+    private static final float BODY_TURN_DEGREES_PER_TICK = 45.0F;
     private static final double SEATED_LOOK_RANGE = 12.0D;
     /** 行礼可在整个追击范围内寻找玩家。 */
     private static final double CURTSY_LOOK_RANGE = 48.0D;
@@ -333,6 +336,11 @@ public class MagicalWinefoxBossEntity extends AbstractSpellCastingMob
     private boolean palmBlackHoleTriggeredThisPhase;
     /** 每 tick 重算，供后续 travel 的爬升分支读取。 */
     private boolean fastAscending;
+
+    // 仅客户端使用的拖尾状态。放在实体上，才能在插值开始前看到数据包给出的目标位置。
+    private int starTrailJumpUntilTick = -1;
+    @Nullable
+    private StarTrailJump pendingStarTrailJump;
     /**
      * &gt;0 表示投掷动画在跑、还没到甩出去那一帧；数到 0 剑才落。
      */
@@ -1185,6 +1193,38 @@ public class MagicalWinefoxBossEntity extends AbstractSpellCastingMob
         super.teleportTo(x, y, z);
     }
 
+    @Override
+    public void lerpTo(double x, double y, double z, float yRot, float xRot, int steps) {
+        if (this.level().isClientSide) {
+            // 与上一个数据包的目标比较，避免把插值滞后误判为位移跳变。
+            double dx = x - this.lerpTargetX();
+            double dy = y - this.lerpTargetY();
+            double dz = z - this.lerpTargetZ();
+            // 1.21 的绝对传送包与相对移动包走同一入口、无法区分，统一按相对移动包的阈值判定。
+            double cutoff = 1.5D;
+            if (dx * dx + dy * dy + dz * dz > cutoff * cutoff) {
+                this.starTrailJumpUntilTick = this.tickCount + Math.max(1, steps);
+                this.pendingStarTrailJump = this.isBattleActive() && !this.isTransitioning() && !this.isInvisible()
+                    ? new StarTrailJump(this.position(), new Vec3(x, y, z)) : null;
+            }
+        }
+        super.lerpTo(x, y, z, yRot, xRot, steps);
+    }
+
+    public boolean isStarTrailInterpolatingJump() {
+        return this.tickCount <= this.starTrailJumpUntilTick;
+    }
+
+    @Nullable
+    public StarTrailJump pollStarTrailJump() {
+        StarTrailJump jump = this.pendingStarTrailJump;
+        this.pendingStarTrailJump = null;
+        return this.isStarTrailInterpolatingJump() ? jump : null;
+    }
+
+    public record StarTrailJump(Vec3 from, Vec3 to) {
+    }
+
     // ---- 运动写入 ----
 
     @Override
@@ -1726,10 +1766,13 @@ public class MagicalWinefoxBossEntity extends AbstractSpellCastingMob
         // 所以单独在这儿补一次朝向，见 tickCurtsyLook。
         this.tickCurtsyLook();
         this.entityData.set(BATTLE_MUSIC, !this.isRemoved() && this.isBattleActive());
+        LivingEntity target = this.getTarget();
+        // 目标本身只存在于服务端；同步它的实体 ID，渲染器才能按双方的显示位置计算朝向。
+        this.entityData.set(VISUAL_TARGET_ID, this.isPhaseTwo() && this.isBattleActive()
+                && target instanceof Player && target.isAlive() ? target.getId() : NO_VISUAL_TARGET);
         if (this.isDefeated()) {
             return;
         }
-        LivingEntity target = this.getTarget();
         if (target == null || !target.isAlive()) {
             // 兜底：正常情况下"脱战没目标"这一段由 tickHoverHold 悬停接管，重力根本没合上，
             // 这里第一句就不成立。留着是防别的路径把重力重新打开（见 tickDescent 的说明）。
@@ -1766,6 +1809,7 @@ public class MagicalWinefoxBossEntity extends AbstractSpellCastingMob
         builder.define(TRANSITIONING, false);
         builder.define(RESTRICTED, false);
         builder.define(BATTLE_MUSIC, false);
+        builder.define(VISUAL_TARGET_ID, NO_VISUAL_TARGET);
     }
 
     /**
@@ -1834,6 +1878,17 @@ public class MagicalWinefoxBossEntity extends AbstractSpellCastingMob
 
     public boolean isTransitioning() {
         return this.entityData.get(TRANSITIONING);
+    }
+
+    @Nullable
+    public Player getVisualFacingTarget() {
+        if (!this.level().isClientSide || !this.isPhaseTwo() || !this.isBattleActive()
+                || this.isBusyCombatAction() || this.isCasting()) {
+            return null;
+        }
+        int targetId = this.entityData.get(VISUAL_TARGET_ID);
+        return targetId != NO_VISUAL_TARGET && this.level().getEntity(targetId) instanceof Player player
+                && player.isAlive() ? player : null;
     }
 
     /** 坐姿不选目标；正式挑战中到达生命地板的玩家也不再是有效目标。 */

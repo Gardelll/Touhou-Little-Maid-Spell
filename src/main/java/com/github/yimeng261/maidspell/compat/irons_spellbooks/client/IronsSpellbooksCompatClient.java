@@ -39,6 +39,7 @@ public final class IronsSpellbooksCompatClient {
         WinefoxMaidAnimationStates.register();
         NeoForge.EVENT_BUS.register(PalmBlackHoleSoundInstance.class);
         NeoForge.EVENT_BUS.register(WinefoxBossMusicController.class);
+        NeoForge.EVENT_BUS.register(WinefoxStarTrail.class);
         // 坐姿常驻 BGM 与战斗 BGM 各自持有实例，靠 PlaySoundEvent 的静音闸门和 tick 里的战斗优先判定互斥。
         NeoForge.EVENT_BUS.register(WinefoxSeatedAmbienceController.class);
         ItemProperties.register(IronsSpellbooksCompatItems.STAR_SHADOW_SPEAR.get(), ResourceLocation.withDefaultNamespace("throwing"),

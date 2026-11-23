@@ -29,6 +29,7 @@ import org.junit.jupiter.api.TestReporter;
 
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static com.github.yimeng261.maidspell.stagewright.support.Checks.NS;
 
@@ -174,17 +175,18 @@ class SoulBookHealthTest {
     void scopesWritesAcrossSyncCallbacks(Game game, @Plot.Size(32) @Plot.Centered Plot plot, TestReporter reporter) {
         Stage ctx = Stage.flat(game, plot, reporter);
         ctx.run(() -> {
-            CallbackMaid maid = prepareDetached(ctx, new CallbackMaid(ctx.level()));
+            AtomicReference<Runnable> afterHealthWrite = new AtomicReference<>();
+            EntityMaid maid = prepareDetached(ctx, callbackMaid(ctx.level(), afterHealthWrite));
             EntityMaid other = detachedMaid(ctx);
             DamageSource source = maid.damageSources().magic();
             float before = maid.getHealth();
             float otherBefore = other.getHealth();
             IllegalStateException interrupted = new IllegalStateException("同步回调中断");
-            maid.afterHealthWrite = () -> {
+            afterHealthWrite.set(() -> {
                 other.setHealth(0.0F);
                 healthEntry(other).setValue(0.0F);
                 throw interrupted;
-            };
+            });
             boolean callbackRan = false;
             try {
                 maid.hurt(source, 1.0F);
@@ -202,22 +204,20 @@ class SoulBookHealthTest {
         });
     }
 
-    /** 生命同步数据写入后跑一次回调，模拟在 onSyncedDataUpdated 里改写别的女仆的模组。 */
-    private static final class CallbackMaid extends EntityMaid {
-        Runnable afterHealthWrite;
-
-        CallbackMaid(Level level) {
-            super(level);
-        }
-
-        @Override
-        public void onSyncedDataUpdated(EntityDataAccessor<?> accessor) {
-            super.onSyncedDataUpdated(accessor);
-            if (afterHealthWrite != null && accessor == LivingEntityHealthAccessor.maidspell$getHealthAccessor()) {
-                Runnable callback = afterHealthWrite;
-                afterHealthWrite = null;
-                callback.run();
+    /**
+     * 生命同步数据写入后跑一次回调，模拟在 onSyncedDataUpdated 里改写别的女仆的模组。
+     * 写成匿名类：Gradle 按名字加载测试源集里的具名类，而测试 JVM 的原版类没做访问转换，女仆子类加载即报错。
+     */
+    private static EntityMaid callbackMaid(Level level, AtomicReference<Runnable> afterHealthWrite) {
+        return new EntityMaid(level) {
+            @Override
+            public void onSyncedDataUpdated(EntityDataAccessor<?> accessor) {
+                super.onSyncedDataUpdated(accessor);
+                if (accessor == LivingEntityHealthAccessor.maidspell$getHealthAccessor()) {
+                    Runnable callback = afterHealthWrite.getAndSet(null);
+                    if (callback != null) callback.run();
+                }
             }
-        }
+        };
     }
 }

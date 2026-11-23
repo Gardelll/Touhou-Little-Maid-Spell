@@ -27,8 +27,8 @@
           "modid": "slashblade"
         },
         {
-          "type": "neoforge:mod_loaded",
-          "modid": "youkaishomecoming"
+          "type": "neoforge:item_exists",
+          "item": "youkaishomecoming:reimu_hairband"
         }
       ]
     }

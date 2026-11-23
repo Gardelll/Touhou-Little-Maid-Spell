@@ -1,6 +1,7 @@
 package com.github.yimeng261.maidspell.stagewright.scenes;
 
 import com.github.yimeng261.maidspell.dimension.RetreatManager;
+import com.github.yimeng261.maidspell.dimension.RetreatTransition;
 import com.github.yimeng261.maidspell.dimension.StructureSearchWorker;
 import com.github.yimeng261.maidspell.dimension.TheRetreatDimension;
 import com.github.yimeng261.maidspell.entity.WindSeekingBellEntity;
@@ -120,10 +121,14 @@ final class RetreatFixtures {
         Players.settled(ctx, player);
     }
 
-    /** 原版在物品冷却中直接忽略右键：等铃的冷却结束（测试线程）。 */
+    /**
+     * 原版在物品冷却中直接忽略右键；进入归隐之地的转场要等客户端揭幕才结束，期间铃也不响应。
+     * 两者都结束后才能右键（测试线程）。
+     */
     static void whenReady(Stage ctx, ServerPlayer player) {
         ctx.await(BELL_COOLDOWN_WAIT, "寻风之铃冷却结束",
                 () -> !player.getCooldowns().isOnCooldown(MaidSpellItems.WIND_SEEKING_BELL.get()));
+        ctx.await(ENTER_TICKS, "进入归隐之地的转场结束", () -> !RetreatTransition.isPending(player));
     }
 
     static Search search(Stage ctx, ServerPlayer player) {

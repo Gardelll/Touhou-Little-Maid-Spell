@@ -47,13 +47,16 @@ public final class MaidHardRemovalProtection {
             return false;
         }
         if (shouldDenyRegisteredRemoval(maid, reason)) {
+            if (isWhitelistedCaller()) {
+                return false;
+            }
             handleBlockedRemoveCall(maid, reason, "setRemoved");
             return true;
         }
         if (!isProtectedMaid(maid) || !isHardRemovalReason(reason)) {
             return false;
         }
-        if (!isForcingProtectionCheck() && AnchorCoreBauble.findIllegalCaller() == null) {
+        if (isWhitelistedCaller()) {
             return false;
         }
 
@@ -84,6 +87,14 @@ public final class MaidHardRemovalProtection {
 
     public static boolean shouldDenyRegisteredRemoval(EntityMaid maid, Entity.RemovalReason reason) {
         return isHardRemovalReason(reason) && !isRemovalAuthorized(maid) && isRegisteredForIndexGuard(maid);
+    }
+
+    /**
+     * 调用栈全部在锚核白名单内即视为授权：已登记的女仆同样适用，否则相机拍照、搬运和外部模组登记的调用者都删不掉她。
+     * 只按调用栈判定，所以移除路径上的各层（含索引写入）各自核对都会得到同一结论。
+     */
+    public static boolean isWhitelistedCaller() {
+        return !isForcingProtectionCheck() && AnchorCoreBauble.findIllegalCaller() == null;
     }
 
     public static boolean isRemovalAuthorized(EntityMaid maid) {

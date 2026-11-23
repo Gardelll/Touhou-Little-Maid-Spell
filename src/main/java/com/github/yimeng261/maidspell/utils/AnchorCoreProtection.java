@@ -62,6 +62,9 @@ public final class AnchorCoreProtection {
             return false;
         }
         if (MaidHardRemovalProtection.shouldDenyRegisteredRemoval(maid, reason)) {
+            if (MaidHardRemovalProtection.isWhitelistedCaller()) {
+                return false;
+            }
             MaidHardRemovalProtection.handleBlockedRemoveCall(maid, reason, path);
             return true;
         }

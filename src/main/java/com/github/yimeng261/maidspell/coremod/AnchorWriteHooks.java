@@ -20,7 +20,7 @@ import java.util.Collections;
 import java.util.Map;
 import java.util.WeakHashMap;
 
-/** 把原字节码操作与锚定检查链接在一起，不检查调用者身份。 */
+/** 把原字节码操作与锚定检查链接在一起；链接时不区分调用者，只有女仆清理判定按锚核白名单核对调用栈。 */
 public final class AnchorWriteHooks {
     private static final MethodHandles.Lookup LOOKUP = MethodHandles.lookup();
     private static final Map<VarHandle, String> HANDLES = Collections.synchronizedMap(new WeakHashMap<>());
@@ -35,8 +35,10 @@ public final class AnchorWriteHooks {
     }
 
     public static boolean blocksExternalMaidCleanup(EntityMaid maid) {
+        // 白名单调用者的移除在入口已放行，索引这一层须给出同样的结论；扫栈放最后，只在本要拦截时才付出代价。
         return !maid.level().isClientSide() && !MaidHardRemovalProtection.isRemovalAuthorized(maid)
-                && (MaidHardRemovalProtection.isRegisteredForIndexGuard(maid) || AnchorCoreProtection.hasAnchorCore(maid));
+                && (MaidHardRemovalProtection.isRegisteredForIndexGuard(maid) || AnchorCoreProtection.hasAnchorCore(maid))
+                && !MaidHardRemovalProtection.isWhitelistedCaller();
     }
 
     public static boolean containsProtectedSectionEntries(EntitySection<?> section) {

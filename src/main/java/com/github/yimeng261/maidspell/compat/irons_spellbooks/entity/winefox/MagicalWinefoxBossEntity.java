@@ -1200,7 +1200,7 @@ public class MagicalWinefoxBossEntity extends AbstractSpellCastingMob
             double dx = x - this.lerpTargetX();
             double dy = y - this.lerpTargetY();
             double dz = z - this.lerpTargetZ();
-            // 1.21 的绝对传送包与相对移动包走同一入口、无法区分，统一按相对移动包的阈值判定。
+            // 传送包与相对移动包都走此入口，无法区分，统一按 1.5 格判定。
             double cutoff = 1.5D;
             if (dx * dx + dy * dy + dz * dz > cutoff * cutoff) {
                 this.starTrailJumpUntilTick = this.tickCount + Math.max(1, steps);

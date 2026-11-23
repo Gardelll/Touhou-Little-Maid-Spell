@@ -75,8 +75,10 @@ class AnchorPersistenceTest {
         var chunk = new ChunkPos(original);
         var folder = Files.createTempDirectory("maidspell-anchor-persistence-");
         try {
-            try (var first = manager(storage(level, folder))) {
+            var firstDisk = storage(level, folder);
+            try (var first = manager(firstDisk)) {
                 first.updateChunkStatus(chunk, Visibility.TICKING);
+                awaitEntitiesLoaded(level, firstDisk, first, chunk);
                 Entity pig = EntityType.PIG.create(level);
                 if (pig == null) throw ctx.fail("无法创建猪");
                 pig.setPos(maid.getX(), maid.getY(), maid.getZ());
@@ -158,10 +160,7 @@ class AnchorPersistenceTest {
             var disk = storage(level, folder);
             try (var reopened = manager(disk)) {
                 reopened.updateChunkStatus(chunk, Visibility.TICKING);
-                for (int i = 0; i < 10 && !reopened.areEntitiesLoaded(chunk.toLong()); i++) {
-                    disk.flush(false);
-                    reopened.tick();
-                }
+                awaitEntitiesLoaded(level, disk, reopened, chunk);
                 ctx.check(reopened.areEntitiesLoaded(chunk.toLong())).as("重开的管理器读完区块实体").isTrue();
                 var restored = reopened.getEntityGetter().get(uuid);
                 if (!(restored instanceof EntityMaid restoredMaid) || restored == maid) {
@@ -180,10 +179,7 @@ class AnchorPersistenceTest {
                     MaidHardRemovalProtection.forgetRegistration(restoredMaid);
                 }
                 reopened.updateChunkStatus(chunk, Visibility.TICKING);
-                for (int i = 0; i < 10 && !reopened.areEntitiesLoaded(chunk.toLong()); i++) {
-                    disk.flush(false);
-                    reopened.tick();
-                }
+                awaitEntitiesLoaded(level, disk, reopened, chunk);
                 var reloaded = reopened.getEntityGetter().get(uuid);
                 if (!(reloaded instanceof EntityMaid reloadedMaid) || reloaded == restoredMaid) {
                     throw ctx.fail("普通卸载后没存下能再读回的女仆：" + reloaded);
@@ -196,6 +192,21 @@ class AnchorPersistenceTest {
             try (var files = Files.walk(folder)) {
                 for (Path file : files.sorted(Comparator.reverseOrder()).toList()) Files.deleteIfExists(file);
             }
+        }
+    }
+
+    /**
+     * 等区段管理器读完区块实体；关闭时的存盘会一直等到读完才返回，所以关之前必须先读完。
+     * C2ME 把读档回调改排到区块主线程执行器，测试占着服务端线程，只能在这里自己处理这些任务。
+     */
+    private static void awaitEntitiesLoaded(ServerLevel level, EntityStorage storage,
+                                            PersistentEntitySectionManager<Entity> manager, ChunkPos chunk) {
+        for (int i = 0; i < 100 && !manager.areEntitiesLoaded(chunk.toLong()); i++) {
+            storage.flush(false);
+            while (level.getChunkSource().pollTask()) {
+                // 逐个处理排队的区块主线程任务，读档回调在其中
+            }
+            manager.tick();
         }
     }
 

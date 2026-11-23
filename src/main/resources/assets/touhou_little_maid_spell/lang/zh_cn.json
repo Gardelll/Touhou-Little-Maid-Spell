@@ -814,6 +814,8 @@
   "touhou_little_maid_spell.configuration.winefoxAdaptiveSaturationRatio": "酒狐自适应减伤饱和倍数",
   "touhou_little_maid_spell.configuration.winefoxAdaptiveFinalBudgetMultiplier": "酒狐限伤后最终 DPS 预算倍数",
   "touhou_little_maid_spell.configuration.winefoxInvisibilitySearchTicks": "酒狐搜索隐身玩家时长（tick）",
+  "touhou_little_maid_spell.configuration.winefoxMovementGuardEnabled": "星之魔女拒绝外部位移",
+  "touhou_little_maid_spell.configuration.winefoxPreventRiding": "禁止星之魔女骑乘或被骑乘",
   "touhou_little_maid_spell.configuration.section.touhou.little.maid.spell.combat.toml": "战斗",
   "touhou_little_maid_spell.configuration.section.touhou.little.maid.spell.combat.toml.title": "%s 战斗配置",
   "touhou_little_maid_spell.configuration.section.touhou.little.maid.spell.baubles.toml": "饰品",

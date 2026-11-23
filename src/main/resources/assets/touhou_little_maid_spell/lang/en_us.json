@@ -814,6 +814,8 @@
   "touhou_little_maid_spell.configuration.winefoxAdaptiveSaturationRatio": "Winefox Adaptive Saturation Ratio",
   "touhou_little_maid_spell.configuration.winefoxAdaptiveFinalBudgetMultiplier": "Winefox Adaptive Final DPS Budget Multiplier",
   "touhou_little_maid_spell.configuration.winefoxInvisibilitySearchTicks": "Winefox Invisibility Search Duration (ticks)",
+  "touhou_little_maid_spell.configuration.winefoxMovementGuardEnabled": "Stellar Witch Rejects External Movement",
+  "touhou_little_maid_spell.configuration.winefoxPreventRiding": "Forbid Stellar Witch Riding",
   "touhou_little_maid_spell.configuration.section.touhou.little.maid.spell.combat.toml": "Combat",
   "touhou_little_maid_spell.configuration.section.touhou.little.maid.spell.combat.toml.title": "%s Combat Configuration",
   "touhou_little_maid_spell.configuration.section.touhou.little.maid.spell.baubles.toml": "Baubles",

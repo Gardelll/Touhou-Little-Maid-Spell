@@ -5,6 +5,7 @@ import com.github.yimeng261.maidspell.MaidSpellMod;
 import com.github.yimeng261.maidspell.dimension.PlayerRetreatManager;
 import com.github.yimeng261.maidspell.dimension.RetreatDimensionData;
 import com.github.yimeng261.maidspell.dimension.RetreatManager;
+import com.github.yimeng261.maidspell.dimension.RetreatTransition;
 import com.github.yimeng261.maidspell.dimension.TheRetreatDimension;
 import com.github.yimeng261.maidspell.item.MaidSpellItems;
 import com.github.yimeng261.maidspell.stagewright.scenes.RetreatFixtures.Found;
@@ -80,8 +81,11 @@ class SharedRetreatTest {
     /** 动作栏提示在客户端停留约 60 tick；首次进入提示至少要这么久不被别的动作栏消息顶掉才看得到。 */
     private static final int OVERLAY_VISIBLE_TICKS = 40;
 
-    /** 首次进入共享归隐之地的"已分配专属隐世之境"动作栏提示要能被看到：之后一段时间内不被别的动作栏消息顶掉。 */
-    @DisplayName("首次进入的“已分配专属隐世之境”动作栏提示不被别的动作栏消息顶掉，能被看到")
+    /**
+     * 首次进入共享归隐之地的"已分配专属隐世之境"动作栏提示要能被看到：转场揭幕时才发出（之前遮屏不透明），
+     * 之后一段时间内不被别的动作栏消息顶掉。
+     */
+    @DisplayName("首次进入的“已分配专属隐世之境”动作栏提示在转场揭幕时发出、不被别的动作栏消息顶掉，能被看到")
     @Test
     @Order(1)
     @Requires(Requires.Capability.CLIENT)
@@ -94,7 +98,14 @@ class SharedRetreatTest {
         ClientSide.awaitIdle(ctx);
         // 提示的可见时间从提示到达客户端起算：不等传送落定，免得把计时拖过去
         long mark = useBellInOverworld(ctx, host);
-        ctx.await(ENTER_TICKS, "收到首次进入提示", () -> ChatTap.find(mark, FIRST_ENTRY, true).isPresent());
+        boolean[] pendingWhenReceived = {false};
+        ctx.await(ENTER_TICKS, "收到首次进入提示", () -> {
+            boolean received = ChatTap.find(mark, FIRST_ENTRY, true).isPresent();
+            pendingWhenReceived[0] = received && RetreatTransition.isPending(host);
+            return received;
+        });
+        ctx.check(pendingWhenReceived[0]).as("收到首次进入提示时转场仍在等待揭幕").isFalse();
+        ctx.check(ChatTap.keys(mark, true).contains(ENTERED)).as("首次进入提示之前已收到进入提示").isFalse();
         ctx.ticks(OVERLAY_VISIBLE_TICKS);
         List<String> overlays = ChatTap.keys(mark, true);
         ctx.record("overlays", overlays);
@@ -114,11 +125,15 @@ class SharedRetreatTest {
         holdBells(ctx, host, BELLS);
         resetFirstEntry(ctx, host);
         long mark = enterFromOverworld(ctx, host);
+        // 两条提示都从揭幕起算，先等转场结束
+        ctx.await(ENTER_TICKS, "进入归隐之地的转场结束", () -> !RetreatTransition.isPending(host));
         ctx.await(NOTICE_TICKS, "收到进入提示", () -> ChatTap.find(mark, ENTERED, true).isPresent());
         ctx.run(() -> {
             ctx.check(host.level().dimension().location()).as("进入的维度").isEqualTo(SHARED);
-            ctx.check(ChatTap.find(mark, FIRST_ENTRY, true).isPresent())
-                    .as("收到首次进入提示（动作栏：" + ChatTap.keys(mark, true) + "）").isTrue();
+            List<String> overlays = ChatTap.keys(mark, true);
+            ctx.check(overlays.contains(FIRST_ENTRY)).as("收到首次进入提示（动作栏：" + overlays + "）").isTrue();
+            ctx.check(overlays.indexOf(FIRST_ENTRY) < overlays.indexOf(ENTERED))
+                    .as("首次进入提示先于进入提示（动作栏：" + overlays + "）").isTrue();
             ctx.check(quota(host)).as("首次进入后的搜索配额").isEqualTo(1);
             ctx.check(host.getMainHandItem().getCount()).as("进入后手上铃的数量").isEqualTo(BELLS);
         });

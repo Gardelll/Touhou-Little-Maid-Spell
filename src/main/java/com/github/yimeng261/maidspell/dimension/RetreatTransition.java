@@ -10,6 +10,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.Level;
+import net.neoforged.bus.api.EventPriority;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
@@ -51,7 +52,10 @@ public final class RetreatTransition {
         enter(player, target, RetreatTransition::announceEntered);
     }
 
-    /** {@code announceArrival} 在玩家确实进入目标维度后调用，负责给出进入提示。 */
+    /**
+     * {@code announceArrival} 负责给出进入提示，只调用一次：有转场时在揭幕那一刻（客户端一直不回报地形就绪则在等待超时时），
+     * 已到达后下线时也调用；转场被打断（玩家死亡、离开目标维度、传送失败）时不调用。
+     */
     public static void enter(ServerPlayer player, ServerLevel target, Consumer<ServerPlayer> announceArrival) {
         if (isPending(player)) {
             return;
@@ -82,6 +86,8 @@ public final class RetreatTransition {
             // 纠正目标地形加载期间客户端自行预测的移动
             player.connection.teleport(player.getX(), player.getY(), player.getZ(), player.getYRot(), player.getXRot());
             send(player, new RetreatTransitionMessage(entry.token(), Stage.REVEAL, null));
+            // 到达时遮屏仍不透明，提示要等揭幕才看得清
+            entry.announceArrival().accept(player);
         }
     }
 
@@ -105,17 +111,27 @@ public final class RetreatTransition {
                     }
                 }
                 case ARRIVED -> {
-                    if (expired || !entry.player().isAlive() || entry.player().level() != entry.target()) {
+                    ServerPlayer player = entry.player();
+                    if (!player.isAlive() || player.level() != entry.target()) {
                         cancel(entry);
+                    } else if (expired && cancel(entry)) {
+                        // 客户端一直不回报地形就绪时遮屏随取消撤下，提示在这里补上
+                        entry.announceArrival().accept(player);
                     }
                 }
             }
         }
     }
 
-    @SubscribeEvent
+    // 先于下线时记录归隐之地待恢复位置的处理运行：已到达的玩家要先按到达处理（例如首次进入的登记），
+    // 否则那边会替玩家建一条空记录，下次进入就不再按首次处理
+    @SubscribeEvent(priority = EventPriority.HIGH)
     public static void onLogout(PlayerEvent.PlayerLoggedOutEvent event) {
-        PENDING.remove(event.getEntity().getUUID());
+        PendingEntry entry = PENDING.remove(event.getEntity().getUUID());
+        if (entry != null && entry.phase() == Phase.ARRIVED && entry.player() == event.getEntity()
+                && entry.player().level() == entry.target()) {
+            entry.announceArrival().accept(entry.player());
+        }
     }
 
     @SubscribeEvent
@@ -140,19 +156,23 @@ public final class RetreatTransition {
         PendingEntry transferring = entry.advance(Phase.TRANSFERRING, deadline);
         PENDING.replace(player.getUUID(), entry, transferring);
         TheRetreatDimension.teleportToRetreat(player, entry.target(), entry.position()).thenAccept(entered -> {
-            announceResult(player, entered, entry.announceArrival());
             if (!entered) {
+                announceResult(player, false, entry.announceArrival());
                 cancel(transferring);
-            } else {
-                PENDING.replace(player.getUUID(), transferring, transferring.advance(Phase.ARRIVED, deadline));
+            } else if (!PENDING.replace(player.getUUID(), transferring, transferring.advance(Phase.ARRIVED, deadline))
+                    && !player.hasDisconnected()) {
+                // 传送拖过了等待上限，转场已取消、没有揭幕可等，到达即提示
+                entry.announceArrival().accept(player);
             }
         });
     }
 
-    private static void cancel(PendingEntry entry) {
+    private static boolean cancel(PendingEntry entry) {
         if (PENDING.remove(entry.player().getUUID(), entry)) {
             send(entry.player(), new RetreatTransitionMessage(entry.token(), Stage.CANCEL, null));
+            return true;
         }
+        return false;
     }
 
     private static void announceResult(ServerPlayer player, boolean entered, Consumer<ServerPlayer> announceArrival) {
@@ -164,7 +184,7 @@ public final class RetreatTransition {
         }
     }
 
-    private static void announceEntered(ServerPlayer player) {
+    public static void announceEntered(ServerPlayer player) {
         player.displayClientMessage(Component.translatable("item.touhou_little_maid_spell.wind_seeking_bell.entered_retreat")
                 .withStyle(ChatFormatting.LIGHT_PURPLE), true);
     }

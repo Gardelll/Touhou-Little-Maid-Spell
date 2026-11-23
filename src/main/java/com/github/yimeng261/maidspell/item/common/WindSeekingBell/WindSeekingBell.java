@@ -164,14 +164,22 @@ public class WindSeekingBell extends Item {
 
     private void enterSharedRetreat(ServerPlayer player, ServerLevel sharedRetreat) {
         RetreatDimensionData data = RetreatDimensionData.get(player.getServer());
-        RetreatDimensionData.DimensionInfo info = data.getDimensionInfo(player.getUUID());
-
-        if (info != null) {
+        if (data.getDimensionInfo(player.getUUID()) != null) {
             RetreatTransition.enter(player, sharedRetreat);
             return;
         }
+        // 登记与配额说明一起在进入提示时做：转场被打断时既不登记也不提示，下次进入仍按首次处理
+        RetreatTransition.enter(player, sharedRetreat, arrived -> announceFirstSharedEntry(arrived, sharedRetreat));
+    }
 
-        // 首次使用时注册并分配配额
+    private static void announceFirstSharedEntry(ServerPlayer player, ServerLevel sharedRetreat) {
+        RetreatDimensionData data = RetreatDimensionData.get(player.getServer());
+        if (data.getDimensionInfo(player.getUUID()) != null) {
+            // 转场期间已在别处登记过（例如在归隐之地里先摇了铃），配额说明已由那里给出
+            RetreatTransition.announceEntered(player);
+            return;
+        }
+
         data.registerDimension(player.getUUID());
         RetreatDimensionData.DimensionInfo entryInfo = data.getDimensionInfo(player.getUUID());
         // 配额限制开启时给予1个配额；关闭时不限制（配额不会被检查）
@@ -181,19 +189,15 @@ public class WindSeekingBell extends Item {
         data.updateAccessTime(player.getUUID());
 
         // 首次进入先显示配额说明，过一会儿再补上进入提示，两条都能看清
-        RetreatTransition.enter(player, sharedRetreat, arrived -> {
-            arrived.displayClientMessage(
-                    Component.translatable("item.touhou_little_maid_spell.wind_seeking_bell.first_entry_shared")
-                            .withStyle(ChatFormatting.LIGHT_PURPLE), true);
-            com.github.yimeng261.maidspell.compat.irons_spellbooks.DelayedServerTasks.scheduleForCaster(
-                    sharedRetreat, arrived, 60, () -> {
-                        if (data.getDimensionInfo(arrived.getUUID()) == entryInfo) {
-                            arrived.displayClientMessage(
-                                    Component.translatable("item.touhou_little_maid_spell.wind_seeking_bell.entered_retreat")
-                                            .withStyle(ChatFormatting.LIGHT_PURPLE), true);
-                        }
-                    });
-        });
+        player.displayClientMessage(
+                Component.translatable("item.touhou_little_maid_spell.wind_seeking_bell.first_entry_shared")
+                        .withStyle(ChatFormatting.LIGHT_PURPLE), true);
+        com.github.yimeng261.maidspell.compat.irons_spellbooks.DelayedServerTasks.scheduleForCaster(
+                sharedRetreat, player, 60, () -> {
+                    if (data.getDimensionInfo(player.getUUID()) == entryInfo) {
+                        RetreatTransition.announceEntered(player);
+                    }
+                });
     }
 
     /**

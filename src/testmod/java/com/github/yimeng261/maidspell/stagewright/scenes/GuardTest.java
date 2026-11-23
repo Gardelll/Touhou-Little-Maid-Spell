@@ -413,8 +413,8 @@ class GuardTest {
     }
 
     /**
-     * 迁移版本为 0 时，梦云水晶与馥郁巧思两份黑名单各自判断：恰为旧默认（默认值去掉 goety:explosive）才补上，
-     * 改过的保持原样；版本已到 1 时什么都不动。结束后把三项写回原值并落盘。
+     * 迁移版本为 0 时，两份黑名单各自判断：恰为最初默认（馥郁巧思默认值去掉 goety:explosive）才迁移，改过的保持原样；
+     * 梦云水晶为馥郁巧思同款默认时，版本 0 或 1 都迁到带雷暴术的默认，馥郁巧思在版本 1 不动；版本已到 2 时什么都不动。结束后把三项写回原值并落盘。
      */
     @SuppressWarnings("unchecked")
     private static void blacklistMigration(Stage ctx) {
@@ -422,25 +422,39 @@ class GuardTest {
         var crystal = (ModConfigSpec.ConfigValue<List<? extends String>>) Reflect.<Object>field(null, baublesConfig(), "DREAM_CRYSTAL_EFFECT_BLACKLIST");
         var fragrant = (ModConfigSpec.ConfigValue<List<? extends String>>) Reflect.<Object>field(null, baublesConfig(), "FRAGRANT_INGENUITY_EFFECT_BLACKLIST");
         ModConfigSpec.IntValue version = Reflect.field(null, baublesConfig(), "DREAM_CRYSTAL_EFFECT_BLACKLIST_MIGRATION_VERSION");
-        List<String> defaults = (List<String>) crystal.getDefault();
-        List<String> previousDefaults = defaults.stream().filter(effect -> !effect.equals(explosive)).toList();
+        List<String> crystalDefaults = (List<String>) crystal.getDefault();
+        List<String> fragrantDefaults = (List<String>) fragrant.getDefault();
+        List<String> versionZeroDefaults = fragrantDefaults.stream().filter(effect -> !effect.equals(explosive)).toList();
         List<String> custom = List.of("minecraft:speed");
         List<? extends String> originalCrystal = crystal.get();
         List<? extends String> originalFragrant = fragrant.get();
         int originalVersion = version.get();
         try {
-            migrate(crystal, previousDefaults, fragrant, previousDefaults, version, 0);
-            ctx.check(crystal.get()).as("两份都是旧默认：梦云水晶黑名单").isEqualTo(defaults);
-            ctx.check(fragrant.get()).as("两份都是旧默认：馥郁巧思黑名单").isEqualTo(defaults);
-            ctx.check(version.get()).as("迁移后版本号").isEqualTo(1);
+            ctx.check(crystalDefaults.contains("irons_spellbooks:thunderstorm")).as("梦云水晶默认黑名单含雷暴术").isTrue();
+            ctx.check(fragrantDefaults.contains("irons_spellbooks:thunderstorm")).as("馥郁巧思默认黑名单含雷暴术").isFalse();
 
-            migrate(crystal, custom, fragrant, previousDefaults, version, 0);
-            ctx.check(crystal.get()).as("只有馥郁巧思是旧默认：梦云水晶黑名单").isEqualTo(custom);
-            ctx.check(fragrant.get()).as("只有馥郁巧思是旧默认：馥郁巧思黑名单").isEqualTo(defaults);
+            migrate(crystal, versionZeroDefaults, fragrant, versionZeroDefaults, version, 0);
+            ctx.check(crystal.get()).as("版本 0 两份都是最初默认：梦云水晶黑名单").isEqualTo(crystalDefaults);
+            ctx.check(fragrant.get()).as("版本 0 两份都是最初默认：馥郁巧思黑名单").isEqualTo(fragrantDefaults);
+            ctx.check(version.get()).as("迁移后版本号").isEqualTo(2);
 
-            migrate(crystal, previousDefaults, fragrant, previousDefaults, version, 1);
-            ctx.check(crystal.get()).as("版本已到 1：梦云水晶黑名单").isEqualTo(previousDefaults);
-            ctx.check(fragrant.get()).as("版本已到 1：馥郁巧思黑名单").isEqualTo(previousDefaults);
+            migrate(crystal, custom, fragrant, versionZeroDefaults, version, 0);
+            ctx.check(crystal.get()).as("版本 0 只有馥郁巧思是最初默认：梦云水晶黑名单").isEqualTo(custom);
+            ctx.check(fragrant.get()).as("版本 0 只有馥郁巧思是最初默认：馥郁巧思黑名单").isEqualTo(fragrantDefaults);
+
+            migrate(crystal, fragrantDefaults, fragrant, versionZeroDefaults, version, 1);
+            ctx.check(crystal.get()).as("版本 1：梦云水晶黑名单").isEqualTo(crystalDefaults);
+            ctx.check(fragrant.get()).as("版本 1：馥郁巧思黑名单").isEqualTo(versionZeroDefaults);
+
+            migrate(crystal, fragrantDefaults, fragrant, fragrantDefaults, version, 0);
+            ctx.check(crystal.get()).as("版本 0 梦云水晶已是馥郁巧思同款默认：梦云水晶黑名单").isEqualTo(crystalDefaults);
+
+            migrate(crystal, custom, fragrant, versionZeroDefaults, version, 1);
+            ctx.check(crystal.get()).as("版本 1 梦云水晶自定义：梦云水晶黑名单").isEqualTo(custom);
+
+            migrate(crystal, fragrantDefaults, fragrant, versionZeroDefaults, version, 2);
+            ctx.check(crystal.get()).as("版本已到 2：梦云水晶黑名单").isEqualTo(fragrantDefaults);
+            ctx.check(fragrant.get()).as("版本已到 2：馥郁巧思黑名单").isEqualTo(versionZeroDefaults);
         } finally {
             crystal.set(originalCrystal);
             fragrant.set(originalFragrant);

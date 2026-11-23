@@ -166,24 +166,21 @@ public class WindSeekingBell extends Item {
         RetreatDimensionData data = RetreatDimensionData.get(player.getServer());
         RetreatDimensionData.DimensionInfo info = data.getDimensionInfo(player.getUUID());
 
-        // 首次使用时注册并分配配额
-        boolean firstEntry = info == null;
-        if (firstEntry) {
-            data.registerDimension(player.getUUID());
-            info = data.getDimensionInfo(player.getUUID());
-            // 配额限制开启时给予1个配额；关闭时不限制（配额不会被检查）
-            if (Config.enableSharedQuotaLimit) {
-                info.structureQuota = 1;
-            }
-            data.updateAccessTime(player.getUUID());
-        }
-
-        if (!firstEntry) {
+        if (info != null) {
             RetreatTransition.enter(player, sharedRetreat);
             return;
         }
+
+        // 首次使用时注册并分配配额
+        data.registerDimension(player.getUUID());
+        RetreatDimensionData.DimensionInfo entryInfo = data.getDimensionInfo(player.getUUID());
+        // 配额限制开启时给予1个配额；关闭时不限制（配额不会被检查）
+        if (Config.enableSharedQuotaLimit) {
+            entryInfo.structureQuota = 1;
+        }
+        data.updateAccessTime(player.getUUID());
+
         // 首次进入先显示配额说明，过一会儿再补上进入提示，两条都能看清
-        RetreatDimensionData.DimensionInfo entryInfo = info;
         RetreatTransition.enter(player, sharedRetreat, arrived -> {
             arrived.displayClientMessage(
                     Component.translatable("item.touhou_little_maid_spell.wind_seeking_bell.first_entry_shared")

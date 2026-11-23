@@ -137,7 +137,7 @@ public class TheRetreatDimension {
     }
 
     /**
-     * 异步加载目标区块后在主线程传送。返回的 future 在主线程完成，结果为玩家是否已身处归隐之地。
+     * 加载目标区块后在主线程传送。返回的 future 在主线程完成，结果为玩家是否已身处归隐之地。
      */
     public static CompletableFuture<Boolean> teleportToRetreat(ServerPlayer player, ServerLevel retreatLevel, BlockPos targetPos) {
         CompletableFuture<Boolean> entered = new CompletableFuture<>();

@@ -33,7 +33,7 @@ public final class RetreatTransition {
     private RetreatTransition() {
     }
 
-    /** 等待客户端遮屏、传送进行中（目标区块异步加载）、已到达等待地形就绪三个阶段。 */
+    /** 等待客户端遮屏、传送进行中（传送结果返回前不重复触发）、已到达等待地形就绪三个阶段。 */
     private enum Phase { COVERING, TRANSFERRING, ARRIVED }
 
     private record PendingEntry(UUID token, ServerPlayer player, ServerLevel target, BlockPos position,
@@ -135,7 +135,7 @@ public final class RetreatTransition {
             cancel(entry);
             return;
         }
-        // 传送要等目标区块异步加载完才执行，期间不再重复触发
+        // 传送结果的 future 完成前不再重复触发
         int deadline = player.server.getTickCount() + ARRIVAL_TIMEOUT_TICKS;
         PendingEntry transferring = entry.advance(Phase.TRANSFERRING, deadline);
         PENDING.replace(player.getUUID(), entry, transferring);

@@ -1,16 +1,16 @@
 #version 150
 
-uniform sampler2D Sampler0; // opaque fog artwork
-uniform sampler2D Sampler1; // light rays
-uniform sampler2D Sampler2; // mist specks
-uniform sampler2D Sampler3; // grayscale reveal order
+uniform sampler2D Sampler0; // 不透明雾气底图
+uniform sampler2D Sampler1; // 光束
+uniform sampler2D Sampler2; // 雾中光点
+uniform sampler2D Sampler3; // 灰度揭幕顺序图
 uniform vec4 LayerOpacity;
 uniform float Reveal;
 
 in vec2 texCoord0;
 out vec4 fragColor;
 
-// Compose the fog group before applying its shared reveal mask.
+// 先把雾气各层合成一组，再统一套用揭幕遮罩
 vec4 over(vec4 under, vec4 layer, float opacity) {
     float alpha = layer.a * opacity;
     return vec4(layer.rgb * alpha, alpha) + under * (1.0 - alpha);

@@ -42,11 +42,14 @@ public abstract class LivingEntityMixin {
         }
     }
 
-    /** 魂之书女仆的 setHealth 不许掉血或写入非有限值，掉血只走伤害结算。 */
+    /**
+     * 魂之书女仆的 setHealth 不许掉血或写入非有限值，掉血只走伤害结算；
+     * 生命上限下降后原版把生命截到上限，这一笔不是伤害，照常写入。
+     */
     @Inject(method = "setHealth", at = @At("HEAD"), cancellable = true)
     private void maidspell$rejectSoulBookHealthDrop(float health, CallbackInfo ci) {
         if ((Object) this instanceof EntityMaid maid && SoulBookHealthProtection.isProtected(maid)
-                && (!Float.isFinite(health) || health < maid.getHealth())) {
+                && (!Float.isFinite(health) || health < maid.getHealth() && health < maid.getMaxHealth())) {
             ci.cancel();
         }
     }

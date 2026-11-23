@@ -68,8 +68,8 @@ public abstract class SynchedEntityDataHealthMixin {
                     ci.cancel();
                     return;
                 }
-                // 魂之书女仆的掉血只认伤害结算许可的那一笔，回血照常往下走
-                if (requestedHealth < maid.getHealth()) {
+                // 魂之书女仆的掉血只认伤害结算许可的那一笔；回血和截到生命上限的写入照常往下走
+                if (requestedHealth < maid.getHealth() && requestedHealth < maid.getMaxHealth()) {
                     if (!MaidHealthWriteGuard.permits(maid, item, requestedHealth)) {
                         ci.cancel();
                     }

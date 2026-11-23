@@ -14,7 +14,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 /**
  * 魂之书女仆的生命数据项：绕过 SynchedEntityData#set 直接改数据项的写入也要经过许可，
- * 只放行回血和本次结算许可的那一笔掉血。
+ * 只放行回血、生命上限下降后截到上限的写入和本次结算许可的那一笔掉血。
  */
 @Mixin(SynchedEntityData.DataItem.class)
 public abstract class MaidHealthDataItemMixin<T> implements MaidHealthDataItem {
@@ -35,7 +35,8 @@ public abstract class MaidHealthDataItemMixin<T> implements MaidHealthDataItem {
             return;
         }
         if (!MaidHealthWriteGuard.consume(maid, (SynchedEntityData.DataItem<?>) (Object) this, health)
-                && getValue() instanceof Float previousHealth && health < previousHealth) {
+                && getValue() instanceof Float previousHealth && health < previousHealth
+                && health < maid.getMaxHealth()) {
             ci.cancel();
         }
     }

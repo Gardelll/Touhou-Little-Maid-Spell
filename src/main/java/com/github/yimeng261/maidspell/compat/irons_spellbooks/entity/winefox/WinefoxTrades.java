@@ -133,7 +133,7 @@ public final class WinefoxTrades {
         offers.add(offer(emeralds(10), scroll(IronsSpellbooksCompatSpells.COMPANION_BLACK_HOLE.get())));
         offers.add(offer(emeralds(10), scroll(IronsSpellbooksCompatSpells.SPELLBREAKING_ECHO.get())));
         offers.add(offer(emeralds(10), scroll(IronsSpellbooksCompatSpells.SEVEN_STAR_GUIDANCE.get())));
-        // 虚空相变：二阶段开场与二阶段随机池都会用，单独摆一行 1 级卷轴。
+        // 虚空相变：二阶段开场与二阶段的定时判定都会用，单独摆一行 1 级卷轴。
         offers.add(offer(emeralds(10), scroll(IronsSpellbooksCompatSpells.VOID_PHASE.get())));
     }
 

@@ -77,11 +77,10 @@ final class WinefoxCombatGoal extends Goal {
     private static final int MAGIC_SHOTGUN_BURST_INTERVAL_TICKS = 6;
 
     /**
-     * 二阶段跟目标保持的水平距离。
+     * 二阶段绕目标出刀时保持的水平距离。
      *
-     * <p>原先二阶段直接把目标所在的那一格当成目标点，她会一路顶到人身上：碰撞箱互相推挤，
-     * 画面里是她贴着玩家来回挤。改成在这个距离上绕目标出刀 —— 仍在近战判定
-     * （{@code distanceToSqr <= 9}，即 3 格）之内，但不会贴脸。
+     * <p>不能把目标所在的那一格当目标点：她会一路顶到人身上，碰撞箱互相推挤，画面里是她贴着玩家来回挤。
+     * 这个距离仍在近战判定（{@link #PHASE_TWO_MELEE_RANGE}）之内，但不会贴脸。
      */
     private static final double PHASE_TWO_STANDOFF_DISTANCE = 2.0D;
     private static final double PHASE_TWO_MELEE_RANGE = 3.0D;
@@ -90,11 +89,11 @@ final class WinefoxCombatGoal extends Goal {
     private static final double PHASE_TWO_ORBIT_SPEED = 0.7D;
 
     /**
-     * 二阶段站定时允许的高度差。
+     * 二阶段绕目标出刀时允许的高度差。
      *
-     * <p>近战那条判定用的是三维距离（{@code distanceToSqr(target) <= 9}），
+     * <p>近战那条判定用的是三维距离（{@link #PHASE_TWO_MELEE_RANGE_SQR}），
      * 所以水平拉到 2 格之后垂直只剩很少的余量：她要是悬在目标上方两格多，
-     * 水平再近也够不着 —— 表现为二阶段一刀都不砍。站定前必须把高度也收进这个带里。
+     * 水平再近也够不着 —— 表现为二阶段一刀都不砍。进入绕圈前必须把高度也收进这个带里。
      */
     private static final double PHASE_TWO_MELEE_VERTICAL_TOLERANCE = 1.0D;
 
@@ -798,7 +797,7 @@ final class WinefoxCombatGoal extends Goal {
         // 保持当前高度"。一阶段她是悬在目标上方 0.5~2.5 格飞行的，那点温和的容忍带在这里是
         // 个陷阱：转阶段那一刻要是正好悬在最高档，当前高度已经超出容忍带，返回的就是"保持当前
         // 高度"，于是高度被永久冻在上方两格多 —— 三维距离永远进不了近战窗口，她一刀都砍不到人。
-        // 所以水平收进站定距离之后一律压到目标高度；还在远处水平飞过来时，容忍带只用来
+        // 所以水平收进近战范围之后一律压到目标高度；还在远处水平飞过来时，容忍带只用来
         // 忽略普通跳跃与台阶，免得每 tick 追着目标的垂直速度抖动。
         double desiredY = horizontalDistance > PHASE_TWO_MELEE_RANGE
                           ? targetFlightY(target.getY(), target.getY())

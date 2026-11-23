@@ -311,9 +311,8 @@ final class ConfigBaubles {
     }
 
     /**
-     * 已有的 TOML 在默认值新增条目后仍保留旧列表，这里只迁移「原封未动的旧默认值」，
-     * 玩家自定义过的黑名单保持由玩家掌控。版本 1 给两份黑名单补上 goety:explosive，
-     * 版本 2 只给梦云水晶补上 irons_spellbooks:thunderstorm，馥郁巧思仍用原列表。
+     * 已有的 TOML 不会跟随默认值更新，这里只把与已知旧默认值完全相同的黑名单改写为当前默认，玩家自定义过的保持不动。
+     * 版本 0 的旧默认是 DEFAULT_BLACKLIST 去掉末项 goety:explosive；版本 1 时梦云水晶的旧默认就是 DEFAULT_BLACKLIST。
      */
     private static void migrateRandomEffectBlacklists() {
         int version = DREAM_CRYSTAL_EFFECT_BLACKLIST_MIGRATION_VERSION.get();

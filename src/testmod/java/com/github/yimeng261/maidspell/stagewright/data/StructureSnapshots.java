@@ -1742,7 +1742,7 @@ public final class StructureSnapshots {
                 "irons_spellbooks:pedestal",
                 "touhou_little_maid_spell:suppression_stone"),
             List.of(
-                "irons_spellbooks:pedestal|items=irons_spellbooks:teleportation_amulet*1",
+                "irons_spellbooks:pedestal|items=touhou_little_maid_spell:staranchor_pearl*1",
                 "minecraft:shulker_box|loot=touhou_little_maid_spell:chests/starfall_garden_4"),
             List.of(),
             List.of()));

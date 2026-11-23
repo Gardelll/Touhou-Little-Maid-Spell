@@ -17,8 +17,8 @@ import java.util.Set;
  * 改写成以 {@code AnchorWriteHooks.link} 为引导方法的 invokedynamic，由钩子在原操作前做锚定检查。
  */
 final class AnchorWriteSites {
-    private static final String VH = "java/lang/invoke/VarHandle";
-    private static final String LOOKUP = "java/lang/invoke/MethodHandles$Lookup";
+    private static final String VAR_HANDLE_OWNER = "java/lang/invoke/VarHandle";
+    private static final String LOOKUP_OWNER = "java/lang/invoke/MethodHandles$Lookup";
     private static final Handle LINK = new Handle(Opcodes.H_INVOKESTATIC,
             "com/github/yimeng261/maidspell/coremod/AnchorWriteHooks", "link",
             "(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;ILjava/lang/String;Ljava/lang/String;)Ljava/lang/invoke/CallSite;", false);
@@ -63,8 +63,8 @@ final class AnchorWriteSites {
         }
         if (!(insn instanceof MethodInsnNode call) || call.getOpcode() == Opcodes.INVOKESTATIC) return null;
         if (call.desc.equals("()V") && call.name.equals("onClientRemoval")) return "clientRemoval";
-        if (LOOKUP.equals(call.owner) && (call.name.equals("findVarHandle") || call.name.equals("unreflectVarHandle"))) return "lookup";
-        if (VH.equals(call.owner)) return call.name.equals("get") || call.name.equals("getAcquire")
+        if (LOOKUP_OWNER.equals(call.owner) && (call.name.equals("findVarHandle") || call.name.equals("unreflectVarHandle"))) return "lookup";
+        if (VAR_HANDLE_OWNER.equals(call.owner)) return call.name.equals("get") || call.name.equals("getAcquire")
                 || call.name.equals("getOpaque") || call.name.equals("getVolatile") ? "handleRead" : "handleWrite";
         if (call.owner.startsWith("java/util/") || call.owner.startsWith("it/unimi/dsi/fastutil/")
                 || call.owner.equals("net/minecraft/util/ClassInstanceMultiMap")) {

@@ -95,7 +95,7 @@ public class NetworkHandler {
     }
 
     public static void handleMaidEntityRestore(MaidEntityRestoreMessage packet, IPayloadContext context) {
-        com.github.yimeng261.maidspell.network.message.MaidEntityRestoreClientHandler.handlePayload(packet);
+        com.github.yimeng261.maidspell.network.message.MaidEntityRestoreClientHandler.handle(packet);
     }
 
     public static void handleWinefoxStructureMusic(WinefoxStructureMusicMessage packet, IPayloadContext context) {

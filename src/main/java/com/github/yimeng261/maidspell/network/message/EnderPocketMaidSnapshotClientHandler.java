@@ -31,9 +31,6 @@ final class EnderPocketMaidSnapshotClientHandler {
         }
 
         ((EntityInvoker) maid).maidspell$invokeUnsetRemoved();
-        if (!snapshot.entityData().isEmpty()) {
-            maid.getEntityData().assignValues(snapshot.entityData());
-        }
         maid.moveTo(snapshot.x(), snapshot.y(), snapshot.z(), snapshot.yRot(), snapshot.xRot());
         maid.setInvisible(false);
         maid.refreshDimensions();

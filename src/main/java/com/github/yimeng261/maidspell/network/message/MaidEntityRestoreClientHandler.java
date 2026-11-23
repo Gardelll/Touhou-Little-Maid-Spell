@@ -66,8 +66,4 @@ public final class MaidEntityRestoreClientHandler {
         entity.moveTo(message.x(), message.y(), message.z(), message.yRot(), message.xRot());
         return entity;
     }
-
-    public static void handlePayload(MaidEntityRestoreMessage message) {
-        handle(message);
-    }
 }

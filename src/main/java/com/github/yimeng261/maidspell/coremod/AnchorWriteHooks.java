@@ -1,7 +1,6 @@
 package com.github.yimeng261.maidspell.coremod;
 
 import com.github.tartaricacid.touhoulittlemaid.entity.passive.EntityMaid;
-import com.github.yimeng261.maidspell.api.AnchorSectionMembership;
 import com.github.yimeng261.maidspell.mixin.accessor.AnchorEntityCallbackAccessor;
 import com.github.yimeng261.maidspell.utils.AnchorCoreProtection;
 import com.github.yimeng261.maidspell.utils.MaidHardRemovalProtection;
@@ -154,7 +153,7 @@ public final class AnchorWriteHooks {
                 if (args.length < 3 || args[1] == null) yield true;
                 String slot = HANDLES.get(args[0]);
                 boolean plainSet = name.equals("set") || name.equals("setVolatile") || name.equals("setRelease") || name.equals("setOpaque");
-                Object current = slot == null || slot.equals("removalReason") || args[1] instanceof com.github.yimeng261.maidspell.api.AnchorTickIndex
+                Object current = slot == null || slot.equals("removalReason") || args[1] instanceof AnchorTickIndex
                         ? null : ((VarHandle) args[0]).toMethodHandle(VarHandle.AccessMode.GET).invoke(args[1]);
                 yield AnchorIndexWriteGuard.allowFieldWrite(args[1], slot, args[args.length - 1], plainSet, current);
             }

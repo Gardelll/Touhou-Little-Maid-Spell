@@ -1,6 +1,6 @@
 package com.github.yimeng261.maidspell.mixin;
 
-import com.github.yimeng261.maidspell.api.AnchorTickIndex;
+import com.github.yimeng261.maidspell.coremod.AnchorTickIndex;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.entity.EntityTickList;

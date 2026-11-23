@@ -2,7 +2,7 @@ package com.github.yimeng261.maidspell.utils;
 
 import com.github.tartaricacid.touhoulittlemaid.entity.passive.EntityMaid;
 import com.github.yimeng261.maidspell.Global;
-import com.github.yimeng261.maidspell.api.AnchorSectionMembership;
+import com.github.yimeng261.maidspell.coremod.AnchorSectionMembership;
 import com.github.yimeng261.maidspell.mixin.accessor.AnchorEntityCallbackAccessor;
 import com.github.yimeng261.maidspell.mixin.accessor.AnchorPersistentManagerAccessor;
 import com.github.yimeng261.maidspell.item.bauble.anchorCore.AnchorCoreBauble;

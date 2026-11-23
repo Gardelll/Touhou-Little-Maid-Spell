@@ -1,6 +1,6 @@
 package com.github.yimeng261.maidspell.mixin;
 
-import com.github.yimeng261.maidspell.api.AnchorSectionContents;
+import com.github.yimeng261.maidspell.coremod.AnchorSectionContents;
 import com.github.yimeng261.maidspell.coremod.AnchorSectionList;
 import com.github.yimeng261.maidspell.coremod.AnchorWriteHooks;
 import net.minecraft.util.ClassInstanceMultiMap;

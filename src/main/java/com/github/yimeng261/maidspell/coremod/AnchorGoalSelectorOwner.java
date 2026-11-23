@@ -1,4 +1,4 @@
-package com.github.yimeng261.maidspell.api;
+package com.github.yimeng261.maidspell.coremod;
 
 import com.github.tartaricacid.touhoulittlemaid.entity.passive.EntityMaid;
 

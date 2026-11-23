@@ -1,7 +1,7 @@
 package com.github.yimeng261.maidspell.mixin;
 
 import com.github.tartaricacid.touhoulittlemaid.entity.passive.EntityMaid;
-import com.github.yimeng261.maidspell.api.AnchorSectionContents;
+import com.github.yimeng261.maidspell.coremod.AnchorSectionContents;
 import com.github.yimeng261.maidspell.coremod.AnchorWriteHooks;
 import net.minecraft.util.ClassInstanceMultiMap;
 import net.minecraft.world.level.entity.EntityAccess;

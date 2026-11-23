@@ -1,7 +1,7 @@
 package com.github.yimeng261.maidspell.mixin;
 
 import com.github.tartaricacid.touhoulittlemaid.entity.passive.EntityMaid;
-import com.github.yimeng261.maidspell.api.AnchorGoalSelectorOwner;
+import com.github.yimeng261.maidspell.coremod.AnchorGoalSelectorOwner;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.ai.goal.GoalSelector;
 import org.spongepowered.asm.mixin.Final;

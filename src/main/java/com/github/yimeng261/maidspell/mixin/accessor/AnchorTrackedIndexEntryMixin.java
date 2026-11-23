@@ -1,6 +1,6 @@
 package com.github.yimeng261.maidspell.mixin.accessor;
 
-import com.github.yimeng261.maidspell.api.AnchorTrackedIndexEntry;
+import com.github.yimeng261.maidspell.coremod.AnchorTrackedIndexEntry;
 import net.minecraft.world.entity.Entity;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.gen.Accessor;

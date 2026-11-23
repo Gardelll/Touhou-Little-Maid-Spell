@@ -1,4 +1,4 @@
-package com.github.yimeng261.maidspell.api;
+package com.github.yimeng261.maidspell.coremod;
 
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import net.minecraft.world.entity.Entity;

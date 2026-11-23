@@ -1,6 +1,6 @@
 package com.github.yimeng261.maidspell.mixin;
 
-import com.github.yimeng261.maidspell.api.AnchorSectionStorageIndex;
+import com.github.yimeng261.maidspell.coremod.AnchorSectionStorageIndex;
 import com.github.yimeng261.maidspell.coremod.AnchorWriteHooks;
 import it.unimi.dsi.fastutil.longs.LongSortedSet;
 import net.minecraft.world.level.entity.EntityAccess;

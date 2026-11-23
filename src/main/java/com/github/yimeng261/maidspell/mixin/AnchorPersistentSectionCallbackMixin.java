@@ -1,8 +1,8 @@
 package com.github.yimeng261.maidspell.mixin;
 
-import com.github.yimeng261.maidspell.api.AnchorSectionContents;
-import com.github.yimeng261.maidspell.api.AnchorSectionMembership;
-import com.github.yimeng261.maidspell.api.AnchorSectionStorageIndex;
+import com.github.yimeng261.maidspell.coremod.AnchorSectionContents;
+import com.github.yimeng261.maidspell.coremod.AnchorSectionMembership;
+import com.github.yimeng261.maidspell.coremod.AnchorSectionStorageIndex;
 import com.github.yimeng261.maidspell.coremod.AnchorWriteHooks;
 import com.github.yimeng261.maidspell.mixin.accessor.AnchorEntitySectionAccessor;
 import net.minecraft.core.SectionPos;

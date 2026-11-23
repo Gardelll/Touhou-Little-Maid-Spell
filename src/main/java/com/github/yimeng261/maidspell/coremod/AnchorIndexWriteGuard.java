@@ -1,9 +1,6 @@
 package com.github.yimeng261.maidspell.coremod;
 
 import com.github.tartaricacid.touhoulittlemaid.entity.passive.EntityMaid;
-import com.github.yimeng261.maidspell.api.AnchorSectionContents;
-import com.github.yimeng261.maidspell.api.AnchorTickIndex;
-import com.github.yimeng261.maidspell.api.AnchorTrackedIndexEntry;
 import com.github.yimeng261.maidspell.client.ClientMaidRemovalGuard;
 import com.github.yimeng261.maidspell.utils.MaidHardRemovalProtection;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;

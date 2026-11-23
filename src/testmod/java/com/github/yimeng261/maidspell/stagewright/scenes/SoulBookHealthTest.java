@@ -121,9 +121,6 @@ class SoulBookHealthTest {
             EntityMaid maid = detachedMaid(ctx);
             float initial = maid.getHealth();
             DamageSource source = maid.damageSources().magic();
-            // 魂之书对第一次受伤本身就有间隔，先挨一下把间隔起点立起来
-            maid.hurt(source, initial * 2.0F);
-            advancePastSoulBookCooldown(maid);
             maid.hurt(source, initial * 2.0F);
             float cap = maid.getMaxHealth() * (float) Config.soulBookDamageThresholdPercent;
             float reduced = Math.max(0.0F, initial - cap);
@@ -182,8 +179,6 @@ class SoulBookHealthTest {
             DamageSource source = maid.damageSources().magic();
             float before = maid.getHealth();
             float otherBefore = other.getHealth();
-            maid.hurt(source, 1.0F);
-            advancePastSoulBookCooldown(maid);
             IllegalStateException interrupted = new IllegalStateException("同步回调中断");
             maid.afterHealthWrite = () -> {
                 other.setHealth(0.0F);

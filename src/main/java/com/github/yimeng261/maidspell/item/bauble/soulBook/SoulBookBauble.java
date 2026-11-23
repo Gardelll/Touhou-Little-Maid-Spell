@@ -23,13 +23,12 @@ public class SoulBookBauble implements IMaidBauble {
     private static final Map<UUID, Integer> lastHurtTimeMap = new ConcurrentHashMap<>();
 
     public static Pair<Boolean, Float> damageCalc(EntityMaid maid, float originalDamage) {
-        UUID maidId = maid.getUUID();
-        int currentTime = maid.tickCount;
-        int lastHurtTime = lastHurtTimeMap.computeIfAbsent(maidId, (uuid) -> maid.tickCount);
-        int timeDiff = currentTime - lastHurtTime;
+        // 没有受伤记录就没有“上一次”，第一击照常结算；记录由 recordHurt 在结算后写入
+        Integer lastHurtTime = lastHurtTimeMap.get(maid.getUUID());
+        boolean allowed = lastHurtTime == null || maid.tickCount - lastHurtTime > Config.soulBookDamageIntervalThreshold;
         float damageThreshold = Math.min(originalDamage, maid.getMaxHealth() * (float)Config.soulBookDamageThresholdPercent);
 
-        return new Pair<>(timeDiff > Config.soulBookDamageIntervalThreshold, damageThreshold);
+        return new Pair<>(allowed, damageThreshold);
     }
 
     public static void recordHurt(EntityMaid maid) {

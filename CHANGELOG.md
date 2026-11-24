@@ -9,6 +9,24 @@
   emeralds, with no discount or purchase limit; "Vivaldi - Concerto No.10 in B Minor" drops when the Stellar Witch
   is defeated in a formal challenge, but not when maids fight in the player's place, rewards are restricted, or a
   custom challenge configuration is used
+- 新增归隐之地进入转场：在主世界使用寻风之铃时，樱花薄雾先遮住屏幕，传送完成、地形就绪后再散开；共享归隐之地首次进入的说明在雾散开时显示 /
+  Added a transition when entering The Retreat: using the Wind Seeking Bell in the Overworld first covers the screen
+  with cherry-blossom mist, which clears once the teleport has finished and the terrain is ready; the first-entry
+  notice for a shared Retreat appears as the mist clears
+- 星之魔女战斗飞行时在身后留下星座印记，瞬移时在起点与终点之间留下一道跃迁轨迹 /
+  The Stellar Witch now leaves constellation marks behind her while flying in combat, and a jump trail between the
+  start and end points when she blinks
+- 星之魔女不再被外部手段移动：`/tp`、爆炸、水流、载具等都无法挪动或带走她，受击击退照常生效；管理员可用 `/maidspell_winefox <星之魔女> tp <坐标>` 移动她。boss 配置新增 `winefoxMovementGuardEnabled`（拒绝外部位移）与 `winefoxPreventRiding`（禁止骑乘或被骑乘）两项，默认开启 /
+  The Stellar Witch can no longer be moved by outside means: `/tp`, explosions, flowing water, vehicles and the
+  like cannot move or carry her away, while knockback from hits still applies; operators can move her with
+  `/maidspell_winefox <stellar witch> tp <position>`. The boss config adds `winefoxMovementGuardEnabled` (reject
+  outside movement) and `winefoxPreventRiding` (forbid riding or being ridden), both enabled by default
+- 未安装铁魔法时也能在祭坛合成梦云水晶：饰品版以车万女仆的药水保护饰品代替星云核心，联动版去掉星云核心 /
+  The Dreamcloud Crystal can now be crafted on the altar without Iron's Spells 'n Spellbooks: the bauble recipe
+  uses Touhou Little Maid's Potion Protect Bauble in place of the Nebula Core, and the crossover recipe drops
+  the Nebula Core
+- 战胜星之魔女后的交易新增 1 级虚空相变卷轴 /
+  The Stellar Witch's trades after her defeat now include a level 1 Void Phase scroll
 
 ### 修复 / Bug Fixes
 
@@ -24,6 +42,14 @@
 - 修复卸下梦云水晶等提高生命上限的饰品后，女仆生命值停在新上限之上的问题 /
   Fixed maids keeping health above their new maximum after removing the Dreamcloud Crystal or other baubles that
   raise max health
+- 修复女仆读档后生命值回满的问题，现在保留存档时的生命值 /
+  Fixed maids returning to full health after a save was reloaded; they now keep the health they were saved with
+- 修复装备魂之书的女仆生成或重新加载后，第一次受到的伤害被当作间隔过近而取消的问题 /
+  Fixed the first hit on a maid with the Soul Book being cancelled as too soon after the previous one when the maid
+  had just spawned or been reloaded
+- 修复发簪把女仆受到的伤害换算到主人身上时，主人被击退、护甲耐久下降的问题 /
+  Fixed the owner being knocked back and losing armor durability when the Hairpin converted the maid's damage
+  through the owner's armor
 - 修复法术战斗中距离最近的实体是友方或坐下待机的女仆时，女仆不去攻击其他敌人的问题 /
   Fixed maids in spell combat not attacking other enemies when the nearest entity was a friendly maid or a maid
   sitting on standby
@@ -71,12 +97,36 @@
 - 锚定核心拦截其他模组移除女仆更严格：调用链中只要出现不受信任的模组代码就会拦下；跨维度移动始终放行 /
   The Anchor Core now blocks other mods from removing maids more strictly: a removal is blocked whenever untrusted
   mod code appears in the call chain, while dimension changes are always allowed
+- 装备锚定核心的女仆被其他模组删除时原地保留，不再回收到魂符或生成恢复箱；用魂符收起与正常死亡不受影响 /
+  Maids with the Anchor Core now stay in place when another mod deletes them, instead of being returned to a Soul
+  Spell or leaving a recovery chest; storing them in a Soul Spell and dying normally are unaffected
+- 装备魂之书的女仆只按正常伤害结算掉血与死亡，其他模组绕过伤害结算直接让她死亡也会被拦下 /
+  Maids with the Soul Book now lose health and die only through normal damage handling; other mods that bypass it
+  to kill her directly are blocked as well
+- 星之魔女二阶段贴近目标后改为绕着目标横向移动出刀，不再原地站定；星影剑阵加入二阶段近战法术，近距离也会施放 /
+  In her second phase the Stellar Witch now circles her target while striking at close range instead of standing
+  still; Starshadow Sword Array joins her phase-two melee spells and is also cast at close range
+- 星云核心掉落后悬浮在空中，不受重力影响 /
+  The Nebula Core now floats in the air after it drops instead of falling
+- 七星引路的落击与收束一击伤害提高到原来的 1.5 倍 /
+  Seven-Star Guidance's strikes and final blow now deal 1.5 times their previous damage
+- 梦云水晶的随机效果黑名单默认加入铁魔法的雷暴效果；馥郁巧思的黑名单不变 /
+  The Dreamcloud Crystal's random effect blacklist now includes Iron's Spells 'n Spellbooks' Thunderstorm effect
+  by default; the Fragrant Ingenuity blacklist is unchanged
+- 星途终岸第二段的展示底座换了位置，底座上的物品换成星锚珍珠 /
+  In the second section of the Stellar Endshore, the display pedestal has moved and now holds a Staranchor Pearl
 
 ### 升级说明 / Upgrade Notes
 
-- 已生成的落樱厨舍不会更新陈设，观星塔木桶里的画也不会改变，只影响新生成的结构 /
-  Cherry Cabins that have already generated keep their old interior and existing Starwatch Tower barrels keep
-  their paintings; only newly generated structures are affected
+- 网络协议已更新，客户端与服务端需一起升级 /
+  The network protocol has changed; clients and servers must be updated together
+- 未改动过的梦云水晶黑名单（`baubles.toml` 中的 `dreamCrystalEffectBlacklist`）会在启动时自动补上雷暴效果，自定义过的列表保持不变 /
+  An unmodified Dreamcloud Crystal blacklist (`dreamCrystalEffectBlacklist` in `baubles.toml`) gains the
+  Thunderstorm effect automatically on startup; customized lists are left unchanged
+
+- 已生成的落樱厨舍不会更新陈设，观星塔木桶里的画与星途终岸的展示底座也不会改变，只影响新生成的结构 /
+  Cherry Cabins that have already generated keep their old interior, and existing Starwatch Tower barrels and
+  Stellar Endshore pedestals stay as they were; only newly generated structures are affected
 - 星落之庭的新生成密度只作用于尚未生成的区块 /
   The new Starfall Garden density only applies to chunks that have not generated yet
 
